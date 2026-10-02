@@ -24,14 +24,19 @@ pub fn run_download(
     output_dir: Option<String>,
 ) -> Result<String, String> {
     let python_path = r"C:\Users\sharm\.gemini\antigravity\scratch\savify\.venv\Scripts\python.exe";
-    let script_path = PathBuf::from(r"e:\Codes\Apps Build Files\Spotify Offline\src-tauri\scripts\savify_bridge.py");
+    let candidate_paths = [
+        PathBuf::from(r"e:\Codes\Apps Build Files\Spotify Offline\src-tauri\scripts\savify_bridge.py"),
+        std::env::current_dir().unwrap_or_default().join("src-tauri").join("scripts").join("savify_bridge.py"),
+        std::env::current_dir().unwrap_or_default().join("scripts").join("savify_bridge.py"),
+    ];
+
+    let script_path = candidate_paths
+        .into_iter()
+        .find(|p| p.is_file())
+        .ok_or_else(|| "savify_bridge.py script not found".to_string())?;
 
     if !std::path::Path::new(python_path).exists() {
         return Err(format!("Python executable not found at {}", python_path));
-    }
-
-    if !script_path.exists() {
-        return Err(format!("Bridge script not found at {:?}", script_path));
     }
 
     let default_output = r"C:\Users\sharm\Music\Spotify offline".to_string();

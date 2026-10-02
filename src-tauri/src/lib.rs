@@ -66,10 +66,18 @@ fn persist_settings(settings: &AppSettings) {
 }
 
 #[tauri::command]
-fn scan_library(directories: Option<Vec<String>>) -> Vec<TrackMetadata> {
-    let dirs_to_scan = directories.unwrap_or_else(|| {
-        vec![r"C:\Users\sharm\Music\Spotify offline".to_string()]
-    });
+fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String>>) -> Vec<TrackMetadata> {
+    let dirs_to_scan = match directories {
+        Some(d) if !d.is_empty() => d,
+        _ => {
+            let lock = state.settings.lock().unwrap();
+            if !lock.music_directories.is_empty() {
+                lock.music_directories.clone()
+            } else {
+                vec![r"C:\Users\sharm\Music\Spotify offline".to_string()]
+            }
+        }
+    };
 
     let mut tracks = Vec::new();
     let mut seen_paths = std::collections::HashSet::new();
@@ -121,7 +129,14 @@ fn start_download(
     url: String,
     output_dir: Option<String>,
 ) -> Result<String, String> {
-    run_download(app, &state.downloader, url, output_dir)
+    let effective_output = match output_dir {
+        Some(d) if !d.is_empty() => Some(d),
+        _ => {
+            let lock = state.settings.lock().unwrap();
+            Some(lock.download_directory.clone())
+        }
+    };
+    run_download(app, &state.downloader, url, effective_output)
 }
 
 #[tauri::command]
@@ -143,16 +158,19 @@ fn save_track_lyrics(file_path: String, lyrics_content: String) -> Result<(), St
 fn open_in_explorer(file_path: String) -> Result<(), String> {
     let path = Path::new(&file_path);
     if !path.exists() {
-        return Err("File does not exist".to_string());
+        return Err("File or folder does not exist".to_string());
     }
 
     #[cfg(windows)]
     {
         use std::process::Command;
-        let _ = Command::new("explorer")
-            .arg("/select,")
-            .arg(path)
-            .spawn();
+        if path.is_dir() {
+            let _ = Command::new("explorer").arg(path).spawn();
+        } else {
+            let _ = Command::new("explorer")
+                .arg(format!("/select,{}", path.display()))
+                .spawn();
+        }
     }
     Ok(())
 }

@@ -46,6 +46,7 @@ interface PlayerContextType {
   toggleLike: (trackId: string) => void;
   addToQueue: (track: Track) => void;
   removeFromQueue: (index: number) => void;
+  moveQueueItem: (fromIndex: number, toIndex: number) => void;
   clearQueue: () => void;
   createPlaylist: (name: string, description?: string) => void;
   deletePlaylist: (id: string) => void;
@@ -53,7 +54,7 @@ interface PlayerContextType {
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
   setPreset: (name: string) => void;
   setCustomGain: (bandIndex: number, gain: number) => void;
-  refreshLibrary: () => Promise<void>;
+  refreshLibrary: (directories?: string[]) => Promise<void>;
   saveLyrics: (track: Track, lrcContent: string) => Promise<void>;
   openInExplorer: (filePath: string) => Promise<void>;
 }
@@ -107,6 +108,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   shuffleRef.current = shuffle;
   const tracksRef = useRef(tracks);
   tracksRef.current = tracks;
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
+  const durationRef = useRef(duration);
+  durationRef.current = duration;
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
+  const isMutedRef = useRef(isMuted);
+  isMutedRef.current = isMuted;
 
   const showToast = useCallback((title: string, subtitle: string, cover?: string | null) => {
     const id = Date.now().toString();
@@ -126,9 +135,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [playlists]);
 
   // Load Initial Library from Tauri
-  const refreshLibrary = useCallback(async () => {
+  const refreshLibrary = useCallback(async (directories?: string[]) => {
     try {
-      const scannedTracks = await invoke<Track[]>('scan_library');
+      const scannedTracks = await invoke<Track[]>('scan_library', {
+        directories: directories || null,
+      });
       setTracks(scannedTracks);
       if (scannedTracks.length > 0 && !currentTrackRef.current) {
         setQueue(scannedTracks);
@@ -384,6 +395,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setQueue((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const moveQueueItem = useCallback((fromIndex: number, toIndex: number) => {
+    setQueue((prev) => {
+      if (fromIndex < 0 || fromIndex >= prev.length || toIndex < 0 || toIndex >= prev.length) {
+        return prev;
+      }
+      const nextQueue = [...prev];
+      const [item] = nextQueue.splice(fromIndex, 1);
+      nextQueue.splice(toIndex, 0, item);
+      return nextQueue;
+    });
+  }, []);
+
   const clearQueue = useCallback(() => {
     setQueue([]);
   }, []);
@@ -478,16 +501,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         togglePlay();
       } else if (e.code === 'ArrowLeft' && !e.ctrlKey) {
         e.preventDefault();
-        seekTo(Math.max(0, currentTime - 5));
+        seekTo(Math.max(0, currentTimeRef.current - 5));
       } else if (e.code === 'ArrowRight' && !e.ctrlKey) {
         e.preventDefault();
-        seekTo(Math.min(duration, currentTime + 5));
+        seekTo(Math.min(durationRef.current, currentTimeRef.current + 5));
       } else if (e.code === 'ArrowUp') {
         e.preventDefault();
-        setVolumeLevel(Math.min(1, volume + 0.05));
+        setVolumeLevel(Math.min(1, volumeRef.current + 0.05));
       } else if (e.code === 'ArrowDown') {
         e.preventDefault();
-        setVolumeLevel(Math.max(0, volume - 0.05));
+        setVolumeLevel(Math.max(0, volumeRef.current - 0.05));
       } else if (e.ctrlKey && e.code === 'ArrowLeft') {
         e.preventDefault();
         handlePrevTrack();
@@ -497,15 +520,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } else if (e.code === 'KeyM') {
         e.preventDefault();
         toggleMute();
-      } else if (e.code === 'KeyL' && currentTrack) {
+      } else if (e.code === 'KeyL' && currentTrackRef.current) {
         e.preventDefault();
-        toggleLike(currentTrack.id);
+        toggleLike(currentTrackRef.current.id);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentTime, currentTrack, duration, handleNextTrack, handlePrevTrack, seekTo, setVolumeLevel, toggleLike, toggleMute, togglePlay, volume]);
+  }, [handleNextTrack, handlePrevTrack, seekTo, setVolumeLevel, toggleLike, toggleMute, togglePlay]);
 
   return (
     <PlayerContext.Provider
@@ -542,6 +565,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleLike,
         addToQueue,
         removeFromQueue,
+        moveQueueItem,
         clearQueue,
         createPlaylist,
         deletePlaylist,

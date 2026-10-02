@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListOrdered, X, Trash2, Play, Disc3 } from 'lucide-react';
+import { ListOrdered, X, Trash2, Play, Disc3, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
 
@@ -9,7 +9,7 @@ interface QueueDrawerProps {
 }
 
 export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => {
-  const { currentTrack, queue, playTrack, removeFromQueue, clearQueue, isPlaying } = usePlayer();
+  const { currentTrack, queue, playTrack, removeFromQueue, moveQueueItem, clearQueue, isPlaying } = usePlayer();
 
   if (!isOpen) return null;
 
@@ -127,19 +127,45 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] font-mono text-gray-500">
+                      <span className="text-[10px] font-mono text-gray-500 mr-0.5">
                         {track.duration_str}
                       </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFromQueue(idx);
-                        }}
-                        className="p-1 text-gray-400 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Remove from queue"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        {idx > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveQueueItem(idx, idx - 1);
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-emerald-400 rounded transition-colors"
+                            title="Move track up"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {idx < queue.length - 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveQueueItem(idx, idx + 1);
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-emerald-400 rounded transition-colors"
+                            title="Move track down"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromQueue(idx);
+                          }}
+                          className="p-0.5 text-gray-400 hover:text-rose-400 rounded transition-colors ml-0.5"
+                          title="Remove from queue"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

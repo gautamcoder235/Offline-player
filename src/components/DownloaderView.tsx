@@ -26,7 +26,15 @@ export const DownloaderView: React.FC = () => {
   const [summary, setSummary] = useState<{ total: number; succeeded: number; failed: number } | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement | null>(null);
-  const downloadDir = 'C:\\Users\\sharm\\Music\\Spotify offline';
+  const [downloadDir, setDownloadDir] = useState('C:\\Users\\sharm\\Music\\Spotify offline');
+
+  useEffect(() => {
+    invoke<{ download_directory: string }>('get_settings')
+      .then((s) => {
+        if (s?.download_directory) setDownloadDir(s.download_directory);
+      })
+      .catch(console.warn);
+  }, []);
 
   // Listen to Tauri downloader streaming events
   useEffect(() => {

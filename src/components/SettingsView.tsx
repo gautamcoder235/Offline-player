@@ -8,6 +8,8 @@ import {
   Keyboard,
   Info,
   Check,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -25,13 +27,17 @@ export const SettingsView: React.FC = () => {
   });
 
   const [newDirInput, setNewDirInput] = useState('');
+  const [downloadDirInput, setDownloadDirInput] = useState('C:\\Users\\sharm\\Music\\Spotify offline');
   const [isScanning, setIsScanning] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     invoke<AppSettings>('get_settings')
       .then((s) => {
-        if (s) setSettings(s);
+        if (s) {
+          setSettings(s);
+          if (s.download_directory) setDownloadDirInput(s.download_directory);
+        }
       })
       .catch(console.warn);
   }, []);
@@ -56,7 +62,7 @@ export const SettingsView: React.FC = () => {
         music_directories: [...settings.music_directories, dir],
       };
       handleSave(updated);
-      refreshLibrary();
+      refreshLibrary(updated.music_directories);
     }
     setNewDirInput('');
   };
@@ -67,12 +73,31 @@ export const SettingsView: React.FC = () => {
       music_directories: settings.music_directories.filter((d) => d !== dirToRemove),
     };
     handleSave(updated);
-    refreshLibrary();
+    refreshLibrary(updated.music_directories);
+  };
+
+  const handleSaveDownloadDir = () => {
+    if (!downloadDirInput.trim()) return;
+    const updated = {
+      ...settings,
+      download_directory: downloadDirInput.trim(),
+    };
+    handleSave(updated);
+  };
+
+  const handleResetDownloadDir = () => {
+    const defaultDir = 'C:\\Users\\sharm\\Music\\Spotify offline';
+    setDownloadDirInput(defaultDir);
+    const updated = {
+      ...settings,
+      download_directory: defaultDir,
+    };
+    handleSave(updated);
   };
 
   const handleRescan = async () => {
     setIsScanning(true);
-    await refreshLibrary();
+    await refreshLibrary(settings.music_directories);
     setTimeout(() => setIsScanning(false), 600);
   };
 
@@ -181,6 +206,59 @@ export const SettingsView: React.FC = () => {
           >
             <Plus className="w-4 h-4" />
             <span>Add Folder</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Download Directory Configuration Section */}
+      <div className="p-6 rounded-3xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <Download className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Default Download Directory</h3>
+              <p className="text-xs text-gray-400">
+                Target destination folder for Spotify downloads via Savify
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openInExplorer(settings.download_directory)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 hover:text-white border border-white/10 transition-all"
+              title="Reveal in Windows Explorer"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Reveal Folder</span>
+            </button>
+            <button
+              onClick={handleResetDownloadDir}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-400 hover:text-white border border-white/10 transition-all"
+              title="Reset to default music directory"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Default</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={downloadDirInput}
+            onChange={(e) => setDownloadDirInput(e.target.value)}
+            placeholder="Enter absolute download folder path..."
+            className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+          />
+          <button
+            onClick={handleSaveDownloadDir}
+            disabled={!downloadDirInput.trim() || downloadDirInput === settings.download_directory}
+            className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black font-bold text-xs transition-all shadow"
+          >
+            Save Target
           </button>
         </div>
       </div>

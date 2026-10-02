@@ -55,7 +55,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         Err(_) => {
             let stream_url = crate::streamer::get_stream_url(&file_path_str);
             return Some(TrackMetadata {
-                id: format!("{:x}", md5_hash(&file_path_str)),
+                id: deterministic_id(&file_path_str),
                 file_path: file_path_str,
                 title: default_title,
                 artist: default_artist,
@@ -76,40 +76,101 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let duration_str = format_duration(duration);
     let bitrate = properties.audio_bitrate();
 
-    let tag = tagged_file.primary_tag().or_else(|| tagged_file.first_tag());
+    let mut title = None;
+    let mut artist = None;
+    let mut album = None;
+    let mut year = None;
+    let mut cover_art = None;
 
-    let (title, artist, album, year, cover_art) = if let Some(tag) = tag {
-        let t = tag
-            .title()
-            .map(|s| s.to_string())
-            .unwrap_or(default_title);
-        let a = tag
-            .artist()
-            .map(|s| s.to_string())
-            .unwrap_or(default_artist);
-        let al = tag
-            .album()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "Offline Music".to_string());
-        let y = tag.year();
-
-        let cov = tag.pictures().first().map(|pic| {
-            let mime = match pic.mime_type() {
-                Some(m) => m.as_str(),
-                None => "image/jpeg",
-            };
-            format!("data:{};base64,{}", mime, BASE64.encode(pic.data()))
-        });
-
-        (t, a, al, y, cov)
+    // Search across primary tag and any additional tags
+    let tags_to_check: Vec<&lofty::tag::Tag> = if let Some(p) = tagged_file.primary_tag() {
+        let mut list = vec![p];
+        for t in tagged_file.tags() {
+            if !std::ptr::eq(p, t) {
+                list.push(t);
+            }
+        }
+        list
     } else {
-        (default_title, default_artist, "Offline Music".to_string(), None, None)
+        tagged_file.tags().iter().collect()
     };
+
+    for tag in tags_to_check {
+        if title.is_none() {
+            if let Some(t) = tag.title() {
+                let trimmed = t.trim();
+                if !trimmed.is_empty() {
+                    title = Some(trimmed.to_string());
+                }
+            }
+        }
+        if artist.is_none() {
+            if let Some(a) = tag.artist() {
+                let trimmed = a.trim();
+                if !trimmed.is_empty() {
+                    artist = Some(trimmed.to_string());
+                }
+            }
+        }
+        if album.is_none() {
+            if let Some(al) = tag.album() {
+                let trimmed = al.trim();
+                if !trimmed.is_empty() {
+                    album = Some(trimmed.to_string());
+                }
+            }
+        }
+        if year.is_none() {
+            year = tag.year();
+        }
+        if cover_art.is_none() {
+            if let Some(pic) = tag.pictures().first() {
+                let mime = match pic.mime_type() {
+                    Some(m) => m.as_str(),
+                    None => "image/jpeg",
+                };
+                cover_art = Some(format!("data:{};base64,{}", mime, BASE64.encode(pic.data())));
+            }
+        }
+    }
+
+    // Check adjacent folder files for cover art fallback if not embedded
+    if cover_art.is_none() {
+        if let Some(parent) = file_path.parent() {
+            let candidates = [
+                file_path.with_extension("jpg"),
+                file_path.with_extension("png"),
+                file_path.with_extension("jpeg"),
+                parent.join("cover.jpg"),
+                parent.join("folder.jpg"),
+                parent.join("album.jpg"),
+                parent.join("cover.png"),
+                parent.join("folder.png"),
+            ];
+            for cand in candidates {
+                if cand.is_file() {
+                    if let Ok(bytes) = std::fs::read(&cand) {
+                        let mime = if cand.extension().and_then(|s| s.to_str()) == Some("png") {
+                            "image/png"
+                        } else {
+                            "image/jpeg"
+                        };
+                        cover_art = Some(format!("data:{};base64,{}", mime, BASE64.encode(&bytes)));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let title = title.unwrap_or(default_title);
+    let artist = artist.unwrap_or(default_artist);
+    let album = album.unwrap_or_else(|| "Offline Music".to_string());
 
     let stream_url = crate::streamer::get_stream_url(&file_path_str);
 
     Some(TrackMetadata {
-        id: format!("{:x}", md5_hash(&file_path_str)),
+        id: deterministic_id(&file_path_str),
         file_path: file_path_str,
         title,
         artist,
@@ -122,15 +183,16 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         cover_art,
         stream_url,
     })
-
 }
 
-fn md5_hash(input: &str) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    let mut hasher = DefaultHasher::new();
-    input.hash(&mut hasher);
-    hasher.finish()
+pub fn deterministic_id(input: &str) -> String {
+    // 64-bit FNV-1a hash: stable across all Rust compiler versions and OS platforms
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in input.as_bytes() {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{:016x}", hash)
 }
 
 #[cfg(test)]
@@ -148,6 +210,8 @@ mod tests {
                 if entry.path().extension().and_then(|s| s.to_str()) == Some("mp3") {
                     total += 1;
                     if let Some(m) = extract_metadata(&entry.path()) {
+                        assert!(!m.id.is_empty());
+                        assert!(!m.title.is_empty());
                         if m.cover_art.is_some() {
                             with_art += 1;
                         }

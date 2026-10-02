@@ -43,7 +43,7 @@ pub fn get_local_lyrics(file_path: &str) -> Option<LyricsResult> {
     // 3. Check for embedded tags (Lyrics item)
     if let Ok(probe) = Probe::open(&path) {
         if let Ok(tagged_file) = probe.read() {
-            if let Some(tag) = tagged_file.primary_tag().or_else(|| tagged_file.first_tag()) {
+            for tag in tagged_file.tags() {
                 if let Some(lyrics_val) = tag.get_string(&ItemKey::Lyrics) {
                     let text = lyrics_val.to_string();
                     let is_synced = text.contains('[') && text.contains(']');

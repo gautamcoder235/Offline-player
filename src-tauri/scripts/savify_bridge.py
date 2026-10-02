@@ -27,6 +27,10 @@ def main():
         sys.exit(1)
 
     query = sys.argv[1].strip()
+    if not query or query.startswith("-"):
+        emit({"type": "error", "message": "Invalid Spotify link or query provided."})
+        sys.exit(1)
+
     output_dir = sys.argv[2] if len(sys.argv) > 2 else r"C:\Users\sharm\Music\Spotify offline"
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -34,7 +38,9 @@ def main():
     emit({"type": "status", "message": f"Connecting to Spotify...", "percent": 5})
 
     try:
-        sp = Spotify(unauthenticated=True)
+        # Avoid 5-second GitHub update check latency
+        Savify.check_for_updates = lambda self: None
+
         path_holder = PathHolder(downloads_path=str(out_path))
         savify_inst = Savify(
             quality=Quality.Q320K,
