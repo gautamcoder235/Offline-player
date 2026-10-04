@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Download,
+  ArrowDownToLine,
   FolderOpen,
   CheckCircle2,
   Terminal,
@@ -346,9 +347,11 @@ export const DownloaderView: React.FC = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#F4F2F7] tracking-tight">Downloader</h2>
-            <span className="text-[11px] font-mono text-[#AAA6B2] bg-[#16151C] border border-[#282631] px-2.5 py-0.5 rounded-full">
-              {sessionTracks.length} session tracks
-            </span>
+            {sessionTracks.length > 0 && (
+              <span className="text-[11px] font-mono text-[#AAA6B2] bg-[#16151C] border border-[#282631] px-2.5 py-0.5 rounded-full">
+                {sessionTracks.length} tracks
+              </span>
+            )}
           </div>
 
           <button
@@ -356,7 +359,7 @@ export const DownloaderView: React.FC = () => {
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#292731]/60 text-xs font-medium transition-colors cursor-pointer shrink-0"
             title="Open music storage folder"
           >
-            <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
+            <FolderOpen className="w-3.5 h-3.5 text-[#AAA6B2]" />
             <span>Open Music Folder</span>
           </button>
         </div>
@@ -520,35 +523,38 @@ export const DownloaderView: React.FC = () => {
 
       {/* Main Full-Space Stage: List songs downloaded currently during this active download process */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="px-6 pt-2 pb-1 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
-              Session Downloaded Songs
-            </span>
-            <span className="text-[11px] font-mono text-[#65616F]">
-              ({sessionTracks.length})
-            </span>
-          </div>
+        {sessionTracks.length > 0 && (
+          <div className="px-6 pt-2 pb-1 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
+                Session Songs
+              </span>
+              <span className="text-[11px] font-mono text-[#65616F]">
+                ({sessionTracks.length})
+              </span>
+            </div>
 
-          {isDownloading && (
-            <span className="text-[11px] text-[#19E6A0] flex items-center gap-1.5 font-medium animate-pulse">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Downloading to library...</span>
-            </span>
-          )}
-        </div>
+            {isDownloading && (
+              <span className="text-[11px] text-[#19E6A0] flex items-center gap-1.5 font-medium animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Downloading...</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Captures Full Remaining View Space with Normal App Track List View */}
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {sessionTracks.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none">
-              <div className="w-14 h-14 rounded-2xl bg-[#14131A] border border-[#282631] flex items-center justify-center mb-3">
-                <Download className="w-6 h-6 text-[#19E6A0]/70" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-[#1C1B26] to-[#12111A] border border-white/[0.08] shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex items-center justify-center mb-4 transition-transform duration-200">
+                <div className="absolute inset-0 rounded-2xl bg-[#19E6A0]/10 blur-xl pointer-events-none" />
+                <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center relative z-10">
+                  <ArrowDownToLine className="w-5 h-5 text-[#19E6A0] stroke-[1.6]" />
+                </div>
               </div>
-              <p className="text-sm font-semibold text-[#F4F2F7]">No active downloads</p>
-              <p className="text-xs text-[#777381] mt-1 max-w-sm">
-                Only songs downloaded during the active download process will be shown here. Paste a link above to start downloading.
-              </p>
+              <h3 className="text-sm font-semibold text-[#F4F2F7] tracking-tight">No active downloads</h3>
+              <p className="text-xs text-[#777381] mt-1.5">Paste a link above to start</p>
             </div>
           ) : (
             <TrackList tracks={sessionTracks} />
