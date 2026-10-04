@@ -109,18 +109,12 @@ export const TrayPopup: React.FC = () => {
       <div className="flex items-center justify-between pb-2 border-b border-[#1A1A1E] shrink-0">
         <div
           onClick={handleOpen}
-          className="flex items-center gap-2 cursor-pointer group py-0.5 -my-0.5 px-1 -mx-1 rounded hover:bg-[#141417] transition-colors"
+          className="flex items-center gap-2 cursor-pointer group py-0.5 -my-0.5 px-1 -mx-1 rounded hover:bg-[#141417] transition-colors w-full"
           title="Open Offline Player"
         >
           <img src="/app-icon.png" alt="" className="w-4 h-4 rounded-full object-contain shrink-0 group-hover:scale-105 transition-transform" />
           <span className="text-[11.5px] font-bold tracking-tight text-white group-hover:text-[#19E6A0] transition-colors">Offline Player</span>
         </div>
-        <button
-          onClick={handleOpen}
-          className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#1C1C20] hover:bg-[#25252A] text-[#D0D0D8] hover:text-white border border-[#2B2B32] transition-colors cursor-pointer"
-        >
-          Open
-        </button>
       </div>
 
       {/* Main Options Stream */}
