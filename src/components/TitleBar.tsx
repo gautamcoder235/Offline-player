@@ -6,32 +6,6 @@ import { Minus, Square, X } from 'lucide-react';
 export function TitleBar() {
   const appWindow = getCurrentWindow();
 
-  const handleMouseDown = async (e: React.MouseEvent) => {
-    if (e.button === 0) {
-      try {
-        await invoke('app_start_dragging');
-      } catch {
-        try {
-          await appWindow.startDragging();
-        } catch (err) {
-          console.warn('startDragging failed:', err);
-        }
-      }
-    }
-  };
-
-  const handleDoubleClick = async () => {
-    try {
-      await invoke('app_toggle_maximize');
-    } catch {
-      try {
-        await appWindow.toggleMaximize();
-      } catch (err) {
-        console.warn('toggleMaximize failed:', err);
-      }
-    }
-  };
-
   const handleMinimize = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -74,8 +48,6 @@ export function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      onMouseDown={handleMouseDown}
-      onDoubleClick={handleDoubleClick}
       className="flex justify-between items-center w-full h-[36px] bg-[#100F14] border-b border-[#292731] select-none z-50 sticky top-0 cursor-default"
     >
       {/* Left: App Brand & Quiet Status */}

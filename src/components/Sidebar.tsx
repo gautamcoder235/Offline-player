@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className={`${
         isCollapsed ? 'w-[60px]' : 'w-56'
-      } transition-[width] duration-200 ease-out h-full flex flex-col bg-[#0E0D12] border-r border-[#292731] select-none z-10 overflow-hidden shrink-0`}
+      } transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-[width] h-full flex flex-col bg-[#0E0D12] border-r border-[#292731] select-none z-10 overflow-hidden shrink-0`}
     >
       {/* Top Header: Collapse Toggle */}
       <div

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
   Play,
   Pause,
@@ -62,8 +62,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     toggleLike,
   } = usePlayer();
 
-  const [hoverTime, setHoverTime] = useState<number | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const hoverLineRef = useRef<HTMLDivElement>(null);
+  const hoverTooltipRef = useRef<HTMLDivElement>(null);
 
   const isLiked = currentTrack ? likedTrackIds.has(currentTrack.id) : false;
 
@@ -71,11 +72,22 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     if (!progressBarRef.current || duration <= 0) return;
     const rect = progressBarRef.current.getBoundingClientRect();
     const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setHoverTime(pos * duration);
+    const hTime = pos * duration;
+    
+    if (hoverLineRef.current && hoverTooltipRef.current) {
+      hoverLineRef.current.style.width = `${pos * 100}%`;
+      hoverTooltipRef.current.style.left = `${pos * 100}%`;
+      hoverTooltipRef.current.innerText = formatTime(hTime);
+      hoverLineRef.current.style.display = 'block';
+      hoverTooltipRef.current.style.display = 'block';
+    }
   };
 
   const handleProgressMouseLeave = () => {
-    setHoverTime(null);
+    if (hoverLineRef.current && hoverTooltipRef.current) {
+      hoverLineRef.current.style.display = 'none';
+      hoverTooltipRef.current.style.display = 'none';
+    }
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -86,7 +98,6 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const hoverPercent = duration > 0 && hoverTime !== null ? (hoverTime / duration) * 100 : null;
 
   const trackColor = currentTrack
     ? getTrackColor(currentTrack.title, currentTrack.artist)
@@ -215,12 +226,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             {/* Background Track */}
             <div className="w-full h-1 bg-[#292731] rounded-full overflow-hidden relative group-hover:h-1.5 transition-all">
               {/* Hover line */}
-              {hoverPercent !== null && (
-                <div
-                  className="absolute top-0 bottom-0 bg-white/10"
-                  style={{ width: `${hoverPercent}%` }}
-                />
-              )}
+              <div
+                ref={hoverLineRef}
+                className="absolute top-0 bottom-0 bg-white/10 hidden"
+              />
               {/* Active filled progress */}
               <div
                 className="h-full bg-[#19E6A0] rounded-full relative"
@@ -235,14 +244,12 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             />
 
             {/* Hover Tooltip */}
-            {hoverTime !== null && (
-              <div
-                className="absolute -top-7 px-1.5 py-0.5 rounded bg-[#16151C] border border-[#292731] text-[10px] text-[#F4F2F7] font-mono -translate-x-1/2 shadow"
-                style={{ left: `${hoverPercent}%` }}
-              >
-                {formatTime(hoverTime)}
-              </div>
-            )}
+            <div
+              ref={hoverTooltipRef}
+              className="absolute -top-7 px-1.5 py-0.5 rounded bg-[#16151C] border border-[#292731] text-[10px] text-[#F4F2F7] font-mono -translate-x-1/2 shadow hidden"
+            >
+              0:00
+            </div>
           </div>
 
           <span className="w-8">{formatTime(duration)}</span>

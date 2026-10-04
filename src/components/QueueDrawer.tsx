@@ -11,15 +11,17 @@ interface QueueDrawerProps {
 export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => {
   const { currentTrack, queue, playTrack, removeFromQueue, moveQueueItem, clearQueue, isPlaying } = usePlayer();
 
-  if (!isOpen) return null;
-
   return (
     <div
-      className="fixed inset-0 z-40 flex justify-end bg-black/70 backdrop-blur-sm select-none transition-opacity duration-200"
+      className={`fixed inset-0 z-40 flex justify-end bg-black/70 backdrop-blur-sm select-none transition-opacity duration-300 ${
+        isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+      }`}
       onClick={onClose}
     >
       <div
-        className="w-80 h-full bg-[#100F14] border-l border-[#292731] p-5 flex flex-col gap-4 shadow-2xl"
+        className={`w-80 h-full bg-[#100F14] border-l border-[#292731] p-5 flex flex-col gap-4 shadow-2xl transform transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

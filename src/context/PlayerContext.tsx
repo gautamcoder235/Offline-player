@@ -276,9 +276,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Audio Engine Hookups
   useEffect(() => {
+    let lastTime = 0;
     audioEngine.onTimeUpdate = (cTime, dur) => {
-      setCurrentTime(cTime);
-      if (dur > 0) setDuration(dur);
+      const now = performance.now();
+      if (now - lastTime >= 250 || cTime === 0) {
+        lastTime = now;
+        setCurrentTime(cTime);
+        if (dur > 0) setDuration(dur);
+      }
     };
 
     audioEngine.onPlay = () => setIsPlaying(true);

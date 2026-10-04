@@ -122,3 +122,9 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Premium icons */
+svg.lucide {
+  stroke-width: 1.5 !important;
+}

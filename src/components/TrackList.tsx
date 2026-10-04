@@ -239,7 +239,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                         {isMenuOpen && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-6 w-48 py-1.5 rounded-lg bg-[#16151C] border border-[#292731] text-xs shadow-xl z-50"
+                            className={`absolute right-0 ${
+                              idx >= tracks.length - 3 ? 'bottom-8' : 'top-6'
+                            } w-48 py-1.5 rounded-lg bg-[#16151C] border border-[#292731] text-xs shadow-2xl z-50`}
                           >
                             <button
                               onClick={() => {
