@@ -163,6 +163,25 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         }
     }
 
+    // Check local cover art cache in APPDATA
+    if cover_art.is_none() {
+        if let (Some(t), Some(a)) = (&title, &artist) {
+            let term = format!("{} {}", a, t);
+            let hash = deterministic_id(&term);
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                let cache_file = std::path::PathBuf::from(appdata)
+                    .join("OfflinePlayer")
+                    .join("covers")
+                    .join(format!("{}.txt", hash));
+                if cache_file.exists() {
+                    if let Ok(cached_data) = std::fs::read_to_string(&cache_file) {
+                        cover_art = Some(cached_data);
+                    }
+                }
+            }
+        }
+    }
+
     let title = title.unwrap_or(default_title);
     let artist = artist.unwrap_or(default_artist);
     let album = album.unwrap_or_else(|| "Offline Music".to_string());

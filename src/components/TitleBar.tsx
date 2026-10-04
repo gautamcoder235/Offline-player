@@ -1,4 +1,5 @@
 import React from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Minus, Square, X } from 'lucide-react';
 
@@ -8,45 +9,65 @@ export function TitleBar() {
   const handleMouseDown = async (e: React.MouseEvent) => {
     if (e.button === 0) {
       try {
-        await appWindow.startDragging();
-      } catch (err) {
-        console.warn('startDragging failed:', err);
+        await invoke('app_start_dragging');
+      } catch {
+        try {
+          await appWindow.startDragging();
+        } catch (err) {
+          console.warn('startDragging failed:', err);
+        }
       }
     }
   };
 
   const handleDoubleClick = async () => {
     try {
-      await appWindow.toggleMaximize();
-    } catch (err) {
-      console.warn('toggleMaximize failed:', err);
+      await invoke('app_toggle_maximize');
+    } catch {
+      try {
+        await appWindow.toggleMaximize();
+      } catch (err) {
+        console.warn('toggleMaximize failed:', err);
+      }
     }
   };
 
   const handleMinimize = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await appWindow.minimize();
-    } catch (err) {
-      console.warn('minimize failed:', err);
+      await invoke('app_minimize');
+    } catch {
+      try {
+        await appWindow.minimize();
+      } catch (err) {
+        console.warn('minimize failed:', err);
+      }
     }
   };
 
   const handleToggleMaximize = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await appWindow.toggleMaximize();
-    } catch (err) {
-      console.warn('toggleMaximize failed:', err);
+      await invoke('app_toggle_maximize');
+    } catch {
+      try {
+        await appWindow.toggleMaximize();
+      } catch (err) {
+        console.warn('toggleMaximize failed:', err);
+      }
     }
   };
 
   const handleClose = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await appWindow.close();
-    } catch (err) {
-      console.warn('close failed:', err);
+      await invoke('app_close');
+    } catch {
+      try {
+        await appWindow.close();
+      } catch (err) {
+        console.warn('close failed:', err);
+      }
     }
   };
 
@@ -58,7 +79,7 @@ export function TitleBar() {
       className="flex justify-between items-center w-full h-[36px] bg-[#100F14] border-b border-[#292731] select-none z-50 sticky top-0 cursor-default"
     >
       {/* Left: App Brand & Quiet Status */}
-      <div className="flex items-center gap-3 px-3.5 pointer-events-none">
+      <div data-tauri-drag-region className="flex items-center gap-3 px-3.5 pointer-events-none">
         <div className="flex items-center gap-2">
           <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-sm object-contain" />
           <span className="text-[12px] font-semibold text-[#F4F2F7] tracking-tight">Offline Player</span>
@@ -81,7 +102,7 @@ export function TitleBar() {
           onClick={handleMinimize}
           className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] transition-colors duration-150 cursor-pointer"
         >
-          <Minus className="w-3.5 h-3.5" />
+          <Minus className="w-3.5 h-3.5 pointer-events-none" />
         </button>
         <button
           type="button"
@@ -90,7 +111,7 @@ export function TitleBar() {
           onClick={handleToggleMaximize}
           className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] transition-colors duration-150 cursor-pointer"
         >
-          <Square className="w-3 h-3" />
+          <Square className="w-3 h-3 pointer-events-none" />
         </button>
         <button
           type="button"
@@ -99,7 +120,7 @@ export function TitleBar() {
           onClick={handleClose}
           className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#FF667A] hover:text-white transition-colors duration-150 cursor-pointer"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-3.5 h-3.5 pointer-events-none" />
         </button>
       </div>
     </div>

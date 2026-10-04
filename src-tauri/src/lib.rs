@@ -194,15 +194,35 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::{Manager, WindowEvent, Emitter};
 
 #[tauri::command]
-fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
-    use std::hash::{Hash, Hasher};
-    use std::collections::hash_map::DefaultHasher;
+fn app_minimize(window: tauri::WebviewWindow) {
+    let _ = window.minimize();
+}
 
+#[tauri::command]
+fn app_toggle_maximize(window: tauri::WebviewWindow) {
+    if let Ok(is_max) = window.is_maximized() {
+        if is_max {
+            let _ = window.unmaximize();
+        } else {
+            let _ = window.maximize();
+        }
+    }
+}
+
+#[tauri::command]
+fn app_close(window: tauri::WebviewWindow) {
+    let _ = window.hide();
+}
+
+#[tauri::command]
+fn app_start_dragging(window: tauri::WebviewWindow) {
+    let _ = window.start_dragging();
+}
+
+#[tauri::command]
+fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
     let term = format!("{} {}", artist, title);
-    
-    let mut hasher = DefaultHasher::new();
-    term.hash(&mut hasher);
-    let hash = hasher.finish();
+    let hash = crate::metadata::deterministic_id(&term);
     
     let base = std::env::var("APPDATA")
         .map(PathBuf::from)
@@ -329,6 +349,10 @@ pub fn run() {
             get_settings,
             save_settings,
             fetch_cover_art,
+            app_minimize,
+            app_toggle_maximize,
+            app_close,
+            app_start_dragging,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

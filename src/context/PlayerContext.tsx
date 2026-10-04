@@ -154,6 +154,44 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refreshLibrary();
   }, [refreshLibrary]);
 
+  // Background cover art auto-fetcher for all offline tracks missing artwork
+  useEffect(() => {
+    if (tracks.length === 0) return;
+
+    let isCancelled = false;
+
+    const loadMissingCovers = async () => {
+      // Find tracks that do not have cover art yet
+      const missing = tracks.filter((t) => !t.cover_art);
+      if (missing.length === 0) return;
+
+      for (const t of missing) {
+        if (isCancelled) break;
+        try {
+          const art = await invoke<string | null>('fetch_cover_art', {
+            artist: t.artist,
+            title: t.title,
+          });
+          if (art && !isCancelled) {
+            setTracks((prev) =>
+              prev.map((track) => (track.id === t.id ? { ...track, cover_art: art } : track))
+            );
+          }
+        } catch {
+          // ignore individual fetch errors
+        }
+        // Small delay to prevent network throttling
+        await new Promise((r) => setTimeout(r, 120));
+      }
+    };
+
+    loadMissingCovers();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [tracks.length]);
+
   // Load lyrics for track
   const fetchLyrics = useCallback(async (track: Track) => {
     setIsLoadingLyrics(true);
