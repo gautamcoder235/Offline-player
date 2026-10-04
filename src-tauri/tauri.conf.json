@@ -20,6 +20,18 @@
         "minHeight": 640,
         "center": true,
         "decorations": false
+      },
+      {
+        "label": "tray_popup",
+        "title": "Offline Player",
+        "width": 260,
+        "height": 340,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false
       }
     ],
     "security": {

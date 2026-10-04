@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -9,23 +10,24 @@ import { LyricsView } from './components/LyricsView';
 import { SettingsView } from './components/SettingsView';
 import { PlaylistsView } from './components/PlaylistsView';
 import { EqualizerModal } from './components/EqualizerModal';
-import { VisualizerCanvas } from './components/VisualizerCanvas';
+import { VisualizerView } from './components/VisualizerView';
 import { QueueDrawer } from './components/QueueDrawer';
 import { ToastNotification } from './components/ToastNotification';
 import { AmbientGlow } from './components/AmbientGlow';
 import { ViewMode } from './types';
 import './App.css';
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { TitleBar } from './components/TitleBar';
+import { TrayPopup } from './components/TrayPopup';
 
 const MainApp: React.FC = () => {
-  const { tracks, searchQuery, likedTrackIds } = usePlayer();
+  const { tracks, searchQuery, likedTrackIds, createPlaylist, playlists } = usePlayer();
   const [currentView, setCurrentView] = useState<ViewMode>('songs');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'artists' | 'albums'>('all');
 
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
-  const [isVisualizerOpen, setIsVisualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('offline_player_sidebar_collapsed') === 'true';
@@ -50,6 +52,53 @@ const MainApp: React.FC = () => {
       window.removeEventListener('toggle-sidebar', handleToggle);
     };
   }, []);
+
+  // Listen for Tray context menu navigation events
+  useEffect(() => {
+    let unlistenOpenView: (() => void) | undefined;
+    let unlistenOpenPlaylist: (() => void) | undefined;
+    let unlistenNewPlaylist: (() => void) | undefined;
+
+    const setupTrayNavigation = async () => {
+      unlistenOpenView = await listen<ViewMode>('tray://open-view', (event) => {
+        setSelectedPlaylistId(null);
+        setCurrentView(event.payload);
+      });
+      unlistenOpenPlaylist = await listen<string>('tray://open-playlist', (event) => {
+        setSelectedPlaylistId(event.payload);
+        setCurrentView('playlist_detail');
+      });
+      unlistenNewPlaylist = await listen('tray://new-playlist', () => {
+        const pool = [
+          'Late Night Chill',
+          'Neon Vibes',
+          'Acoustic Bliss',
+          'Daily Discovery',
+          'Golden Hour',
+          'Retro Wave',
+          'Focus Flow',
+          'Midnight Grooves',
+        ];
+        const colors = ['#19E6A0', '#E8C77A', '#7F5AF0', '#2CB67D', '#FF667A', '#3B82F6'];
+        const randomName = pool[Math.floor(Math.random() * pool.length)] + ` #${playlists.length + 1}`;
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        const randomTracks = tracks.slice(0, Math.min(5, tracks.length)).map((t) => t.id);
+        const newPl = createPlaylist(randomName, 'Curated random mix', randomTracks, randomColor);
+        if (newPl?.id) {
+          setSelectedPlaylistId(newPl.id);
+          setCurrentView('playlist_detail');
+        }
+      });
+    };
+
+    setupTrayNavigation();
+
+    return () => {
+      if (unlistenOpenView) unlistenOpenView();
+      if (unlistenOpenPlaylist) unlistenOpenPlaylist();
+      if (unlistenNewPlaylist) unlistenNewPlaylist();
+    };
+  }, [createPlaylist, playlists.length, tracks]);
 
   // Filtered tracks based on search query & category
   const filteredTracks = useMemo(() => {
@@ -80,6 +129,8 @@ const MainApp: React.FC = () => {
 
   const renderMainContent = () => {
     switch (currentView) {
+      case 'visualizer':
+        return <VisualizerView />;
       case 'download':
         return <DownloaderView />;
       case 'lyrics':
@@ -92,6 +143,7 @@ const MainApp: React.FC = () => {
           <PlaylistsView
             selectedPlaylistId={selectedPlaylistId}
             onSelectPlaylist={setSelectedPlaylistId}
+            onViewChange={setCurrentView}
           />
         );
       case 'liked':
@@ -121,7 +173,7 @@ const MainApp: React.FC = () => {
       <AmbientGlow />
 
       {/* Main App Frame */}
-      <div className="flex flex-1 overflow-hidden z-10 pt-0">
+      <div className="flex flex-1 overflow-hidden z-10 pt-0 min-h-0">
         {/* Left Sidebar */}
         <Sidebar
           currentView={currentView}
@@ -129,13 +181,13 @@ const MainApp: React.FC = () => {
           selectedPlaylistId={selectedPlaylistId}
           onSelectPlaylist={setSelectedPlaylistId}
           onOpenEqualizer={() => setIsEqualizerOpen(true)}
-          onOpenVisualizer={() => setIsVisualizerOpen(true)}
+          onOpenVisualizer={() => setCurrentView((prev) => (prev === 'visualizer' ? 'songs' : 'visualizer'))}
           isCollapsed={isSidebarCollapsed}
           onToggle={() => setIsSidebarCollapsed(prev => !prev)}
         />
 
-        {/* Center Main Stage */}
-        <main className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Center Main Stage - Rounded Card Canvas with Uniform Decreased Spacing */}
+        <main className="flex-1 flex flex-col overflow-hidden relative min-h-0 m-1.5 rounded-2xl bg-[#100F14] border border-[#292731]/40 shadow-sm">
           <Header filterType={filterType} onFilterChange={setFilterType} />
           <div className="flex-1 overflow-hidden flex flex-col">{renderMainContent()}</div>
         </main>
@@ -149,13 +201,12 @@ const MainApp: React.FC = () => {
         isQueueActive={isQueueOpen}
         onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
         isEqualizerActive={isEqualizerOpen}
-        onToggleVisualizer={() => setIsVisualizerOpen((prev) => !prev)}
-        isVisualizerActive={isVisualizerOpen}
+        onToggleVisualizer={() => setCurrentView((prev) => (prev === 'visualizer' ? 'songs' : 'visualizer'))}
+        isVisualizerActive={currentView === 'visualizer'}
       />
 
       {/* Modals & Overlays */}
       <EqualizerModal isOpen={isEqualizerOpen} onClose={() => setIsEqualizerOpen(false)} />
-      <VisualizerCanvas isOpen={isVisualizerOpen} onClose={() => setIsVisualizerOpen(false)} />
       <QueueDrawer isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
       <ToastNotification />
     </div>
@@ -163,6 +214,12 @@ const MainApp: React.FC = () => {
 };
 
 export default function App() {
+  const isTrayPopup = typeof window !== 'undefined' && getCurrentWindow().label === 'tray_popup';
+
+  if (isTrayPopup) {
+    return <TrayPopup />;
+  }
+
   return (
     <PlayerProvider>
       <MainApp />

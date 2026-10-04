@@ -6,7 +6,6 @@ import {
   RefreshCw,
   FolderOpen,
   Keyboard,
-  Info,
   Check,
   Download,
   RotateCcw,
@@ -319,8 +318,8 @@ export const SettingsView: React.FC = () => {
 
       {/* App Info Footer */}
       <div className="flex items-center justify-between px-1 pt-1 text-[11px] text-[#65616F]">
-        <div className="flex items-center gap-1.5">
-          <Info className="w-3.5 h-3.5 text-[#65616F]" />
+        <div className="flex items-center gap-2">
+          <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-md object-contain shadow-sm" />
           <span>Offline Player v0.1.0 • Tauri v2 + Rust Audio Engine</span>
         </div>
         <span>Built for Gautam</span>

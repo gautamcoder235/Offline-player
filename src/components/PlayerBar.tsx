@@ -98,18 +98,20 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const effectiveVol = isMuted ? 0 : volume;
+  const volPercent = Math.round(effectiveVol * 100);
 
   const trackColor = currentTrack
     ? getTrackColor(currentTrack.title, currentTrack.artist)
     : { bg: '#16151C', text: '#777381', glow: 'transparent' };
 
   return (
-    <footer className="h-20 px-6 flex items-center justify-between border-t border-[#292731] bg-[#100F14]/95 backdrop-blur-xl z-20 select-none">
+    <footer className="h-20 shrink-0 px-3 sm:px-6 flex items-center justify-between border-t border-[#292731]/40 bg-[#100F14]/95 backdrop-blur-xl z-20 select-none overflow-hidden">
       {/* LEFT: Track Info & Champagne Heart */}
-      <div className="flex items-center gap-3 w-1/4 min-w-[220px]">
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none sm:w-1/4 min-w-0 max-w-[200px] sm:max-w-[280px] md:max-w-[320px] shrink-0">
         {currentTrack ? (
           <>
-            <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-[#292731] shrink-0 bg-[#16151C]">
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden border border-[#292731] shrink-0 bg-[#16151C]">
               {currentTrack.cover_art ? (
                 <img
                   src={currentTrack.cover_art}
@@ -125,17 +127,17 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 </div>
               )}
             </div>
-            <div className="flex flex-col min-w-0 pr-2">
+            <div className="flex flex-col min-w-0 pr-1 sm:pr-2">
               <span className="text-xs font-semibold text-[#F4F2F7] truncate">
                 {currentTrack.title}
               </span>
-              <span className="text-[11px] text-[#777381] truncate">
+              <span className="text-[10px] sm:text-[11px] text-[#777381] truncate">
                 {currentTrack.artist}
               </span>
             </div>
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+              className={`p-1 sm:p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
                 isLiked ? 'text-[#E8C77A]' : 'text-[#65616F] hover:text-[#E8C77A]'
               }`}
               title={isLiked ? 'Remove from Liked' : 'Save to Liked'}
@@ -145,22 +147,22 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             </button>
           </>
         ) : (
-          <div className="flex items-center gap-3 text-xs text-[#65616F]">
-            <div className="w-12 h-12 rounded-lg bg-[#16151C] border border-[#292731] flex items-center justify-center">
+          <div className="flex items-center gap-2.5 text-xs text-[#65616F]">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-[#16151C] border border-[#292731] flex items-center justify-center shrink-0">
               <Disc3 className="w-5 h-5 text-[#4B4854]" />
             </div>
-            <span className="text-[11px]">No song selected</span>
+            <span className="text-[11px] truncate">No song selected</span>
           </div>
         )}
       </div>
 
       {/* CENTER: Playback Controls & Scrubber */}
-      <div className="flex flex-col items-center gap-1.5 w-2/4 max-w-xl">
+      <div className="flex flex-col items-center gap-1 sm:gap-1.5 flex-1 max-w-xl px-2 sm:px-4 min-w-0">
         {/* Buttons */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-2.5 sm:gap-4 md:gap-5">
           <button
             onClick={toggleShuffle}
-            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+            className={`p-1 sm:p-1.5 rounded-full transition-colors cursor-pointer ${
               shuffle ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
             }`}
             title="Shuffle"
@@ -171,7 +173,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={prevTrack}
-            className="p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-colors cursor-pointer"
             title="Previous (Ctrl+Left)"
             aria-label="Previous Track"
           >
@@ -180,7 +182,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={togglePlay}
-            className="w-9 h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow transition-transform hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             title="Play / Pause (Space)"
             aria-label="Play or Pause"
           >
@@ -193,7 +195,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={nextTrack}
-            className="p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-colors cursor-pointer"
             title="Next (Ctrl+Right)"
             aria-label="Next Track"
           >
@@ -202,7 +204,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={cycleRepeat}
-            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+            className={`p-1 sm:p-1.5 rounded-full transition-colors cursor-pointer ${
               repeatMode !== 'off' ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
             }`}
             title={`Repeat: ${repeatMode}`}
@@ -213,15 +215,15 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         </div>
 
         {/* Time Scrubber */}
-        <div className="w-full flex items-center gap-3 text-[11px] text-[#777381] font-mono">
-          <span className="w-8 text-right">{formatTime(currentTime)}</span>
+        <div className="w-full flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] text-[#777381] font-mono">
+          <span className="w-7 sm:w-8 text-right shrink-0">{formatTime(currentTime)}</span>
 
           <div
             ref={progressBarRef}
             onClick={handleProgressClick}
             onMouseMove={handleProgressMouseMove}
             onMouseLeave={handleProgressMouseLeave}
-            className="relative flex-1 h-3 flex items-center cursor-pointer group py-1"
+            className="relative flex-1 h-3 flex items-center cursor-pointer group py-1 min-w-[60px]"
           >
             {/* Background Track */}
             <div className="w-full h-1 bg-[#292731] rounded-full overflow-hidden relative group-hover:h-1.5 transition-all">
@@ -252,16 +254,16 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             </div>
           </div>
 
-          <span className="w-8">{formatTime(duration)}</span>
+          <span className="w-7 sm:w-8 shrink-0">{formatTime(duration)}</span>
         </div>
       </div>
 
       {/* RIGHT: Tools & Volume */}
-      <div className="flex items-center justify-end gap-3 w-1/4 min-w-[220px]">
+      <div className="flex items-center justify-end gap-1.5 sm:gap-2 md:gap-3 shrink-0 min-w-fit">
         {/* Real-time Visualizer Button */}
         <button
           onClick={onToggleVisualizer}
-          className={`p-1.5 transition-colors cursor-pointer ${
+          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
             isVisualizerActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Audio Visualizer"
@@ -273,7 +275,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Live Lyrics Button */}
         <button
           onClick={onToggleLyrics}
-          className={`p-1.5 transition-colors cursor-pointer ${
+          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
             isLyricsActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Lyrics"
@@ -285,7 +287,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Equalizer Button */}
         <button
           onClick={onToggleEqualizer}
-          className={`p-1.5 transition-colors cursor-pointer ${
+          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
             isEqualizerActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Equalizer"
@@ -297,7 +299,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Queue Button */}
         <button
           onClick={onToggleQueue}
-          className={`p-1.5 transition-colors cursor-pointer ${
+          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
             isQueueActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Playing Queue"
@@ -307,10 +309,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         </button>
 
         {/* Volume Scrubber */}
-        <div className="flex items-center gap-2 pl-2 border-l border-[#292731]">
+        <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-[#292731] shrink-0">
           <button
             onClick={toggleMute}
-            className="text-[#777381] hover:text-[#F4F2F7] transition-colors cursor-pointer"
+            className="text-[#777381] hover:text-[#F4F2F7] transition-colors cursor-pointer p-0.5"
             title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
             aria-label="Toggle Mute"
           >
@@ -328,10 +330,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             min="0"
             max="1"
             step="0.01"
-            value={isMuted ? 0 : volume}
+            value={effectiveVol}
             onChange={(e) => setVolumeLevel(parseFloat(e.target.value))}
-            className="w-20 h-1 slider-track cursor-pointer"
-            title={`Volume: ${Math.round(volume * 100)}%`}
+            className="w-16 sm:w-20 md:w-24 h-1 slider-track cursor-pointer transition-all shrink-0"
+            style={{
+              background: `linear-gradient(to right, #19E6A0 0%, #19E6A0 ${volPercent}%, #292731 ${volPercent}%, #292731 100%)`
+            }}
+            title={`Volume: ${volPercent}%`}
             aria-label="Volume slider"
           />
         </div>

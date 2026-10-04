@@ -1,7 +1,7 @@
 import os
 from PIL import Image
 
-src_path = r"C:\Users\sharm\.gemini\antigravity\brain\7a6d9932-cc6f-42d6-b607-4c0e46752aee\offline_player_logo_1790976029108.jpg"
+src_path = r"C:\Users\sharm\Downloads\ChatGPT Image Oct 4, 2026, 01_54_21 PM.png"
 if not os.path.exists(src_path):
     print("Source image not found.")
     exit(1)
@@ -14,6 +14,7 @@ os.makedirs(icon_dir, exist_ok=True)
 
 sizes = {
     "32x32.png": 32,
+    "64x64.png": 64,
     "128x128.png": 128,
     "128x128@2x.png": 256,
     "icon.png": 512,
@@ -33,14 +34,17 @@ for name, size in sizes.items():
     resized = src.resize((size, size), Image.LANCZOS)
     resized.save(os.path.join(icon_dir, name))
 
-# Generate .ico with multiple sizes
-ico_sizes = [16, 32, 48, 256]
-ico_images = [src.resize((s, s), Image.LANCZOS) for s in ico_sizes]
-ico_images[0].save(os.path.join(icon_dir, "icon.ico"), format="ICO", sizes=[(s, s) for s in ico_sizes])
+# Generate .ico with all standard Windows resolutions (16, 24, 32, 48, 64, 128, 256)
+src.save(
+    os.path.join(icon_dir, "icon.ico"),
+    format="ICO",
+    sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+)
 
-# Save to public directory
+# Save to public directory for TitleBar and web favicon
 public_dir = r"e:\Codes\Apps Build Files\Spotify Offline\public"
 os.makedirs(public_dir, exist_ok=True)
-resized_32 = src.resize((32, 32), Image.LANCZOS)
-resized_32.save(os.path.join(public_dir, "app-icon.png"))
+resized_web = src.resize((128, 128), Image.LANCZOS)
+resized_web.save(os.path.join(public_dir, "app-icon.png"))
+src.resize((512, 512), Image.LANCZOS).save(os.path.join(public_dir, "icon.png"))
 print("Done.")

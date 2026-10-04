@@ -2,6 +2,8 @@ pub mod downloader;
 pub mod lyrics;
 pub mod metadata;
 pub mod streamer;
+#[cfg(windows)]
+pub mod taskbar;
 
 use downloader::{run_download, stop_download, DownloaderState};
 use lyrics::{get_local_lyrics, save_lrc_file, LyricsResult};
@@ -34,6 +36,7 @@ impl Default for AppSettings {
 pub struct AppState {
     pub downloader: DownloaderState,
     pub settings: Mutex<AppSettings>,
+    pub tray_playlists: Mutex<Vec<TrayPlaylist>>,
 }
 
 fn get_settings_file_path() -> PathBuf {
@@ -190,7 +193,7 @@ fn save_settings(state: State<'_, AppState>, settings: AppSettings) -> AppSettin
 }
 
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
-use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem};
 use tauri::{Manager, WindowEvent, Emitter};
 
 #[tauri::command]
@@ -220,8 +223,119 @@ fn app_start_dragging(window: tauri::WebviewWindow) {
 }
 
 #[tauri::command]
+fn update_taskbar_playback_state(is_playing: bool) {
+    #[cfg(windows)]
+    taskbar::update_play_state(is_playing);
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrayPlaylist {
+    pub id: String,
+    pub name: String,
+}
+
+fn build_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, playlists: &[TrayPlaylist]) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+    let show_i = MenuItemBuilder::with_id("show", "Show Offline Player").build(app)?;
+    let sep1 = PredefinedMenuItem::separator(app)?;
+
+    let liked_i = MenuItemBuilder::with_id("pl:liked", "♥ Liked Songs").build(app)?;
+    let sep_pl = PredefinedMenuItem::separator(app)?;
+    let mut pl_builder = SubmenuBuilder::new(app, "Playlists")
+        .item(&liked_i)
+        .item(&sep_pl);
+
+    let mut custom_items = Vec::new();
+    for pl in playlists {
+        let item = MenuItemBuilder::with_id(format!("pl:{}", pl.id), &pl.name).build(app)?;
+        custom_items.push(item);
+    }
+    for item in &custom_items {
+        pl_builder = pl_builder.item(item);
+    }
+
+    let sep_pl2 = PredefinedMenuItem::separator(app)?;
+    let new_pl_i = MenuItemBuilder::with_id("pl:new", "+ New Random Playlist").build(app)?;
+    let pl_submenu = pl_builder
+        .item(&sep_pl2)
+        .item(&new_pl_i)
+        .build()?;
+
+    let sep2 = PredefinedMenuItem::separator(app)?;
+    let quit_i = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+
+    MenuBuilder::new(app)
+        .items(&[
+            &show_i,
+            &sep1,
+            &pl_submenu,
+            &sep2,
+            &quit_i,
+        ])
+        .build()
+}
+
+#[tauri::command]
+fn update_tray_playlists(state: State<'_, AppState>, app: AppHandle, playlists: Vec<TrayPlaylist>) -> Result<(), String> {
+    {
+        let mut lock = state.tray_playlists.lock().unwrap();
+        *lock = playlists.clone();
+    }
+    let _ = app.emit("tray://playlists-updated", &playlists);
+    if let Some(tray) = app.tray_by_id("main_tray") {
+        if let Ok(new_menu) = build_tray_menu(&app, &playlists) {
+            let _ = tray.set_menu(Some(new_menu));
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_tray_playlists(state: State<'_, AppState>) -> Vec<TrayPlaylist> {
+    state.tray_playlists.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn show_main_window(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+    if let Some(p) = app.get_webview_window("tray_popup") {
+        let _ = p.hide();
+    }
+}
+
+#[tauri::command]
+fn open_tray_playlist(app: AppHandle, playlist_id: String) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+    if playlist_id == "liked" {
+        let _ = app.emit("tray://open-view", "liked");
+    } else if playlist_id == "new" {
+        let _ = app.emit("tray://new-playlist", ());
+    } else {
+        let _ = app.emit("tray://open-playlist", playlist_id);
+    }
+    if let Some(p) = app.get_webview_window("tray_popup") {
+        let _ = p.hide();
+    }
+}
+
+#[tauri::command]
+fn quit_app(app: AppHandle) {
+    app.exit(0);
+}
+
+#[tauri::command]
 fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
-    let term = format!("{} {}", artist, title);
+    let clean_artist = if artist.to_lowercase().contains("unknown") { "" } else { artist.trim() };
+    let term = if clean_artist.is_empty() {
+        title.trim().to_string()
+    } else {
+        format!("{} {}", clean_artist, title.trim())
+    };
     let hash = crate::metadata::deterministic_id(&term);
     
     let base = std::env::var("APPDATA")
@@ -236,29 +350,51 @@ fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, Stri
             return Ok(Some(cached_data));
         }
     }
-    
-    let url = format!("https://itunes.apple.com/search?term={}&media=music&limit=1", percent_encoding::utf8_percent_encode(&term, percent_encoding::NON_ALPHANUMERIC));
-    
-    if let Ok(resp) = reqwest::blocking::get(&url) {
-        if let Ok(json) = resp.json::<serde_json::Value>() {
-            if let Some(results) = json.get("results").and_then(|r| r.as_array()) {
-                if let Some(first) = results.first() {
-                    if let Some(art_url) = first.get("artworkUrl100").and_then(|u| u.as_str()) {
-                        let high_res_url = art_url.replace("100x100", "600x600");
-                        if let Ok(img_resp) = reqwest::blocking::get(&high_res_url) {
-                            if let Ok(bytes) = img_resp.bytes() {
-                                use base64::{Engine as _, engine::general_purpose};
-                                let encoded = general_purpose::STANDARD.encode(&bytes);
-                                let base64_str = format!("data:image/jpeg;base64,{}", encoded);
-                                let _ = std::fs::write(&cache_file, &base64_str);
-                                return Ok(Some(base64_str));
+
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(4))
+        .build()
+        .unwrap_or_default();
+
+    let search_itunes = |search_query: &str| -> Option<String> {
+        let url = format!(
+            "https://itunes.apple.com/search?term={}&media=music&limit=1",
+            percent_encoding::utf8_percent_encode(search_query, percent_encoding::NON_ALPHANUMERIC)
+        );
+        if let Ok(resp) = client.get(&url).send() {
+            if let Ok(json) = resp.json::<serde_json::Value>() {
+                if let Some(results) = json.get("results").and_then(|r| r.as_array()) {
+                    if let Some(first) = results.first() {
+                        if let Some(art_url) = first.get("artworkUrl100").and_then(|u| u.as_str()) {
+                            let high_res_url = art_url.replace("100x100", "600x600");
+                            if let Ok(img_resp) = client.get(&high_res_url).send() {
+                                if let Ok(bytes) = img_resp.bytes() {
+                                    use base64::{Engine as _, engine::general_purpose};
+                                    let encoded = general_purpose::STANDARD.encode(&bytes);
+                                    return Some(format!("data:image/jpeg;base64,{}", encoded));
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        None
+    };
+
+    if let Some(base64_str) = search_itunes(&term) {
+        let _ = std::fs::write(&cache_file, &base64_str);
+        return Ok(Some(base64_str));
     }
+
+    let clean_title = title.split('(').next().unwrap_or(&title).split('[').next().unwrap_or(&title).trim();
+    if !clean_title.is_empty() && clean_title != term {
+        if let Some(base64_str) = search_itunes(clean_title) {
+            let _ = std::fs::write(&cache_file, &base64_str);
+            return Ok(Some(base64_str));
+        }
+    }
+
     Ok(None)
 }
 
@@ -271,71 +407,78 @@ pub fn run() {
     let app_state = AppState {
         downloader: DownloaderState::default(),
         settings: Mutex::new(initial_settings),
+        tray_playlists: Mutex::new(Vec::new()),
     };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(app_state)
         .setup(|app| {
-            let show_i = MenuItemBuilder::with_id("show", "Show Offline Player").build(app)?;
-            let play_i = MenuItemBuilder::with_id("play-pause", "Play / Pause").build(app)?;
-            let next_i = MenuItemBuilder::with_id("next", "Next Track").build(app)?;
-            let prev_i = MenuItemBuilder::with_id("prev", "Previous Track").build(app)?;
-            let quit_i = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-            let sep1 = PredefinedMenuItem::separator(app)?;
-            let sep2 = PredefinedMenuItem::separator(app)?;
-
-            let menu = MenuBuilder::new(app)
-                .items(&[&show_i, &sep1, &play_i, &next_i, &prev_i, &sep2, &quit_i])
-                .build()?;
-
-            let _tray = TrayIconBuilder::new()
-                .menu(&menu)
+            let _tray = TrayIconBuilder::with_id("main_tray")
                 .icon(app.default_window_icon().unwrap().clone())
-                .on_menu_event(|app, event| {
-                    match event.id.as_ref() {
-                        "show" => {
-                            if let Some(window) = app.get_webview_window("main") {
+                .on_tray_icon_event(|tray, event| {
+                    match event {
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } => {
+                            if let Some(window) = tray.app_handle().get_webview_window("main") {
                                 let _ = window.show();
                                 let _ = window.set_focus();
                             }
+                            if let Some(popup) = tray.app_handle().get_webview_window("tray_popup") {
+                                let _ = popup.hide();
+                            }
                         }
-                        "play-pause" => {
-                            let _ = app.emit("tray://play-pause", ());
-                        }
-                        "next" => {
-                            let _ = app.emit("tray://next", ());
-                        }
-                        "prev" => {
-                            let _ = app.emit("tray://prev", ());
-                        }
-                        "quit" => {
-                            app.exit(0);
+                        TrayIconEvent::Click {
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Up,
+                            position,
+                            ..
+                        } => {
+                            if let Some(popup) = tray.app_handle().get_webview_window("tray_popup") {
+                                let click_x = position.x;
+                                let click_y = position.y;
+                                let popup_w = 260.0;
+                                let popup_h = 340.0;
+                                let pos_x = (click_x - popup_w + 10.0).max(10.0);
+                                let pos_y = (click_y - popup_h - 10.0).max(10.0);
+
+                                let _ = popup.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(pos_x as i32, pos_y as i32)));
+                                let _ = popup.show();
+                                let _ = popup.set_focus();
+                            }
                         }
                         _ => {}
                     }
                 })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        if let Some(window) = tray.app_handle().get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                })
                 .build(app)?;
+
+            #[cfg(windows)]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    if let Some(icon) = app.default_window_icon() {
+                        let _ = window.set_icon(icon.clone());
+                    }
+                    if let Ok(hwnd) = window.hwnd() {
+                        taskbar::init_taskbar(app.handle().clone(), hwnd);
+                    }
+                }
+            }
 
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+            if window.label() == "tray_popup" {
+                if let WindowEvent::Focused(false) = event {
+                    let _ = window.hide();
+                }
+            } else if window.label() == "main" {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -353,6 +496,12 @@ pub fn run() {
             app_toggle_maximize,
             app_close,
             app_start_dragging,
+            update_taskbar_playback_state,
+            update_tray_playlists,
+            get_tray_playlists,
+            show_main_window,
+            open_tray_playlist,
+            quit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -53,8 +53,8 @@ export const LyricsView: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none relative bg-[#0B0A0F]">
       {/* Top Bar */}
-      <div className="px-8 py-4 flex items-center justify-between border-b border-[#292731] z-10 bg-[#100F14]/90 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      <div className="px-8 py-4 flex items-center justify-between border-b border-[#292731] z-10 bg-[#100F14]/90 backdrop-blur-md min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
           <div className="w-11 h-11 rounded-lg overflow-hidden border border-[#292731] shrink-0 bg-[#16151C]">
             {currentTrack.cover_art ? (
               <img src={currentTrack.cover_art} alt="" className="w-full h-full object-cover" />
@@ -67,17 +67,17 @@ export const LyricsView: React.FC = () => {
               </div>
             )}
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight truncate max-w-md">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight truncate">
               {currentTrack.title}
             </h2>
-            <p className="text-xs text-[#19E6A0] font-medium truncate max-w-md">
+            <p className="text-xs text-[#19E6A0] font-medium truncate">
               {currentTrack.artist}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {currentLyrics?.isSynced && (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#19E6A0]/10 text-[#19E6A0] text-[11px] font-medium border border-[#19E6A0]/20">
               <Check className="w-3 h-3" />

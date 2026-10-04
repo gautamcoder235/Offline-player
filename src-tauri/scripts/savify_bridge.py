@@ -69,6 +69,32 @@ def main():
                 unique_queue.append(track)
 
         total = len(unique_queue)
+
+        # Detect playlist / album name
+        detected_collection_name = ""
+        is_collection = False
+        query_lower = query.lower()
+        if "playlist" in query_lower or "album" in query_lower:
+            is_collection = True
+            try:
+                import urllib.request
+                import re
+                req = urllib.request.Request(query, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+                with urllib.request.urlopen(req, timeout=3.5) as resp:
+                    html = resp.read().decode('utf-8', errors='ignore')
+                    m = re.search(r'<meta property="og:title" content="([^"]+)"', html)
+                    if not m:
+                        m = re.search(r'<title>([^<|]+)', html)
+                    if m:
+                        detected_collection_name = m.group(1).strip()
+            except Exception:
+                pass
+
+            if not detected_collection_name and unique_queue and unique_queue[0].album_name:
+                detected_collection_name = unique_queue[0].album_name
+            elif not detected_collection_name:
+                detected_collection_name = "Downloaded Playlist"
+
         track_list_preview = [
             {"title": t.name, "artists": t.artists, "album": t.album_name}
             for t in unique_queue[:50]
@@ -78,6 +104,8 @@ def main():
             "type": "tracklist",
             "total": total,
             "tracks": track_list_preview,
+            "playlist_name": detected_collection_name if is_collection else None,
+            "is_collection": is_collection,
             "percent": 25,
             "message": f"Found {total} track(s) to process."
         })
@@ -95,12 +123,17 @@ def main():
             # Skip if already exists and > 500KB
             if expected_file.is_file() and expected_file.stat().st_size > 500_000:
                 succeeded += 1
+                artist_name = track.artists[0] if track.artists else "Unknown Artist"
                 emit({
-                    "type": "track_progress",
+                    "type": "track_done",
                     "current": current_num,
                     "total": total,
                     "percent": int(25 + (current_num / total) * 70),
                     "track": str(track),
+                    "title": track.name,
+                    "artist": artist_name,
+                    "album": track.album_name or "",
+                    "file_path": str(expected_file),
                     "status": "already_exists",
                     "message": f"Already downloaded: {str(track)}"
                 })
@@ -120,12 +153,24 @@ def main():
                 res = savify_inst._download(track)
                 if res and res.get("returncode") == 0:
                     succeeded += 1
+                    artist_name = track.artists[0] if track.artists else "Unknown Artist"
+                    actual_location = res.get("location") if res else None
+                    if actual_location and os.path.isfile(str(actual_location)):
+                        file_location = str(actual_location)
+                    elif expected_file.is_file():
+                        file_location = str(expected_file)
+                    else:
+                        file_location = str(actual_location or expected_file)
                     emit({
-                        "type": "track_progress",
+                        "type": "track_done",
                         "current": current_num,
                         "total": total,
                         "percent": int(25 + (current_num / total) * 70),
                         "track": str(track),
+                        "title": track.name,
+                        "artist": artist_name,
+                        "album": track.album_name or "",
+                        "file_path": file_location,
                         "status": "completed",
                         "message": f"Completed: {str(track)}"
                     })
@@ -159,6 +204,8 @@ def main():
             "total": total,
             "succeeded": succeeded,
             "failed": failed,
+            "playlist_name": detected_collection_name if is_collection else None,
+            "is_collection": is_collection,
             "message": f"Finished downloading: {succeeded} succeeded, {failed} failed."
         })
 

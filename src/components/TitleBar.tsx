@@ -45,25 +45,45 @@ export function TitleBar() {
     }
   };
 
+  const handleStartDragging = async (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    try {
+      await appWindow.startDragging();
+    } catch {
+      try {
+        await invoke('app_start_dragging');
+      } catch (err) {
+        console.warn('startDragging failed:', err);
+      }
+    }
+  };
+
   return (
     <div
       data-tauri-drag-region
-      className="flex justify-between items-center w-full h-[36px] bg-[#100F14] border-b border-[#292731] select-none z-50 sticky top-0 cursor-default"
+      onMouseDown={handleStartDragging}
+      onDoubleClick={handleToggleMaximize}
+      className="flex justify-between items-center w-full h-[40px] shrink-0 bg-[#0E0D12] select-none z-50 sticky top-0 cursor-default"
     >
-      {/* Left: App Brand & Quiet Status */}
-      <div data-tauri-drag-region className="flex items-center gap-3 px-3.5 pointer-events-none">
-        <div className="flex items-center gap-2">
-          <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-sm object-contain" />
-          <span className="text-[12px] font-semibold text-[#F4F2F7] tracking-tight">Offline Player</span>
-        </div>
-        <div className="flex items-center gap-1.5 pl-2 border-l border-[#292731]/80 text-[11px] text-[#777381]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
-          <span>Offline</span>
-        </div>
+      {/* Left: App Brand */}
+      <div data-tauri-drag-region className="flex items-center gap-2.5 px-3.5 pointer-events-none">
+        <img
+          src="/app-icon.png"
+          alt="Offline Player"
+          className="w-7 h-7 rounded-full object-contain shrink-0 drop-shadow-md select-none"
+        />
+        <span className="text-[13.5px] font-semibold text-[#F4F2F7] tracking-tight leading-none select-none">
+          Offline Player
+        </span>
       </div>
 
       {/* Middle Drag Spacer */}
-      <div data-tauri-drag-region className="flex-1 h-full" />
+      <div
+        data-tauri-drag-region
+        onMouseDown={handleStartDragging}
+        onDoubleClick={handleToggleMaximize}
+        className="flex-1 h-full cursor-default"
+      />
 
       {/* Right: Window Controls */}
       <div className="flex h-full items-stretch">

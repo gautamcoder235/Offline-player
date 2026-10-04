@@ -72,8 +72,8 @@ export class AudioEngine {
 
       this.sourceNode = this.audioCtx.createMediaElementSource(this.audio);
       this.analyserNode = this.audioCtx.createAnalyser();
-      this.analyserNode.fftSize = 256;
-      this.analyserNode.smoothingTimeConstant = 0.8;
+      this.analyserNode.fftSize = 512;
+      this.analyserNode.smoothingTimeConstant = 0.78;
 
       this.gainNode = this.audioCtx.createGain();
 
@@ -128,6 +128,14 @@ export class AudioEngine {
 
   public pause(): void {
     this.audio.pause();
+  }
+
+  public getCurrentSrc(): string {
+    return this.audio.src || '';
+  }
+
+  public isPaused(): boolean {
+    return this.audio.paused;
   }
 
   public seek(timeInSeconds: number): void {
@@ -189,10 +197,6 @@ export class AudioEngine {
 
   public get currentTime(): number {
     return this.audio.currentTime || 0;
-  }
-
-  public get isPaused(): boolean {
-    return this.audio.paused;
   }
 }
 

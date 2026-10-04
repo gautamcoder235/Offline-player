@@ -2585,6 +2585,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tiny_http",
  "walkdir",
+ "windows",
 ]
 
 [[package]]

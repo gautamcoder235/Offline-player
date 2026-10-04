@@ -24,6 +24,7 @@ export type ViewMode =
   | 'liked'
   | 'download'
   | 'lyrics'
+  | 'visualizer'
   | 'settings';
 
 export interface Playlist {
@@ -64,10 +65,16 @@ export interface DownloadLogEvent {
   message?: string;
   percent?: number;
   track?: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  file_path?: string;
   status?: string;
   total?: number;
   current?: number;
   succeeded?: number;
   failed?: number;
   tracks?: Array<{ title: string; artists: string[]; album: string }>;
+  playlist_name?: string | null;
+  is_collection?: boolean;
 }
