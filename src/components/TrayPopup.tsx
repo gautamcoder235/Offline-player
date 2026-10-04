@@ -29,12 +29,23 @@ export const TrayPopup: React.FC = () => {
     document.body.classList.add('tray-popup-mode');
     document.documentElement.style.setProperty('background', 'transparent', 'important');
     document.documentElement.style.setProperty('background-color', 'transparent', 'important');
+    document.documentElement.style.setProperty('height', '100vh', 'important');
+    document.documentElement.style.setProperty('width', '100vw', 'important');
+    document.documentElement.style.setProperty('overflow', 'hidden', 'important');
+
     document.body.style.setProperty('background', 'transparent', 'important');
     document.body.style.setProperty('background-color', 'transparent', 'important');
+    document.body.style.setProperty('height', '100vh', 'important');
+    document.body.style.setProperty('width', '100vw', 'important');
+    document.body.style.setProperty('overflow', 'hidden', 'important');
+
     const root = document.getElementById('root');
     if (root) {
       root.style.setProperty('background', 'transparent', 'important');
       root.style.setProperty('background-color', 'transparent', 'important');
+      root.style.setProperty('height', '100vh', 'important');
+      root.style.setProperty('width', '100vw', 'important');
+      root.style.setProperty('overflow', 'hidden', 'important');
     }
 
     // Direct wheel event listener ensuring mousewheel scrolling always works across the entire popup window
@@ -86,7 +97,14 @@ export const TrayPopup: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full bg-black border border-[#222226] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col justify-between select-none text-[#F4F2F7] overflow-hidden box-border">
+    <div
+      className="fixed inset-0 w-full h-full bg-black border border-[#222226] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col select-none text-[#F4F2F7] overflow-hidden box-border"
+      style={{
+        width: '100vw',
+        height: '100vh',
+        maxHeight: '100vh',
+      }}
+    >
       {/* Top Header */}
       <div className="flex items-center justify-between pb-2 border-b border-[#1A1A1E] shrink-0">
         <div
@@ -108,10 +126,11 @@ export const TrayPopup: React.FC = () => {
       {/* Main Options Stream */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto py-1 space-y-2 min-h-0 pr-1 overscroll-contain select-none"
+        tabIndex={0}
+        className="flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-2 min-h-0 pr-1 overscroll-contain select-none focus:outline-none"
         style={{
           scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+          scrollbarColor: 'rgba(255, 255, 255, 0.28) transparent',
         }}
       >
         {/* Navigation Category */}

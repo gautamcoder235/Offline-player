@@ -34,6 +34,7 @@ export interface Playlist {
   track_ids: string[];
   createdAt: number;
   coverColor?: string;
+  cover_art?: string;
 }
 
 export interface EqualizerPreset {

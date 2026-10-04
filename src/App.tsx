@@ -241,8 +241,14 @@ export default function App() {
       document.body.classList.add('tray-popup-mode');
       document.documentElement.style.setProperty('background', 'transparent', 'important');
       document.documentElement.style.setProperty('background-color', 'transparent', 'important');
+      document.documentElement.style.setProperty('height', '100vh', 'important');
+      document.documentElement.style.setProperty('width', '100vw', 'important');
+      document.documentElement.style.setProperty('overflow', 'hidden', 'important');
       document.body.style.setProperty('background', 'transparent', 'important');
       document.body.style.setProperty('background-color', 'transparent', 'important');
+      document.body.style.setProperty('height', '100vh', 'important');
+      document.body.style.setProperty('width', '100vw', 'important');
+      document.body.style.setProperty('overflow', 'hidden', 'important');
     }
     return <TrayPopup />;
   }

@@ -116,6 +116,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const renderPlaylistCover = (pl: typeof playlists[0], collapsed: boolean) => {
+    const plTracks = tracks.filter((t) => pl.track_ids.includes(t.id));
+    const coverArts = plTracks
+      .map((t) => t.cover_art)
+      .filter((c): c is string => Boolean(c));
+    const uniqueCovers = Array.from(new Set(pl.cover_art ? [pl.cover_art, ...coverArts] : coverArts));
+    const accentColor = pl.coverColor || '#19E6A0';
+    const sizeClass = collapsed ? 'w-7 h-7 rounded-lg' : 'w-6 h-6 rounded-md';
+
+    if (uniqueCovers.length >= 4) {
+      return (
+        <div
+          className={`${sizeClass} overflow-hidden shrink-0 border border-white/[0.08] shadow-sm bg-[#16151C] grid grid-cols-2 grid-rows-2 transition-transform duration-200 group-hover:scale-105`}
+        >
+          {uniqueCovers.slice(0, 4).map((art, i) => (
+            <img key={i} src={art} alt="" className="w-full h-full object-cover" />
+          ))}
+        </div>
+      );
+    }
+
+    if (uniqueCovers.length > 0) {
+      return (
+        <div
+          className={`${sizeClass} overflow-hidden shrink-0 border border-white/[0.08] shadow-sm bg-[#16151C] transition-transform duration-200 group-hover:scale-105`}
+        >
+          <img src={uniqueCovers[0]} alt={pl.name} className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`${sizeClass} overflow-hidden shrink-0 border border-white/[0.08] shadow-sm flex items-center justify-center transition-transform duration-200 group-hover:scale-105`}
+        style={{
+          background: `linear-gradient(135deg, ${accentColor}25, #14131A)`,
+        }}
+      >
+        <ListMusic className={collapsed ? 'w-3.5 h-3.5' : 'w-3 h-3'} style={{ color: accentColor }} />
+      </div>
+    );
+  };
+
   // Group 1: Primary Navigation
   const primaryNav = [
     {
@@ -353,15 +396,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {isPlActive && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3.5 rounded-r-full bg-[#19E6A0] shadow-[0_0_4px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
                     )}
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold uppercase transition-transform duration-200 group-hover:scale-110"
-                      style={{
-                        backgroundColor: pl.coverColor ? `${pl.coverColor}22` : 'rgba(255,255,255,0.08)',
-                        color: pl.coverColor || '#AAA6B2',
-                      }}
-                    >
-                      {pl.name.charAt(0) || '♪'}
-                    </span>
+                    {renderPlaylistCover(pl, true)}
                   </button>
                 );
               })}
@@ -433,7 +468,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <div
                     key={pl.id}
-                    className={`group relative flex items-center justify-between px-3 h-9 rounded-xl text-xs font-medium cursor-pointer transition-all duration-200 active:scale-[0.98] ${
+                    className={`group relative flex items-center justify-between px-2.5 h-10 rounded-xl text-xs font-medium cursor-pointer transition-all duration-200 active:scale-[0.98] ${
                       isPlActive
                         ? 'bg-[#19181F] text-[#F4F2F7]'
                         : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
@@ -444,18 +479,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }}
                   >
                     {isPlActive && (
-                      <div className="w-1 h-3 rounded-full bg-[#19E6A0] -ml-1 mr-1 shrink-0 shadow-[0_0_4px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
+                      <div className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-1.5 shrink-0 shadow-[0_0_4px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
                     )}
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span
-                        className="w-3.5 h-3.5 rounded-sm flex items-center justify-center text-[9px] font-bold shrink-0 transition-transform duration-200 group-hover:scale-[1.05]"
-                        style={{
-                          backgroundColor: pl.coverColor ? `${pl.coverColor}25` : 'rgba(255,255,255,0.08)',
-                          color: pl.coverColor || '#AAA6B2',
-                        }}
-                      >
-                        {pl.name.charAt(0) || '♪'}
-                      </span>
+                    <div className="flex items-center gap-2.5 truncate flex-1 min-w-0">
+                      {renderPlaylistCover(pl, false)}
                       <span className="truncate">{pl.name}</span>
                     </div>
                     <button
@@ -466,7 +493,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           onViewChange('songs');
                         }
                       }}
-                      className="p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                      className="p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer shrink-0 ml-1"
                       aria-label="Delete playlist"
                     >
                       <Trash2 className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
