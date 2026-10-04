@@ -51,8 +51,22 @@ const globalSession: DownloadSessionState = {
 type SessionListener = () => void;
 const sessionListeners = new Set<SessionListener>();
 
+let notifyRafId: number | null = null;
 function notifySessionListeners() {
-  sessionListeners.forEach((fn) => fn());
+  if (notifyRafId !== null) return;
+  notifyRafId = requestAnimationFrame(() => {
+    notifyRafId = null;
+    sessionListeners.forEach((fn) => fn());
+  });
+}
+
+let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleRefreshLibrary(delay = 1000) {
+  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+  refreshDebounceTimer = setTimeout(() => {
+    refreshDebounceTimer = null;
+    globalCallbacks.refreshLibrary();
+  }, delay);
 }
 
 let isGlobalListening = false;
@@ -120,7 +134,8 @@ function initGlobalListeners() {
         globalSession.sessionTracks = [...globalSession.sessionTracks, newTrack];
       }
 
-      globalCallbacks.refreshLibrary();
+      // Debounce library refresh to avoid freezing disk while downloading
+      scheduleRefreshLibrary(2500);
     }
 
     if (payload.type === 'completed') {
@@ -169,20 +184,23 @@ function initGlobalListeners() {
         }
       }
 
-      globalCallbacks.refreshLibrary();
+      scheduleRefreshLibrary(300);
     }
 
     notifySessionListeners();
   });
 
   listen<string>('download://log', (e) => {
-    globalSession.logs = [...globalSession.logs.slice(-150), e.payload];
+    const raw = e.payload || '';
+    const cleanLog = raw.includes('\r') ? raw.split('\r').pop()?.trim() || raw : raw.trim();
+    if (!cleanLog) return;
+    globalSession.logs = [...globalSession.logs.slice(-100), cleanLog];
     notifySessionListeners();
   });
 
   listen<{ exit_code: number }>('download://complete', () => {
     globalSession.isDownloading = false;
-    globalCallbacks.refreshLibrary();
+    scheduleRefreshLibrary(300);
     notifySessionListeners();
   });
 }
@@ -249,8 +267,8 @@ export const DownloaderView: React.FC = () => {
   }, [tracks]);
 
   useEffect(() => {
-    if (showLogs) {
-      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (showLogs && logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
   }, [globalSession.logs.length, showLogs]);
 

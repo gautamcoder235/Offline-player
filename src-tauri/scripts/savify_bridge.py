@@ -47,7 +47,12 @@ def main():
             download_format=Format.MP3,
             path_holder=path_holder,
             retry=2,
-            skip_cover_art=False
+            skip_cover_art=False,
+            ydl_options={
+                'socket_timeout': 15,
+                'retries': 3,
+                'fragment_retries': 3,
+            }
         )
 
         emit({"type": "status", "message": "Fetching metadata and track list...", "percent": 15})

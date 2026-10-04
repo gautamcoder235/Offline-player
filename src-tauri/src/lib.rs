@@ -69,7 +69,7 @@ fn persist_settings(settings: &AppSettings) {
 }
 
 #[tauri::command]
-fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String>>) -> Vec<TrackMetadata> {
+async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String>>) -> Result<Vec<TrackMetadata>, String> {
     let dirs_to_scan = match directories {
         Some(d) if !d.is_empty() => d,
         _ => {
@@ -82,42 +82,46 @@ fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String>>) ->
         }
     };
 
-    let mut tracks = Vec::new();
-    let mut seen_paths = std::collections::HashSet::new();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut tracks = Vec::new();
+        let mut seen_paths = std::collections::HashSet::new();
 
-    let valid_extensions = ["mp3", "m4a", "flac", "wav", "ogg"];
+        let valid_extensions = ["mp3", "m4a", "flac", "wav", "ogg"];
 
-    for dir_path in dirs_to_scan {
-        let p = Path::new(&dir_path);
-        if !p.exists() || !p.is_dir() {
-            continue;
-        }
+        for dir_path in dirs_to_scan {
+            let p = Path::new(&dir_path);
+            if !p.exists() || !p.is_dir() {
+                continue;
+            }
 
-        for entry in WalkDir::new(p).follow_links(true).into_iter().flatten() {
-            if entry.file_type().is_file() {
-                if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
-                    if valid_extensions.contains(&ext.to_lowercase().as_str()) {
-                        let path_str = entry.path().to_string_lossy().to_string();
-                        if seen_paths.insert(path_str) {
-                            if let Some(meta) = extract_metadata(entry.path()) {
-                                tracks.push(meta);
+            for entry in WalkDir::new(p).follow_links(true).into_iter().flatten() {
+                if entry.file_type().is_file() {
+                    if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
+                        if valid_extensions.contains(&ext.to_lowercase().as_str()) {
+                            let path_str = entry.path().to_string_lossy().to_string();
+                            if seen_paths.insert(path_str) {
+                                if let Some(meta) = extract_metadata(entry.path()) {
+                                    tracks.push(meta);
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    // Sort by artist, then title
-    tracks.sort_by(|a, b| {
-        a.artist
-            .to_lowercase()
-            .cmp(&b.artist.to_lowercase())
-            .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
-    });
+        // Sort by artist, then title
+        tracks.sort_by(|a, b| {
+            a.artist
+                .to_lowercase()
+                .cmp(&b.artist.to_lowercase())
+                .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+        });
 
-    tracks
+        tracks
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -379,73 +383,77 @@ fn quit_app(app: AppHandle) {
 }
 
 #[tauri::command]
-fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
-    let clean_artist = if artist.to_lowercase().contains("unknown") { "" } else { artist.trim() };
-    let term = if clean_artist.is_empty() {
-        title.trim().to_string()
-    } else {
-        format!("{} {}", clean_artist, title.trim())
-    };
-    let hash = crate::metadata::deterministic_id(&term);
-    
-    let base = std::env::var("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."));
-    let cache_dir = base.join("OfflinePlayer").join("covers");
-    let _ = std::fs::create_dir_all(&cache_dir);
-    let cache_file = cache_dir.join(format!("{}.txt", hash));
-    
-    if cache_file.exists() {
-        if let Ok(cached_data) = std::fs::read_to_string(&cache_file) {
-            return Ok(Some(cached_data));
+async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_artist = if artist.to_lowercase().contains("unknown") { "" } else { artist.trim() };
+        let term = if clean_artist.is_empty() {
+            title.trim().to_string()
+        } else {
+            format!("{} {}", clean_artist, title.trim())
+        };
+        let hash = crate::metadata::deterministic_id(&term);
+        
+        let base = std::env::var("APPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("."));
+        let cache_dir = base.join("OfflinePlayer").join("covers");
+        let _ = std::fs::create_dir_all(&cache_dir);
+        let cache_file = cache_dir.join(format!("{}.txt", hash));
+        
+        if cache_file.exists() {
+            if let Ok(cached_data) = std::fs::read_to_string(&cache_file) {
+                return Ok(Some(cached_data));
+            }
         }
-    }
 
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(4))
-        .build()
-        .unwrap_or_default();
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(4))
+            .build()
+            .unwrap_or_default();
 
-    let search_itunes = |search_query: &str| -> Option<String> {
-        let url = format!(
-            "https://itunes.apple.com/search?term={}&media=music&limit=1",
-            percent_encoding::utf8_percent_encode(search_query, percent_encoding::NON_ALPHANUMERIC)
-        );
-        if let Ok(resp) = client.get(&url).send() {
-            if let Ok(json) = resp.json::<serde_json::Value>() {
-                if let Some(results) = json.get("results").and_then(|r| r.as_array()) {
-                    if let Some(first) = results.first() {
-                        if let Some(art_url) = first.get("artworkUrl100").and_then(|u| u.as_str()) {
-                            let high_res_url = art_url.replace("100x100", "600x600");
-                            if let Ok(img_resp) = client.get(&high_res_url).send() {
-                                if let Ok(bytes) = img_resp.bytes() {
-                                    use base64::{Engine as _, engine::general_purpose};
-                                    let encoded = general_purpose::STANDARD.encode(&bytes);
-                                    return Some(format!("data:image/jpeg;base64,{}", encoded));
+        let search_itunes = |search_query: &str| -> Option<String> {
+            let url = format!(
+                "https://itunes.apple.com/search?term={}&media=music&limit=1",
+                percent_encoding::utf8_percent_encode(search_query, percent_encoding::NON_ALPHANUMERIC)
+            );
+            if let Ok(resp) = client.get(&url).send() {
+                if let Ok(json) = resp.json::<serde_json::Value>() {
+                    if let Some(results) = json.get("results").and_then(|r| r.as_array()) {
+                        if let Some(first) = results.first() {
+                            if let Some(art_url) = first.get("artworkUrl100").and_then(|u| u.as_str()) {
+                                let high_res_url = art_url.replace("100x100", "600x600");
+                                if let Ok(img_resp) = client.get(&high_res_url).send() {
+                                    if let Ok(bytes) = img_resp.bytes() {
+                                        use base64::{Engine as _, engine::general_purpose};
+                                        let encoded = general_purpose::STANDARD.encode(&bytes);
+                                        return Some(format!("data:image/jpeg;base64,{}", encoded));
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
-        None
-    };
+            None
+        };
 
-    if let Some(base64_str) = search_itunes(&term) {
-        let _ = std::fs::write(&cache_file, &base64_str);
-        return Ok(Some(base64_str));
-    }
-
-    let clean_title = title.split('(').next().unwrap_or(&title).split('[').next().unwrap_or(&title).trim();
-    if !clean_title.is_empty() && clean_title != term {
-        if let Some(base64_str) = search_itunes(clean_title) {
+        if let Some(base64_str) = search_itunes(&term) {
             let _ = std::fs::write(&cache_file, &base64_str);
             return Ok(Some(base64_str));
         }
-    }
 
-    Ok(None)
+        let clean_title = title.split('(').next().unwrap_or(&title).split('[').next().unwrap_or(&title).trim();
+        if !clean_title.is_empty() && clean_title != term {
+            if let Some(base64_str) = search_itunes(clean_title) {
+                let _ = std::fs::write(&cache_file, &base64_str);
+                return Ok(Some(base64_str));
+            }
+        }
+
+        Ok(None)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
