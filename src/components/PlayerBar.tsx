@@ -137,13 +137,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             </div>
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className={`p-1 sm:p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
+              className={`p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-90 cursor-pointer shrink-0 ${
                 isLiked ? 'text-[#E8C77A]' : 'text-[#65616F] hover:text-[#E8C77A]'
               }`}
               title={isLiked ? 'Remove from Liked' : 'Save to Liked'}
               aria-label={isLiked ? 'Remove from Liked' : 'Save to Liked'}
             >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-[#E8C77A] text-[#E8C77A]' : ''}`} />
+              <Heart className={`w-4 h-4 transition-transform duration-300 ${isLiked ? 'fill-[#E8C77A] text-[#E8C77A] scale-110' : 'scale-100'}`} />
             </button>
           </>
         ) : (
@@ -162,18 +162,19 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <div className="flex items-center gap-2.5 sm:gap-4 md:gap-5">
           <button
             onClick={toggleShuffle}
-            className={`p-1 sm:p-1.5 rounded-full transition-colors cursor-pointer ${
+            className={`relative p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer ${
               shuffle ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
             }`}
             title="Shuffle"
             aria-label="Shuffle"
           >
             <Shuffle className="w-3.5 h-3.5" />
+            {shuffle && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#19E6A0] animate-in fade-in zoom-in duration-200" />}
           </button>
 
           <button
             onClick={prevTrack}
-            className="p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-all duration-200 active:scale-90 cursor-pointer"
             title="Previous (Ctrl+Left)"
             aria-label="Previous Track"
           >
@@ -182,20 +183,20 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={togglePlay}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow transition-transform hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
             title="Play / Pause (Space)"
             aria-label="Play or Pause"
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4 fill-black text-black" />
+              <Pause className="w-4 h-4 fill-black text-black animate-in zoom-in duration-200" />
             ) : (
-              <Play className="w-4 h-4 fill-black text-black ml-0.5" />
+              <Play className="w-4 h-4 fill-black text-black ml-0.5 animate-in zoom-in duration-200" />
             )}
           </button>
 
           <button
             onClick={nextTrack}
-            className="p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-all duration-200 active:scale-90 cursor-pointer"
             title="Next (Ctrl+Right)"
             aria-label="Next Track"
           >
@@ -204,13 +205,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={cycleRepeat}
-            className={`p-1 sm:p-1.5 rounded-full transition-colors cursor-pointer ${
+            className={`relative p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer ${
               repeatMode !== 'off' ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
             }`}
             title={`Repeat: ${repeatMode}`}
             aria-label={`Repeat: ${repeatMode}`}
           >
             {repeatMode === 'one' ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />}
+            {repeatMode !== 'off' && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#19E6A0] animate-in fade-in zoom-in duration-200" />}
           </button>
         </div>
 
@@ -226,7 +228,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             className="relative flex-1 h-3 flex items-center cursor-pointer group py-1 min-w-[60px]"
           >
             {/* Background Track */}
-            <div className="w-full h-1 bg-[#292731] rounded-full overflow-hidden relative group-hover:h-1.5 transition-all">
+            <div className="w-full h-1 bg-[#292731] rounded-full overflow-hidden relative group-hover:h-1.5 transition-all duration-200">
               {/* Hover line */}
               <div
                 ref={hoverLineRef}
@@ -241,14 +243,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
             {/* Scrubber Knob */}
             <div
-              className="absolute w-2.5 h-2.5 bg-[#F4F2F7] rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity -translate-x-1/2 pointer-events-none"
+              className="absolute w-2.5 h-2.5 bg-[#F4F2F7] rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200 -translate-x-1/2 pointer-events-none"
               style={{ left: `${progressPercent}%` }}
             />
 
             {/* Hover Tooltip */}
             <div
               ref={hoverTooltipRef}
-              className="absolute -top-7 px-1.5 py-0.5 rounded bg-[#16151C] border border-[#292731] text-[10px] text-[#F4F2F7] font-mono -translate-x-1/2 shadow hidden"
+              className="absolute -top-7 px-1.5 py-0.5 rounded bg-[#16151C] border border-[#292731] text-[10px] text-[#F4F2F7] font-mono -translate-x-1/2 shadow hidden animate-in fade-in duration-150"
             >
               0:00
             </div>
@@ -263,8 +265,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Real-time Visualizer Button */}
         <button
           onClick={onToggleVisualizer}
-          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
-            isVisualizerActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
+          className={`p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
+            isVisualizerActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Audio Visualizer"
           aria-label="Toggle Audio Visualizer"
@@ -275,8 +277,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Live Lyrics Button */}
         <button
           onClick={onToggleLyrics}
-          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
-            isLyricsActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
+          className={`p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
+            isLyricsActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Lyrics"
           aria-label="Toggle Lyrics"
@@ -287,8 +289,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Equalizer Button */}
         <button
           onClick={onToggleEqualizer}
-          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
-            isEqualizerActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
+          className={`p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
+            isEqualizerActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Equalizer"
           aria-label="Toggle Equalizer"
@@ -299,8 +301,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Queue Button */}
         <button
           onClick={onToggleQueue}
-          className={`p-1 sm:p-1.5 transition-colors cursor-pointer shrink-0 ${
-            isQueueActive ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
+          className={`p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
+            isQueueActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
           }`}
           title="Playing Queue"
           aria-label="Toggle Playing Queue"
@@ -312,7 +314,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-[#292731] shrink-0">
           <button
             onClick={toggleMute}
-            className="text-[#777381] hover:text-[#F4F2F7] transition-colors cursor-pointer p-0.5"
+            className="text-[#777381] hover:text-[#F4F2F7] transition-all duration-200 active:scale-90 cursor-pointer p-0.5"
             title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
             aria-label="Toggle Mute"
           >

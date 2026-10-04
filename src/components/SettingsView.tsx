@@ -149,9 +149,9 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleRescan}
             disabled={isScanning}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1D1C23] hover:bg-[#211F26] border border-[#292731] text-xs font-medium text-[#F4F2F7] transition-colors duration-150 disabled:opacity-50 cursor-pointer"
+            className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1D1C23] hover:bg-[#211F26] border border-[#292731] text-xs font-medium text-[#F4F2F7] transition-all duration-200 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin text-[#19E6A0]' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-300 ${isScanning ? 'animate-spin text-[#19E6A0]' : 'group-hover:rotate-90'}`} />
             <span>Rescan All</span>
           </button>
         </div>
@@ -171,7 +171,7 @@ export const SettingsView: React.FC = () => {
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openInExplorer(dir)}
-                  className="p-1 text-[#777381] hover:text-[#F4F2F7] rounded transition-colors cursor-pointer"
+                  className="p-1 text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B22] rounded transition-all duration-200 active:scale-95 cursor-pointer"
                   title="Open folder in Explorer"
                   aria-label="Open folder in Explorer"
                 >
@@ -180,7 +180,7 @@ export const SettingsView: React.FC = () => {
                 {settings.music_directories.length > 1 && (
                   <button
                     onClick={() => handleRemoveDirectory(dir)}
-                    className="p-1 text-[#777381] hover:text-[#FF667A] rounded transition-colors cursor-pointer"
+                    className="p-1 text-[#777381] hover:text-[#FF667A] hover:bg-[#1C1B22] rounded transition-all duration-200 active:scale-95 cursor-pointer"
                     title="Remove folder"
                     aria-label="Remove folder"
                   >
@@ -204,7 +204,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleAddDirectory}
             disabled={!newDirInput.trim()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs transition-colors duration-150 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs transition-all duration-200 active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Folder</span>
@@ -230,7 +230,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => openInExplorer(settings.download_directory)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1C23] hover:bg-[#211F26] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#292731] transition-colors duration-150 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1C23] hover:bg-[#211F26] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#292731] transition-all duration-200 active:scale-[0.98] cursor-pointer"
               title="Reveal in Windows Explorer"
             >
               <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
@@ -238,7 +238,7 @@ export const SettingsView: React.FC = () => {
             </button>
             <button
               onClick={handleResetDownloadDir}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1C23] hover:bg-[#211F26] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#292731] transition-colors duration-150 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1C23] hover:bg-[#211F26] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#292731] transition-all duration-200 active:scale-[0.98] cursor-pointer"
               title="Reset to default music directory"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -258,7 +258,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleSaveDownloadDir}
             disabled={!downloadDirInput.trim() || downloadDirInput === settings.download_directory}
-            className="px-4 py-2 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs transition-colors duration-150 cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs transition-all duration-200 active:scale-[0.98] cursor-pointer"
           >
             Save Target
           </button>

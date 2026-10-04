@@ -247,7 +247,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           e.stopPropagation();
                           handleRowClick(track);
                         }}
-                        className="hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[#19E6A0] transition-colors cursor-pointer"
+                        className="hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[#19E6A0] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
                         aria-label={isCurrent && isPlaying ? 'Pause' : 'Play'}
                       >
                         {isCurrent && isPlaying ? (
@@ -278,8 +278,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span
-                          className={`font-medium truncate text-xs ${
-                            isCurrent ? 'text-[#19E6A0]' : 'text-[#F4F2F7]'
+                          className={`font-medium truncate text-xs transition-colors duration-200 ${
+                            isCurrent ? 'text-[#19E6A0]' : 'text-[#F4F2F7] group-hover:text-[#19E6A0]'
                           }`}
                         >
                           {track.title}
@@ -302,7 +302,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           e.stopPropagation();
                           toggleLike(track.id);
                         }}
-                        className={`p-1 transition-opacity cursor-pointer ${
+                        className={`p-1 transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer ${
                           isLiked
                             ? 'text-[#E8C77A] opacity-100'
                             : 'text-[#65616F] opacity-0 group-hover:opacity-100 hover:text-[#E8C77A]'
@@ -331,7 +331,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                             setActionFeedback(null);
                           }
                         }}
-                        className={`p-1.5 rounded-lg transition-all duration-150 cursor-pointer ${
+                        className={`p-1.5 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer ${
                           isMenuOpen
                             ? 'opacity-100 text-[#F4F2F7] bg-[#1E1D26]'
                             : 'text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1D1C23] opacity-0 group-hover:opacity-100'
@@ -353,16 +353,16 @@ export const TrackList: React.FC<TrackListProps> = ({
                           {/* Add to Queue */}
                           <button
                             onClick={() => triggerAddToQueue(track)}
-                            className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-150 flex items-center justify-between cursor-pointer group/item"
+                            className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group/item"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               {actionFeedback?.trackId === track.id && actionFeedback.action === 'queue' ? (
-                                <Check className="w-3.5 h-3.5 text-[#19E6A0] animate-pop-in shrink-0" />
+                                <Check className="w-3.5 h-3.5 text-[#19E6A0] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
                               ) : (
-                                <ListPlus className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-150 group-hover/item:scale-110" />
+                                <ListPlus className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
                               )}
                               <span
-                                className={`truncate transition-colors ${
+                                className={`truncate transition-colors duration-200 ${
                                   actionFeedback?.trackId === track.id && actionFeedback.action === 'queue'
                                     ? 'text-[#19E6A0] font-medium'
                                     : ''
@@ -393,19 +393,19 @@ export const TrackList: React.FC<TrackListProps> = ({
                                     <button
                                       key={pl.id}
                                       onClick={() => triggerAddToPlaylist(pl.id, track)}
-                                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer group/pl text-xs"
+                                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 cursor-pointer group/pl text-xs"
                                     >
                                       <span
-                                        className={`truncate flex-1 transition-colors ${
+                                        className={`truncate flex-1 transition-colors duration-200 ${
                                           isPlSaved ? 'text-[#19E6A0] font-medium' : ''
                                         }`}
                                       >
                                         {isPlSaved ? `Added to ${pl.name}` : pl.name}
                                       </span>
                                       {isPlSaved ? (
-                                        <Check className="w-3 h-3 text-[#19E6A0] animate-pop-in shrink-0" />
+                                        <Check className="w-3 h-3 text-[#19E6A0] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
                                       ) : (
-                                        <Plus className="w-3 h-3 text-[#65616F] group-hover/pl:text-[#19E6A0] shrink-0 transition-colors" />
+                                        <Plus className="w-3 h-3 text-[#65616F] group-hover/pl:text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover/pl:scale-110" />
                                       )}
                                     </button>
                                   );
@@ -418,16 +418,16 @@ export const TrackList: React.FC<TrackListProps> = ({
                           <div className="border-t border-[#25232F] my-1 pt-1">
                             <button
                               onClick={() => triggerOpenInExplorer(track)}
-                              className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-150 flex items-center justify-between cursor-pointer group/item"
+                              className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group/item"
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {actionFeedback?.trackId === track.id && actionFeedback.action === 'explorer' ? (
-                                  <Check className="w-3.5 h-3.5 text-[#E8C77A] animate-pop-in shrink-0" />
+                                  <Check className="w-3.5 h-3.5 text-[#E8C77A] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
                                 ) : (
-                                  <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A] shrink-0 transition-transform duration-150 group-hover/item:scale-110" />
+                                  <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
                                 )}
                                 <span
-                                  className={`truncate transition-colors ${
+                                  className={`truncate transition-colors duration-200 ${
                                     actionFeedback?.trackId === track.id && actionFeedback.action === 'explorer'
                                       ? 'text-[#E8C77A] font-medium'
                                       : ''

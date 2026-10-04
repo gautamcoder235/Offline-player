@@ -259,6 +259,15 @@ pub fn update_play_state(is_playing: bool) {
     let play_pause_icon = if is_playing { icons.pause } else { icons.play };
     let play_pause_tip = if is_playing { "Pause" } else { "Play" };
 
+    let prev_button = THUMBBUTTON {
+        dwMask: THB_ICON | THB_FLAGS | THB_TOOLTIP,
+        iId: ID_PREV,
+        iBitmap: 0,
+        hIcon: icons.prev,
+        szTip: str_to_u16_260("Previous"),
+        dwFlags: THBF_ENABLED,
+    };
+
     let play_pause_button = THUMBBUTTON {
         dwMask: THB_ICON | THB_FLAGS | THB_TOOLTIP,
         iId: ID_PLAY_PAUSE,
@@ -268,9 +277,20 @@ pub fn update_play_state(is_playing: bool) {
         dwFlags: THBF_ENABLED,
     };
 
+    let next_button = THUMBBUTTON {
+        dwMask: THB_ICON | THB_FLAGS | THB_TOOLTIP,
+        iId: ID_NEXT,
+        iBitmap: 0,
+        hIcon: icons.next,
+        szTip: str_to_u16_260("Next"),
+        dwFlags: THBF_ENABLED,
+    };
+
+    let buttons = [prev_button, play_pause_button, next_button];
+
     if let Ok(taskbar) = get_taskbar_list() {
         unsafe {
-            let _ = taskbar.ThumbBarUpdateButtons(hwnd_val, &[play_pause_button]);
+            let _ = taskbar.ThumbBarUpdateButtons(hwnd_val, &buttons);
         }
     }
 }
@@ -293,6 +313,18 @@ unsafe extern "system" fn taskbar_subclass_proc(
     if umsg == WM_COMMAND {
         let hiword = ((wparam.0 >> 16) & 0xFFFF) as u32;
         if hiword == THBN_CLICKED {
+            static LAST_CLICK: Mutex<Option<std::time::Instant>> = Mutex::new(None);
+            let now = std::time::Instant::now();
+            {
+                let mut last = LAST_CLICK.lock().unwrap();
+                if let Some(prev) = *last {
+                    if now.duration_since(prev).as_millis() < 250 {
+                        return LRESULT(0);
+                    }
+                }
+                *last = Some(now);
+            }
+
             let button_id = (wparam.0 & 0xFFFF) as u32;
             if let Some(app) = APP_HANDLE.get() {
                 match button_id {

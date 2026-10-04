@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[#777381] hover:text-[#F4F2F7] p-0.5 cursor-pointer"
+              className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[#777381] hover:text-[#F4F2F7] p-0.5 cursor-pointer transition-colors duration-200"
               aria-label="Clear search query"
             >
               <X className="w-3.5 h-3.5" />
@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
               <button
                 key={type}
                 onClick={() => onFilterChange(type)}
-                className={`px-2.5 sm:px-3 py-1 rounded-lg text-[11px] font-medium capitalize transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-[11px] font-medium capitalize transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.98] ${
                   isActive
                     ? 'bg-[#211F26] text-[#F4F2F7] shadow-sm'
                     : 'text-[#9A96A5] hover:text-[#F4F2F7] hover:bg-[#1D1C23]'
@@ -71,10 +71,10 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-[#16151C] hover:bg-[#1D1C23] border border-[#292731] text-[#9A96A5] hover:text-[#F4F2F7] transition-colors duration-150 disabled:opacity-50 cursor-pointer shrink-0"
+          className="group flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-[#16151C] hover:bg-[#1D1C23] border border-[#292731] text-[#9A96A5] hover:text-[#F4F2F7] transition-all duration-200 disabled:opacity-50 cursor-pointer shrink-0 active:scale-[0.98]"
           title="Rescan audio library"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#19E6A0]' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-300 ${isRefreshing ? 'animate-spin text-[#19E6A0]' : 'group-hover:rotate-90'}`} />
           <span className="hidden sm:inline">Rescan</span>
         </button>
       </div>

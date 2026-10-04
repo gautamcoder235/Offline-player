@@ -128,7 +128,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             {playlistTracks.length > 0 && (
               <button
                 onClick={() => playTrack(playlistTracks[0], playlistTracks)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-lg cursor-pointer hover:scale-105 active:scale-95"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-black" />
                 <span>Play All</span>
@@ -136,7 +136,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             )}
             <button
               onClick={() => onSelectPlaylist(null)}
-              className="px-3.5 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-colors duration-150 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
             >
               Back
             </button>
@@ -167,7 +167,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-lg hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>New Playlist</span>
@@ -179,14 +179,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleCreate}
-            className="p-5 rounded-2xl bg-[#16151C] border border-[#292731] w-full max-w-sm space-y-4 shadow-2xl animate-pop-in"
+            className="p-5 rounded-2xl bg-[#16151C] border border-[#292731] w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#F4F2F7]">Create New Playlist</h3>
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                className="text-[#65616F] hover:text-[#F4F2F7] p-1 rounded-lg transition-colors cursor-pointer"
+                className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1C1B22] p-1 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -202,7 +202,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
-                className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50"
+                className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
               />
             </div>
 
@@ -215,7 +215,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 placeholder="Chill tracks for coding..."
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50"
+                className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
               />
             </div>
 
@@ -229,7 +229,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                     key={col}
                     type="button"
                     onClick={() => setSelectedColor(col)}
-                    className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${
+                    className={`w-6 h-6 rounded-full transition-transform duration-200 cursor-pointer active:scale-90 ${
                       selectedColor === col ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
                     }`}
                     style={{ backgroundColor: col }}
@@ -242,14 +242,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                className="px-3.5 py-2 text-xs font-medium text-[#777381] hover:text-[#F4F2F7] rounded-xl cursor-pointer"
+                className="px-3.5 py-2 text-xs font-medium text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B22] transition-all duration-200 active:scale-95 rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!name.trim()}
-                className="px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
               >
                 Create
               </button>
@@ -263,10 +263,10 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         {/* Special Hero Card: Liked Songs */}
         <div
           onClick={() => onViewChange?.('liked')}
-          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#19E6A0]/25 via-[#351070]/30 to-[#14131A] border border-[#292731] hover:border-[#19E6A0]/50 transition-all duration-200 cursor-pointer group flex flex-col justify-between relative shadow-xl min-h-[180px]"
+          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#19E6A0]/25 via-[#351070]/30 to-[#14131A] border border-[#292731] hover:border-[#19E6A0]/50 transition-all duration-200 cursor-pointer group flex flex-col justify-between relative shadow-xl min-h-[180px] active:scale-[0.98]"
         >
           <div className="flex items-start justify-between">
-            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg">
+            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
               <Heart className="w-6 h-6 fill-[#19E6A0] text-[#19E6A0]" />
             </div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#AAA6B2] bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full">
@@ -275,7 +275,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           </div>
 
           <div className="pr-12">
-            <h3 className="text-xl font-black text-[#F4F2F7] tracking-tight group-hover:text-[#19E6A0] transition-colors">
+            <h3 className="text-xl font-black text-[#F4F2F7] tracking-tight group-hover:text-[#19E6A0] transition-colors duration-200">
               Liked Songs
             </h3>
             <p className="text-xs text-[#AAA6B2] mt-1 font-medium">
@@ -289,7 +289,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 e.stopPropagation();
                 playTrack(likedTracks[0], likedTracks);
               }}
-              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-110 active:scale-95 cursor-pointer"
+              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
               title="Play Liked Songs"
             >
               <Play className="w-5 h-5 fill-black text-black ml-0.5" />
@@ -310,10 +310,10 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             <div
               key={pl.id}
               onClick={() => onSelectPlaylist(pl.id)}
-              className="p-3.5 rounded-2xl bg-[#14131A] hover:bg-[#1B1A24] border border-[#282631] hover:border-[#383545] transition-all duration-200 cursor-pointer group flex flex-col gap-3 relative shadow-md hover:shadow-xl"
+              className="p-3.5 rounded-2xl bg-[#14131A] hover:bg-[#1B1A24] border border-[#282631] hover:border-[#383545] transition-all duration-200 cursor-pointer group flex flex-col gap-3 relative shadow-md hover:shadow-xl active:scale-[0.98]"
             >
               {/* Square Aspect Ratio Cover with 2x2 Collage or Artwork */}
-              <div className="aspect-square w-full rounded-xl overflow-hidden shadow-md bg-[#0E0D14] relative border border-[#292731]/70 flex items-center justify-center">
+              <div className="aspect-square w-full rounded-xl overflow-hidden shadow-md bg-[#0E0D14] relative border border-[#292731]/70 flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
                 {uniqueCovers.length >= 4 ? (
                   <div className="w-full h-full grid grid-cols-2 grid-rows-2">
                     {uniqueCovers.slice(0, 4).map((art, i) => (
@@ -340,7 +340,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       e.stopPropagation();
                       playTrack(playlistTracks[0], playlistTracks);
                     }}
-                    className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-110 active:scale-95 cursor-pointer"
+                    className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
                     title={`Play ${pl.name}`}
                   >
                     <Play className="w-4 h-4 fill-black text-black ml-0.5" />
@@ -351,7 +351,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               {/* Card Meta & Delete Action */}
               <div className="flex items-center justify-between min-w-0">
                 <div className="min-w-0 flex-1 pr-1">
-                  <h4 className="text-xs font-bold text-[#F4F2F7] truncate group-hover:text-[#19E6A0] transition-colors">
+                  <h4 className="text-xs font-bold text-[#F4F2F7] truncate group-hover:text-[#19E6A0] transition-colors duration-200">
                     {pl.name}
                   </h4>
                   <span className="text-[11px] text-[#777381] font-mono mt-0.5 block">
@@ -364,11 +364,11 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                     e.stopPropagation();
                     deletePlaylist(pl.id);
                   }}
-                  className="p-1.5 text-[#65616F] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-[#FF667A]/10 cursor-pointer"
+                  className="p-1.5 text-[#65616F] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg hover:bg-[#FF667A]/10 cursor-pointer active:scale-90"
                   title="Delete playlist"
                   aria-label="Delete playlist"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
                 </button>
               </div>
             </div>
@@ -379,10 +379,10 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         {playlists.length < 3 && (
           <button
             onClick={() => setIsCreating(true)}
-            className="p-3.5 rounded-2xl border-2 border-dashed border-[#282631] hover:border-[#19E6A0]/50 hover:bg-[#16151C]/50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 text-[#65616F] hover:text-[#19E6A0] min-h-[180px] group"
+            className="p-3.5 rounded-2xl border-2 border-dashed border-[#282631] hover:border-[#19E6A0]/50 hover:bg-[#16151C]/50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 text-[#65616F] hover:text-[#19E6A0] min-h-[180px] group active:scale-[0.98]"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#14131A] flex items-center justify-center border border-[#282631] group-hover:border-[#19E6A0]/40 transition-colors">
-              <FolderPlus className="w-5 h-5 text-[#777381] group-hover:text-[#19E6A0]" />
+            <div className="w-10 h-10 rounded-xl bg-[#14131A] flex items-center justify-center border border-[#282631] group-hover:border-[#19E6A0]/40 transition-colors duration-200">
+              <FolderPlus className="w-5 h-5 text-[#777381] group-hover:text-[#19E6A0] transition-transform duration-200 group-hover:scale-110" />
             </div>
             <span className="text-xs font-semibold">Create Playlist</span>
           </button>

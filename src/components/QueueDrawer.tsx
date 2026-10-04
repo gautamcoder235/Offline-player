@@ -58,7 +58,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             {queue.length > 0 && (
               <button
                 onClick={clearQueue}
-                className="p-1 text-[#777381] hover:text-[#FF667A] rounded transition-colors cursor-pointer"
+                className="p-1 text-[#777381] hover:text-[#FF667A] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-95 cursor-pointer"
                 title="Clear queue"
                 aria-label="Clear queue"
               >
@@ -67,7 +67,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             )}
             <button
               onClick={onClose}
-              className="p-1 text-[#777381] hover:text-[#F4F2F7] rounded transition-colors cursor-pointer"
+              className="p-1 text-[#777381] hover:text-[#F4F2F7] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-95 cursor-pointer"
               aria-label="Close queue drawer"
             >
               <X className="w-4 h-4" />
@@ -161,14 +161,14 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                       <span className="text-[10px] font-mono text-[#65616F] mr-0.5">
                         {track.duration_str}
                       </span>
-                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         {idx > 0 && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               moveQueueItem(idx, idx - 1);
                             }}
-                            className="p-0.5 text-[#777381] hover:text-[#19E6A0] rounded transition-colors cursor-pointer"
+                            className="p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 hover:scale-110 cursor-pointer"
                             title="Move track up"
                             aria-label="Move track up"
                           >
@@ -181,7 +181,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                               e.stopPropagation();
                               moveQueueItem(idx, idx + 1);
                             }}
-                            className="p-0.5 text-[#777381] hover:text-[#19E6A0] rounded transition-colors cursor-pointer"
+                            className="p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 hover:scale-110 cursor-pointer"
                             title="Move track down"
                             aria-label="Move track down"
                           >
@@ -193,7 +193,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                             e.stopPropagation();
                             removeFromQueue(idx);
                           }}
-                          className="p-0.5 text-[#777381] hover:text-[#FF667A] rounded transition-colors ml-0.5 cursor-pointer"
+                          className="p-1 text-[#777381] hover:text-[#FF667A] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 hover:scale-110 ml-0.5 cursor-pointer"
                           title="Remove from queue"
                           aria-label="Remove from queue"
                         >
@@ -255,7 +255,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                           e.stopPropagation();
                           addToQueue(track);
                         }}
-                        className="p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[#19E6A0] rounded transition-opacity cursor-pointer"
+                        className="p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 hover:scale-110 cursor-pointer"
                         title="Add to queue"
                         aria-label="Add to queue"
                       >

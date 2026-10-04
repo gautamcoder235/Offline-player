@@ -150,6 +150,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Refs for audio engine callbacks to avoid stale closures
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
   const queueRef = useRef(queue);
   queueRef.current = queue;
   const contextTracksRef = useRef(contextTracks);
@@ -573,17 +575,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [handleNextTrack, saveLastPlayed]);
 
   const togglePlay = useCallback(async () => {
-    if (!currentTrack) {
-      if (tracks.length > 0) {
-        await playTrack(tracks[0], tracks);
+    const track = currentTrackRef.current;
+    if (!track) {
+      const allTracks = tracksRef.current;
+      if (allTracks.length > 0) {
+        await playTrack(allTracks[0], allTracks);
       }
       return;
     }
 
-    if (isPlaying) {
+    const currentlyPlaying = isPlayingRef.current || !audioEngine.isPaused();
+
+    if (currentlyPlaying) {
       audioEngine.pause();
       setIsPlaying(false);
-      saveLastPlayed(currentTrack, currentTimeRef.current, durationRef.current);
+      saveLastPlayed(track, currentTimeRef.current, durationRef.current);
     } else {
       // Audio might not be loaded yet into HTMLAudioElement if freshly restored from previous session
       const currentSrc = audioEngine.getCurrentSrc();
@@ -591,11 +597,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (needsLoad) {
         try {
-          let streamUrl = currentTrack.stream_url;
+          let streamUrl = track.stream_url;
           // Refresh URL from backend in case the streaming port changed after app restart
-          if (currentTrack.file_path) {
+          if (track.file_path) {
             try {
-              const freshUrl = await invoke<string>('get_audio_url', { filePath: currentTrack.file_path });
+              const freshUrl = await invoke<string>('get_audio_url', { filePath: track.file_path });
               if (freshUrl) {
                 streamUrl = freshUrl;
                 setCurrentTrack((prev) => (prev ? { ...prev, stream_url: freshUrl } : prev));
@@ -619,7 +625,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       await audioEngine.play();
       setIsPlaying(true);
     }
-  }, [currentTrack, isPlaying, playTrack, saveLastPlayed, tracks]);
+  }, [playTrack, saveLastPlayed]);
 
 
   // Sync playlists with Taskbar / System Tray context menu
@@ -719,32 +725,59 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   }, []);
 
-  // Tray Event Listeners
+  const togglePlayRef = useRef(togglePlay);
+  togglePlayRef.current = togglePlay;
+  const handleNextTrackRef = useRef(handleNextTrack);
+  handleNextTrackRef.current = handleNextTrack;
+  const handlePrevTrackRef = useRef(handlePrevTrack);
+  handlePrevTrackRef.current = handlePrevTrack;
+  const toggleShuffleRef = useRef(toggleShuffle);
+  toggleShuffleRef.current = toggleShuffle;
+  const cycleRepeatRef = useRef(cycleRepeat);
+  cycleRepeatRef.current = cycleRepeat;
+
+  // Tray & Taskbar Event Listeners - registered once on mount with stable listener callbacks
   useEffect(() => {
     let unlistenPlayPause: (() => void) | undefined;
     let unlistenNext: (() => void) | undefined;
     let unlistenPrev: (() => void) | undefined;
     let unlistenShuffle: (() => void) | undefined;
     let unlistenRepeat: (() => void) | undefined;
+    let isMounted = true;
 
     const setupTrayListeners = async () => {
-      unlistenPlayPause = await listen('tray://play-pause', () => togglePlay());
-      unlistenNext = await listen('tray://next', () => handleNextTrack());
-      unlistenPrev = await listen('tray://prev', () => handlePrevTrack());
-      unlistenShuffle = await listen('tray://shuffle', () => toggleShuffle());
-      unlistenRepeat = await listen('tray://repeat', () => cycleRepeat());
+      const u1 = await listen('tray://play-pause', () => togglePlayRef.current());
+      const u2 = await listen('tray://next', () => handleNextTrackRef.current());
+      const u3 = await listen('tray://prev', () => handlePrevTrackRef.current());
+      const u4 = await listen('tray://shuffle', () => toggleShuffleRef.current());
+      const u5 = await listen('tray://repeat', () => cycleRepeatRef.current());
+
+      if (!isMounted) {
+        u1();
+        u2();
+        u3();
+        u4();
+        u5();
+      } else {
+        unlistenPlayPause = u1;
+        unlistenNext = u2;
+        unlistenPrev = u3;
+        unlistenShuffle = u4;
+        unlistenRepeat = u5;
+      }
     };
 
     setupTrayListeners();
 
     return () => {
+      isMounted = false;
       if (unlistenPlayPause) unlistenPlayPause();
       if (unlistenNext) unlistenNext();
       if (unlistenPrev) unlistenPrev();
       if (unlistenShuffle) unlistenShuffle();
       if (unlistenRepeat) unlistenRepeat();
     };
-  }, [togglePlay, handleNextTrack, handlePrevTrack, toggleShuffle, cycleRepeat]);
+  }, []);
 
   const toggleLike = useCallback((trackId: string) => {
     setLikedTrackIds((prev) => {
