@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
+import { UpdateProvider } from './context/UpdateContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
@@ -255,7 +256,9 @@ export default function App() {
 
   return (
     <PlayerProvider>
-      <MainApp />
+      <UpdateProvider>
+        <MainApp />
+      </UpdateProvider>
     </PlayerProvider>
   );
 }

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { usePlayer } from '../context/PlayerContext';
+import { useUpdate } from '../context/UpdateContext';
 import { ViewMode } from '../types';
 
 interface SidebarProps {
@@ -38,6 +39,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggle,
 }) => {
   const { tracks, likedTrackIds, playlists, createPlaylist, deletePlaylist } = usePlayer();
+  const { status: updateStatus } = useUpdate();
+  const hasUpdateNotification = updateStatus === 'update-available' || updateStatus === 'completed';
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
 
@@ -529,13 +532,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {currentView === 'settings' && !isCollapsed && (
             <div className="w-1 h-3 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
           )}
-          <Settings
-            className={`w-[17px] h-[17px] shrink-0 transition-all duration-300 group-hover:rotate-45 ${
-              currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
-            }`}
-            strokeWidth={1.5}
-          />
-          {!isCollapsed && <span>Settings</span>}
+          <div className="relative shrink-0">
+            <Settings
+              className={`w-[17px] h-[17px] transition-all duration-300 group-hover:rotate-45 ${
+                currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
+              }`}
+              strokeWidth={1.5}
+            />
+            {hasUpdateNotification && isCollapsed && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#19E6A0] shadow-[0_0_6px_rgba(25,230,160,0.8)] animate-pulse" />
+            )}
+          </div>
+          {!isCollapsed && (
+            <div className="flex items-center justify-between flex-1 min-w-0">
+              <span className="truncate">Settings</span>
+              {hasUpdateNotification && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 animate-pulse shrink-0">
+                  <span className="w-1 h-1 rounded-full bg-[#19E6A0]" />
+                  <span>Update</span>
+                </span>
+              )}
+            </div>
+          )}
         </button>
       </div>
     </aside>

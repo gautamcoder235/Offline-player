@@ -24,6 +24,13 @@ pnpm-debug.log*
 .env
 .env.*
 
+# Tauri updater signing keys
+*.key
+*.key.pub
+.tauri-keys
+.tauri-keys/
+tauri.key*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

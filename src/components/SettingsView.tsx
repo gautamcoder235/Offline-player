@@ -12,15 +12,31 @@ import {
   Music,
   HardDrive,
   Volume2,
+  Sparkles,
+  ArrowDownCircle,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
 import { usePlayer } from '../context/PlayerContext';
+import { useUpdate } from '../context/UpdateContext';
 import { AppSettings } from '../types';
 import { formatBytes } from '../utils/helpers';
 
 export const SettingsView: React.FC = () => {
   const { tracks, refreshLibrary, openInExplorer } = usePlayer();
+  const {
+    status: updateStatus,
+    updateInfo,
+    currentVersion,
+    progress: updateProgress,
+    error: updateError,
+    checkForUpdates,
+    downloadAndInstall,
+    restartApp,
+    dismissUpdate,
+  } = useUpdate();
   const [settings, setSettings] = useState<AppSettings>({
     music_directories: ['C:\\Users\\sharm\\Music\\Spotify offline'],
     download_directory: 'C:\\Users\\sharm\\Music\\Spotify offline',
@@ -291,6 +307,209 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Application Updates Section */}
+      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+              <Sparkles className="w-4 h-4 text-[#19E6A0]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-[#F4F2F7]">Application Updates</h3>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#AAA6B2]">
+                  v{currentVersion}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Cryptographically signed automatic updates via Tauri v2 architecture
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Status indicator pill */}
+            {updateStatus === 'checking' && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B24] border border-[#282631] text-[11px] font-medium text-[#AAA6B2]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#19E6A0]" />
+                <span>Checking...</span>
+              </span>
+            )}
+            {updateStatus === 'up-to-date' && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/25 text-[11px] font-medium text-[#19E6A0]">
+                <Check className="w-3.5 h-3.5" />
+                <span>Up to date</span>
+              </span>
+            )}
+            {updateStatus === 'completed' && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/25 text-[11px] font-medium text-[#19E6A0]">
+                <Check className="w-3.5 h-3.5" />
+                <span>Ready to restart</span>
+              </span>
+            )}
+
+            {/* Manual Check Button */}
+            <button
+              onClick={() => void checkForUpdates(false)}
+              disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'installing'}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-200 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
+              title="Check GitHub for newer releases"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 text-[#AAA6B2] ${
+                  updateStatus === 'checking' ? 'animate-spin text-[#19E6A0]' : ''
+                }`}
+              />
+              <span>{updateStatus === 'checking' ? 'Checking...' : 'Check for Updates'}</span>
+            </button>
+
+            {/* Download Action Buttons (shown when available or on error with available update) */}
+            {(updateStatus === 'update-available' || (updateStatus === 'error' && updateInfo)) && (
+              <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                <button
+                  onClick={dismissUpdate}
+                  className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#282631] transition-all cursor-pointer"
+                  title="Dismiss update notification"
+                >
+                  Later
+                </button>
+                <button
+                  onClick={() => void downloadAndInstall()}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-sm cursor-pointer active:scale-[0.98]"
+                >
+                  <ArrowDownCircle className="w-3.5 h-3.5" />
+                  <span>Update to v{updateInfo?.version}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Restart Action Button */}
+            {updateStatus === 'completed' && (
+              <button
+                onClick={() => void restartApp()}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-sm cursor-pointer active:scale-[0.98] animate-in fade-in zoom-in-95 duration-200"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Restart to Apply</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Downloading / Installing Progress Bar */}
+        {(updateStatus === 'downloading' || updateStatus === 'installing') && (
+          <div className="p-3.5 rounded-xl bg-[#0E0D14] border border-[#282631] space-y-2 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#AAA6B2] flex items-center gap-2">
+                {updateStatus === 'downloading' ? (
+                  <>
+                    <ArrowDownCircle className="w-3.5 h-3.5 text-[#3B82F6] animate-bounce" />
+                    <span>Downloading update package...</span>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-[#E8C77A] animate-spin" />
+                    <span>Verifying signature & applying binaries...</span>
+                  </>
+                )}
+              </span>
+              <span className="font-mono text-[#19E6A0] font-semibold">
+                {updateProgress.percent > 0 ? `${updateProgress.percent}%` : ''}
+                {updateProgress.totalBytes > 0 ? (
+                  <span className="text-[#65616F] font-normal ml-2">
+                    ({formatBytes(updateProgress.downloadedBytes)} / {formatBytes(updateProgress.totalBytes)})
+                  </span>
+                ) : updateProgress.downloadedBytes > 0 ? (
+                  <span className="text-[#65616F] font-normal ml-2">
+                    ({formatBytes(updateProgress.downloadedBytes)})
+                  </span>
+                ) : null}
+              </span>
+            </div>
+
+            <div className="w-full h-2 rounded-full bg-[#1C1B24] overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#19E6A0] to-[#35F0B1] transition-all duration-200 rounded-full"
+                style={{ width: `${Math.max(5, updateProgress.percent)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Completed / Ready to Apply Banner */}
+        {updateStatus === 'completed' && updateInfo && (
+          <div className="p-3.5 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Check className="w-4 h-4 text-[#19E6A0] shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-[#19E6A0]">
+                  Offline Player v{updateInfo.version} is ready to install
+                </p>
+                <p className="text-[11px] text-[#AAA6B2] mt-0.5">
+                  Package has been downloaded and verified. Restart application to complete the update.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => void restartApp()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-sm cursor-pointer shrink-0 active:scale-[0.98]"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Restart Now</span>
+            </button>
+          </div>
+        )}
+
+        {/* Release Notes Card */}
+        {updateInfo && (
+          <div className="p-3.5 rounded-xl bg-[#0E0D14] border border-[#282631] space-y-2 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#F4F2F7]">
+                  Release Notes for v{updateInfo.version}
+                </span>
+                {updateInfo.date && (
+                  <span className="text-[10px] text-[#65616F]">
+                    Published {new Date(updateInfo.date).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-mono text-[#19E6A0]">Available Now</span>
+            </div>
+            {updateInfo.body ? (
+              <div className="text-xs text-[#AAA6B2] bg-[#14131A] p-3 rounded-lg border border-[#282631]/60 whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto no-scrollbar">
+                {updateInfo.body}
+              </div>
+            ) : (
+              <p className="text-xs text-[#777381] italic">No release notes provided for this version.</p>
+            )}
+          </div>
+        )}
+
+        {/* Error Notification */}
+        {updateError && (
+          <div className="p-3 rounded-xl bg-[#FF667A]/10 border border-[#FF667A]/25 flex items-start gap-3 animate-in fade-in duration-200">
+            <AlertCircle className="w-4 h-4 text-[#FF667A] shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-[#FF667A] font-medium">Update Error</p>
+              <p className="text-[11px] text-[#FF667A]/80 mt-0.5 break-words">{updateError}</p>
+            </div>
+            <button
+              onClick={() => {
+                if (updateInfo) {
+                  void downloadAndInstall();
+                } else {
+                  void checkForUpdates(false);
+                }
+              }}
+              className="text-[11px] font-semibold text-[#FF667A] hover:underline shrink-0 cursor-pointer"
+            >
+              {updateInfo ? 'Retry Download' : 'Retry Check'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Library Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <div className="p-4 rounded-2xl bg-[#14131A] border border-[#282631] flex items-center gap-3.5 shadow-sm">
@@ -364,7 +583,7 @@ export const SettingsView: React.FC = () => {
       <div className="flex items-center justify-between px-1 pt-2 text-xs text-[#65616F]">
         <div className="flex items-center gap-2">
           <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-md object-contain shadow-sm" />
-          <span>Offline Player v0.1.0 • Tauri v2 + Rust Audio Engine</span>
+          <span>Offline Player v{currentVersion} • Tauri v2 + Rust Audio Engine</span>
         </div>
         <span className="font-mono text-[11px] text-[#4B4854]">Obsidian Edition</span>
       </div>
