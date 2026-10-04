@@ -288,7 +288,7 @@ export const VisualizerView: React.FC = () => {
           }
 
           const color = `hsl(${158 + t * 40}, 85%, ${52 + e * 18}%)`;
-          const off = i * (bw + gap);
+          const off = gap / 2 + i * (bw + gap);
           for (const x of [cx + off, cx - off - bw]) {
             ctx.globalAlpha = 0.9;
             ctx.fillStyle = color;
