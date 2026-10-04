@@ -217,6 +217,14 @@ export default function App() {
   const isTrayPopup = typeof window !== 'undefined' && getCurrentWindow().label === 'tray_popup';
 
   if (isTrayPopup) {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add('tray-popup-mode');
+      document.body.classList.add('tray-popup-mode');
+      document.documentElement.style.setProperty('background', 'transparent', 'important');
+      document.documentElement.style.setProperty('background-color', 'transparent', 'important');
+      document.body.style.setProperty('background', 'transparent', 'important');
+      document.body.style.setProperty('background-color', 'transparent', 'important');
+    }
     return <TrayPopup />;
   }
 

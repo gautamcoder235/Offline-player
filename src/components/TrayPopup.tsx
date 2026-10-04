@@ -23,9 +23,18 @@ export const TrayPopup: React.FC = () => {
   const [playlists, setPlaylists] = useState<TrayPlaylist[]>([]);
 
   useEffect(() => {
-    // Ensure transparent window canvas for obsidian styling
-    document.documentElement.style.background = 'transparent';
-    document.body.style.background = 'transparent';
+    // Ensure transparent window canvas for obsidian styling with zero square corner artifacts
+    document.documentElement.classList.add('tray-popup-mode');
+    document.body.classList.add('tray-popup-mode');
+    document.documentElement.style.setProperty('background', 'transparent', 'important');
+    document.documentElement.style.setProperty('background-color', 'transparent', 'important');
+    document.body.style.setProperty('background', 'transparent', 'important');
+    document.body.style.setProperty('background-color', 'transparent', 'important');
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.setProperty('background', 'transparent', 'important');
+      root.style.setProperty('background-color', 'transparent', 'important');
+    }
 
     invoke<TrayPlaylist[]>('get_tray_playlists')
       .then((pls) => {
@@ -67,12 +76,16 @@ export const TrayPopup: React.FC = () => {
   };
 
   return (
-    <div className="w-[224px] h-[290px] bg-black border border-[#222226] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col justify-between select-none text-[#F4F2F7] overflow-hidden">
+    <div className="w-full h-full bg-black border border-[#222226] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col justify-between select-none text-[#F4F2F7] overflow-hidden box-border">
       {/* Top Header */}
       <div className="flex items-center justify-between pb-2 border-b border-[#1A1A1E] shrink-0">
-        <div className="flex items-center gap-2">
-          <img src="/app-icon.png" alt="" className="w-4 h-4 rounded-full object-contain shrink-0" />
-          <span className="text-[11.5px] font-bold tracking-tight text-white">Offline Player</span>
+        <div
+          onClick={handleOpen}
+          className="flex items-center gap-2 cursor-pointer group py-0.5 -my-0.5 px-1 -mx-1 rounded hover:bg-[#141417] transition-colors"
+          title="Open Offline Player"
+        >
+          <img src="/app-icon.png" alt="" className="w-4 h-4 rounded-full object-contain shrink-0 group-hover:scale-105 transition-transform" />
+          <span className="text-[11.5px] font-bold tracking-tight text-white group-hover:text-[#19E6A0] transition-colors">Offline Player</span>
         </div>
         <button
           onClick={handleOpen}

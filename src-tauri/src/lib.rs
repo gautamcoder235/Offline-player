@@ -294,6 +294,7 @@ fn get_tray_playlists(state: State<'_, AppState>) -> Vec<TrayPlaylist> {
 #[tauri::command]
 fn show_main_window(app: AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
     }
@@ -305,6 +306,7 @@ fn show_main_window(app: AppHandle) {
 #[tauri::command]
 fn open_tray_playlist(app: AppHandle, playlist_id: String) {
     if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
     }
@@ -323,6 +325,7 @@ fn open_tray_playlist(app: AppHandle, playlist_id: String) {
 #[tauri::command]
 fn open_tray_view(app: AppHandle, view: String) {
     if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
     }
@@ -445,6 +448,7 @@ pub fn run() {
                             ..
                         } => {
                             if let Some(window) = tray.app_handle().get_webview_window("main") {
+                                let _ = window.unminimize();
                                 let _ = window.show();
                                 let _ = window.set_focus();
                             }
@@ -495,6 +499,7 @@ pub fn run() {
             let id = event.id().as_ref();
             if id == "show" {
                 if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.unminimize();
                     let _ = w.show();
                     let _ = w.set_focus();
                 }
@@ -510,12 +515,14 @@ pub fn run() {
             } else if id.starts_with("view:") {
                 let view = &id[5..];
                 if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.unminimize();
                     let _ = w.show();
                     let _ = w.set_focus();
                 }
                 let _ = app.emit("tray://open-view", view);
             } else if id == "pl:new" {
                 if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.unminimize();
                     let _ = w.show();
                     let _ = w.set_focus();
                 }
