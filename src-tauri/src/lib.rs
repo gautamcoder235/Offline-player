@@ -500,8 +500,8 @@ pub fn run() {
                                 let click_x = position.x;
                                 let click_y = position.y;
                                 let scale = popup.scale_factor().unwrap_or(1.0);
-                                let phys_w = 224.0 * scale;
-                                let phys_h = 290.0 * scale;
+                                let phys_w = 228.0 * scale;
+                                let phys_h = 360.0 * scale;
                                 let pos_x = (click_x - phys_w + 10.0 * scale).max(10.0);
                                 let pos_y = (click_y - phys_h - 10.0 * scale).max(10.0);
 

@@ -899,6 +899,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Global Search Shortcut (Ctrl+K or Cmd+K)
+      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyK' || e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        window.dispatchEvent(new Event('focus-search'));
+        const searchInput = document.getElementById('global-search-input') as HTMLInputElement | null;
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+        return;
+      }
+
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;

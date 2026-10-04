@@ -53,6 +53,25 @@ const MainApp: React.FC = () => {
     };
   }, []);
 
+  // Listen for global focus-search shortcut (Ctrl+K)
+  useEffect(() => {
+    const handleFocusSearch = () => {
+      if (['settings', 'visualizer', 'download', 'lyrics'].includes(currentView)) {
+        setCurrentView('songs');
+      }
+      setTimeout(() => {
+        const input = document.getElementById('global-search-input') as HTMLInputElement | null;
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
+    };
+
+    window.addEventListener('focus-search', handleFocusSearch);
+    return () => window.removeEventListener('focus-search', handleFocusSearch);
+  }, [currentView]);
+
   // Listen for Tray context menu navigation events
   useEffect(() => {
     let unlistenOpenView: (() => void) | undefined;

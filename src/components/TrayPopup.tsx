@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
@@ -21,6 +21,7 @@ interface TrayPlaylist {
 
 export const TrayPopup: React.FC = () => {
   const [playlists, setPlaylists] = useState<TrayPlaylist[]>([]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Ensure transparent window canvas for obsidian styling with zero square corner artifacts
@@ -36,6 +37,14 @@ export const TrayPopup: React.FC = () => {
       root.style.setProperty('background-color', 'transparent', 'important');
     }
 
+    // Direct wheel event listener ensuring mousewheel scrolling always works across the entire popup window
+    const handleWheel = (e: WheelEvent) => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop += e.deltaY;
+      }
+    };
+    window.addEventListener('wheel', handleWheel, { passive: true });
+
     invoke<TrayPlaylist[]>('get_tray_playlists')
       .then((pls) => {
         if (pls && Array.isArray(pls)) setPlaylists(pls);
@@ -47,6 +56,7 @@ export const TrayPopup: React.FC = () => {
     });
 
     return () => {
+      window.removeEventListener('wheel', handleWheel);
       unlisten.then((fn) => fn());
     };
   }, []);
@@ -96,7 +106,14 @@ export const TrayPopup: React.FC = () => {
       </div>
 
       {/* Main Options Stream */}
-      <div className="flex-1 overflow-y-auto py-1 space-y-2 min-h-0 pr-0.5 no-scrollbar">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto py-1 space-y-2 min-h-0 pr-1 overscroll-contain select-none"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+        }}
+      >
         {/* Navigation Category */}
         <div className="space-y-0.5">
           <div className="text-[9px] font-semibold uppercase tracking-wider text-[#666672] px-1.5 py-0.5">

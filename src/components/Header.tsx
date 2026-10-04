@@ -24,13 +24,23 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
         <div className="relative flex-1 min-w-[90px] sm:min-w-[140px] max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777381] pointer-events-none" />
           <input
+            id="global-search-input"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                if (searchQuery) {
+                  setSearchQuery('');
+                } else {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }
+            }}
             placeholder="Search tracks, artists, albums..."
-            className="w-full pl-9 sm:pl-10 pr-8 sm:pr-9 py-2 rounded-xl text-xs bg-[#14131A] border border-[#282631]/80 text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 focus:ring-2 focus:ring-[#19E6A0]/10 transition-colors duration-150 truncate"
+            className="w-full pl-9 sm:pl-10 pr-14 sm:pr-16 py-2 rounded-xl text-xs bg-[#14131A] border border-[#282631]/80 text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 focus:ring-2 focus:ring-[#19E6A0]/10 transition-colors duration-150 truncate"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[#777381] hover:text-[#F4F2F7] p-0.5 cursor-pointer transition-colors duration-200"
@@ -38,6 +48,10 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
             >
               <X className="w-3.5 h-3.5" />
             </button>
+          ) : (
+            <kbd className="hidden sm:inline-flex items-center absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#65616F] bg-[#1C1B23] border border-[#2D2A38] px-1.5 py-0.5 rounded font-mono pointer-events-none select-none">
+              Ctrl+K
+            </kbd>
           )}
         </div>
 

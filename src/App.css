@@ -64,6 +64,18 @@
   background: rgba(255, 255, 255, 0.22);
 }
 
+/* Tray popup window scrollbars */
+html.tray-popup-mode ::-webkit-scrollbar {
+  width: 4px;
+}
+html.tray-popup-mode ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
+}
+html.tray-popup-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(25, 230, 160, 0.6);
+}
+
 /* Hide scrollbar completely while preserving scroll/sliding capability */
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;
