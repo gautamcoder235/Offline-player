@@ -117,7 +117,7 @@ export const SettingsView: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6 select-none max-w-4xl mx-auto w-full space-y-6 pb-12">
+    <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 select-none w-full space-y-6 pb-12 bg-[#0B0A0F]">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#292731]/60">
         <div>
