@@ -193,7 +193,7 @@ fn save_settings(state: State<'_, AppState>, settings: AppSettings) -> AppSettin
 }
 
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
-use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::{Manager, WindowEvent, Emitter};
 
 #[tauri::command]
@@ -234,31 +234,20 @@ pub struct TrayPlaylist {
     pub name: String,
 }
 
-fn build_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, playlists: &[TrayPlaylist]) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+fn build_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _playlists: &[TrayPlaylist]) -> Result<tauri::menu::Menu<R>, tauri::Error> {
     let show_i = MenuItemBuilder::with_id("show", "Show Offline Player").build(app)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
 
-    let liked_i = MenuItemBuilder::with_id("pl:liked", "♥ Liked Songs").build(app)?;
-    let sep_pl = PredefinedMenuItem::separator(app)?;
-    let mut pl_builder = SubmenuBuilder::new(app, "Playlists")
-        .item(&liked_i)
-        .item(&sep_pl);
+    let lib_i = MenuItemBuilder::with_id("view:songs", "Library").build(app)?;
+    let liked_i = MenuItemBuilder::with_id("view:liked", "Liked Songs").build(app)?;
+    let dl_i = MenuItemBuilder::with_id("view:download", "Downloader").build(app)?;
+    let vis_i = MenuItemBuilder::with_id("view:visualizer", "Visualizer").build(app)?;
+    let pls_i = MenuItemBuilder::with_id("view:playlists", "Playlists").build(app)?;
 
-    let mut custom_items = Vec::new();
-    for pl in playlists {
-        let item = MenuItemBuilder::with_id(format!("pl:{}", pl.id), &pl.name).build(app)?;
-        custom_items.push(item);
-    }
-    for item in &custom_items {
-        pl_builder = pl_builder.item(item);
-    }
-
-    let sep_pl2 = PredefinedMenuItem::separator(app)?;
-    let new_pl_i = MenuItemBuilder::with_id("pl:new", "+ New Random Playlist").build(app)?;
-    let pl_submenu = pl_builder
-        .item(&sep_pl2)
-        .item(&new_pl_i)
-        .build()?;
+    let sep_actions = PredefinedMenuItem::separator(app)?;
+    let new_pl_i = MenuItemBuilder::with_id("pl:new", "New Random Playlist").build(app)?;
+    let folder_i = MenuItemBuilder::with_id("tool:folder", "Open Music Folder").build(app)?;
+    let settings_i = MenuItemBuilder::with_id("view:settings", "Settings").build(app)?;
 
     let sep2 = PredefinedMenuItem::separator(app)?;
     let quit_i = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
@@ -267,7 +256,15 @@ fn build_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, playlists: &[Tr
         .items(&[
             &show_i,
             &sep1,
-            &pl_submenu,
+            &lib_i,
+            &liked_i,
+            &dl_i,
+            &vis_i,
+            &pls_i,
+            &sep_actions,
+            &new_pl_i,
+            &folder_i,
+            &settings_i,
             &sep2,
             &quit_i,
         ])
@@ -318,6 +315,30 @@ fn open_tray_playlist(app: AppHandle, playlist_id: String) {
     } else {
         let _ = app.emit("tray://open-playlist", playlist_id);
     }
+    if let Some(p) = app.get_webview_window("tray_popup") {
+        let _ = p.hide();
+    }
+}
+
+#[tauri::command]
+fn open_tray_view(app: AppHandle, view: String) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+    let _ = app.emit("tray://open-view", view);
+    if let Some(p) = app.get_webview_window("tray_popup") {
+        let _ = p.hide();
+    }
+}
+
+#[tauri::command]
+fn open_tray_folder(app: AppHandle, state: State<'_, AppState>) {
+    let dir = {
+        let lock = state.settings.lock().unwrap();
+        lock.download_directory.clone()
+    };
+    let _ = open_in_explorer(dir);
     if let Some(p) = app.get_webview_window("tray_popup") {
         let _ = p.hide();
     }
@@ -441,8 +462,8 @@ pub fn run() {
                                 let click_x = position.x;
                                 let click_y = position.y;
                                 let scale = popup.scale_factor().unwrap_or(1.0);
-                                let phys_w = 220.0 * scale;
-                                let phys_h = 210.0 * scale;
+                                let phys_w = 224.0 * scale;
+                                let phys_h = 290.0 * scale;
                                 let pos_x = (click_x - phys_w + 10.0 * scale).max(10.0);
                                 let pos_y = (click_y - phys_h - 10.0 * scale).max(10.0);
 
@@ -469,6 +490,40 @@ pub fn run() {
             }
 
             Ok(())
+        })
+        .on_menu_event(|app, event| {
+            let id = event.id().as_ref();
+            if id == "show" {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+            } else if id == "quit" {
+                app.exit(0);
+            } else if id == "tool:folder" {
+                let state: State<'_, AppState> = app.state();
+                let dir = {
+                    let lock = state.settings.lock().unwrap();
+                    lock.download_directory.clone()
+                };
+                let _ = open_in_explorer(dir);
+            } else if id.starts_with("view:") {
+                let view = &id[5..];
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+                let _ = app.emit("tray://open-view", view);
+            } else if id == "pl:new" {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+                let _ = app.emit("tray://new-playlist", ());
+            } else if id.starts_with("pl:") {
+                let pl_id = &id[3..];
+                open_tray_playlist(app.clone(), pl_id.to_string());
+            }
         })
         .on_window_event(|window, event| {
             if window.label() == "tray_popup" {
@@ -502,6 +557,8 @@ pub fn run() {
             get_tray_playlists,
             show_main_window,
             open_tray_playlist,
+            open_tray_view,
+            open_tray_folder,
             quit_app,
         ])
         .run(tauri::generate_context!())

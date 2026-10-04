@@ -2,9 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
+  Music,
   Heart,
+  Download,
+  Radio,
   ListMusic,
   Plus,
+  FolderOpen,
+  Settings,
   ExternalLink,
   LogOut,
 } from 'lucide-react';
@@ -18,7 +23,7 @@ export const TrayPopup: React.FC = () => {
   const [playlists, setPlaylists] = useState<TrayPlaylist[]>([]);
 
   useEffect(() => {
-    // Ensure transparent window canvas for obsidian glass styling
+    // Ensure transparent window canvas for obsidian styling
     document.documentElement.style.background = 'transparent';
     document.body.style.background = 'transparent';
 
@@ -41,8 +46,20 @@ export const TrayPopup: React.FC = () => {
     invoke('show_main_window').catch(console.warn);
   };
 
+  const handleView = (view: string) => {
+    invoke('open_tray_view', { view }).catch(console.warn);
+  };
+
   const handlePlaylist = (id: string) => {
     invoke('open_tray_playlist', { playlistId: id }).catch(console.warn);
+  };
+
+  const handleNewPlaylist = () => {
+    invoke('open_tray_playlist', { playlistId: 'new' }).catch(console.warn);
+  };
+
+  const handleOpenFolder = () => {
+    invoke('open_tray_folder').catch(console.warn);
   };
 
   const handleQuit = () => {
@@ -50,7 +67,7 @@ export const TrayPopup: React.FC = () => {
   };
 
   return (
-    <div className="w-[220px] h-[210px] bg-black border border-[#222225] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col justify-between select-none text-[#F4F2F7] overflow-hidden">
+    <div className="w-[224px] h-[290px] bg-black border border-[#222226] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col justify-between select-none text-[#F4F2F7] overflow-hidden">
       {/* Top Header */}
       <div className="flex items-center justify-between pb-2 border-b border-[#1A1A1E] shrink-0">
         <div className="flex items-center gap-2">
@@ -65,60 +82,147 @@ export const TrayPopup: React.FC = () => {
         </button>
       </div>
 
-      {/* Playlists Section */}
-      <div className="flex-1 overflow-y-auto py-1.5 space-y-0.5 min-h-0 pr-0.5 no-scrollbar">
-        <div className="text-[9.5px] font-semibold uppercase tracking-wider text-[#66666F] px-1.5 py-0.5">
-          Playlists
-        </div>
-
-        {/* Liked Songs */}
-        <button
-          onClick={() => handlePlaylist('liked')}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#141416] text-left transition-colors cursor-pointer group"
-        >
-          <div className="w-5 h-5 rounded-md bg-[#141418] flex items-center justify-center shrink-0 border border-[#24242A]">
-            <Heart className="w-3 h-3 fill-[#19E6A0] text-[#19E6A0]" />
+      {/* Main Options Stream */}
+      <div className="flex-1 overflow-y-auto py-1 space-y-2 min-h-0 pr-0.5 no-scrollbar">
+        {/* Navigation Category */}
+        <div className="space-y-0.5">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-[#666672] px-1.5 py-0.5">
+            Navigate
           </div>
-          <span className="text-[11.5px] font-medium text-[#E0E0E6] truncate group-hover:text-[#19E6A0]">
-            Liked Songs
-          </span>
-        </button>
 
-        {/* Custom Playlists */}
-        {playlists.map((pl) => (
           <button
-            key={pl.id}
-            onClick={() => handlePlaylist(pl.id)}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#141416] text-left transition-colors cursor-pointer group"
+            onClick={() => handleView('songs')}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
           >
-            <div className="w-5 h-5 rounded-md bg-[#141418] flex items-center justify-center shrink-0 border border-[#24242A]">
-              <ListMusic className="w-3 h-3 text-[#AAA6B2] group-hover:text-[#19E6A0]" />
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <Music className="w-3.5 h-3.5 text-[#AAA6B2] group-hover:text-[#19E6A0]" />
             </div>
-            <span className="text-[11.5px] font-medium text-[#AAA6B2] group-hover:text-white truncate">
-              {pl.name}
+            <span className="text-[11.5px] font-medium text-[#D8D8DF] group-hover:text-white truncate">
+              Library
             </span>
           </button>
-        ))}
 
-        {/* New Random Playlist */}
-        <button
-          onClick={() => handlePlaylist('new')}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#141416] text-left transition-colors cursor-pointer group text-[#777381] hover:text-[#19E6A0]"
-        >
-          <div className="w-5 h-5 rounded-md bg-[#101014] flex items-center justify-center shrink-0 border border-dashed border-[#282830]">
-            <Plus className="w-3 h-3" />
+          <button
+            onClick={() => handlePlaylist('liked')}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <Heart className="w-3.5 h-3.5 fill-[#19E6A0] text-[#19E6A0]" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#D8D8DF] group-hover:text-white truncate">
+              Liked Songs
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleView('download')}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <Download className="w-3.5 h-3.5 text-[#19E6A0]" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#D8D8DF] group-hover:text-white truncate">
+              Downloader
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleView('visualizer')}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <Radio className="w-3.5 h-3.5 text-[#00F2FE]" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#D8D8DF] group-hover:text-white truncate">
+              Visualizer
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleView('playlists')}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <ListMusic className="w-3.5 h-3.5 text-[#E8C77A]" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#D8D8DF] group-hover:text-white truncate">
+              Playlists
+            </span>
+          </button>
+        </div>
+
+        {/* Quick Actions Category */}
+        <div className="space-y-0.5 pt-1 border-t border-[#18181C]">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-[#666672] px-1.5 py-0.5">
+            Actions & Tools
           </div>
-          <span className="text-[11.5px] font-medium truncate">
-            New Random Playlist
-          </span>
-        </button>
+
+          <button
+            onClick={handleNewPlaylist}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <Plus className="w-3.5 h-3.5 text-[#AAA6B2] group-hover:text-[#19E6A0]" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#AAA6B2] group-hover:text-white truncate">
+              New Playlist
+            </span>
+          </button>
+
+          <button
+            onClick={handleOpenFolder}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#AAA6B2] group-hover:text-white truncate">
+              Music Folder
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleView('settings')}
+            className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+          >
+            <div className="w-4 h-4 flex items-center justify-center shrink-0">
+              <Settings className="w-3.5 h-3.5 text-[#AAA6B2] group-hover:text-white" />
+            </div>
+            <span className="text-[11.5px] font-medium text-[#AAA6B2] group-hover:text-white truncate">
+              Settings
+            </span>
+          </button>
+        </div>
+
+        {/* Custom Playlists (if any) */}
+        {playlists.length > 0 && (
+          <div className="space-y-0.5 pt-1 border-t border-[#18181C]">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-[#666672] px-1.5 py-0.5">
+              Your Playlists
+            </div>
+            {playlists.map((pl) => (
+              <button
+                key={pl.id}
+                onClick={() => handlePlaylist(pl.id)}
+                className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+              >
+                <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                  <ListMusic className="w-3 h-3 text-[#777782] group-hover:text-[#19E6A0]" />
+                </div>
+                <span className="text-[11.5px] font-medium text-[#8E8E98] group-hover:text-white truncate">
+                  {pl.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Footer Navigation & Quit */}
       <div className="pt-1.5 border-t border-[#1A1A1E] flex items-center justify-between text-[11px] shrink-0">
         <button
           onClick={handleOpen}
-          className="flex items-center gap-1.5 text-[#777381] hover:text-white transition-colors cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#141416]"
+          className="flex items-center gap-1.5 text-[#77777F] hover:text-white transition-colors cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#141417]"
         >
           <ExternalLink className="w-3 h-3" />
           <span>Show App</span>
@@ -126,7 +230,7 @@ export const TrayPopup: React.FC = () => {
 
         <button
           onClick={handleQuit}
-          className="flex items-center gap-1.5 text-[#777381] hover:text-[#FF667A] transition-colors cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#FF667A]/10"
+          className="flex items-center gap-1.5 text-[#77777F] hover:text-[#FF667A] transition-colors cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#FF667A]/10"
         >
           <LogOut className="w-3 h-3" />
           <span>Quit</span>
