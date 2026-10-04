@@ -195,7 +195,28 @@ use tauri::{Manager, WindowEvent, Emitter};
 
 #[tauri::command]
 fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
+    use std::hash::{Hash, Hasher};
+    use std::collections::hash_map::DefaultHasher;
+
     let term = format!("{} {}", artist, title);
+    
+    let mut hasher = DefaultHasher::new();
+    term.hash(&mut hasher);
+    let hash = hasher.finish();
+    
+    let base = std::env::var("APPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("."));
+    let cache_dir = base.join("OfflinePlayer").join("covers");
+    let _ = std::fs::create_dir_all(&cache_dir);
+    let cache_file = cache_dir.join(format!("{}.txt", hash));
+    
+    if cache_file.exists() {
+        if let Ok(cached_data) = std::fs::read_to_string(&cache_file) {
+            return Ok(Some(cached_data));
+        }
+    }
+    
     let url = format!("https://itunes.apple.com/search?term={}&media=music&limit=1", percent_encoding::utf8_percent_encode(&term, percent_encoding::NON_ALPHANUMERIC));
     
     if let Ok(resp) = reqwest::blocking::get(&url) {
@@ -208,7 +229,9 @@ fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, Stri
                             if let Ok(bytes) = img_resp.bytes() {
                                 use base64::{Engine as _, engine::general_purpose};
                                 let encoded = general_purpose::STANDARD.encode(&bytes);
-                                return Ok(Some(format!("data:image/jpeg;base64,{}", encoded)));
+                                let base64_str = format!("data:image/jpeg;base64,{}", encoded);
+                                let _ = std::fs::write(&cache_file, &base64_str);
+                                return Ok(Some(base64_str));
                             }
                         }
                     }
