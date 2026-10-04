@@ -18,58 +18,61 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
   };
 
   return (
-    <header className="h-16 px-6 flex items-center justify-between gap-4 border-b border-white/5 glass-panel bg-black/20 z-10">
-      {/* Search Bar */}
+    <header className="h-14 px-6 flex items-center justify-between gap-4 border-b border-[#292731] bg-[#100F14]/90 backdrop-blur-md z-10 select-none">
+      {/* 6. Precision Search Bar */}
       <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777381] pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by title, artist, or album..."
-          className="w-full pl-10 pr-9 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500/50 transition-colors duration-150"
+          placeholder="Search tracks, artists, albums..."
+          className="w-full pl-10 pr-9 py-2 rounded-lg text-xs bg-[#14131A] border border-[#282631] text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 focus:ring-2 focus:ring-[#19E6A0]/10 transition-colors duration-150"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5 cursor-pointer"
-            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#777381] hover:text-[#F4F2F7] p-0.5 cursor-pointer"
+            aria-label="Clear search query"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Filter Category Pills */}
-      <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-lg border border-white/5">
-        {(['all', 'artists', 'albums'] as const).map((type) => (
-          <button
-            key={type}
-            onClick={() => onFilterChange(type)}
-            className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors duration-150 cursor-pointer ${
-              filterType === type
-                ? 'bg-white/12 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {type}
-          </button>
-        ))}
+      {/* Filter Category Tabs */}
+      <div className="flex items-center gap-1 bg-[#14131A] p-0.5 rounded-lg border border-[#282631]">
+        {(['all', 'artists', 'albums'] as const).map((type) => {
+          const isActive = filterType === type;
+          return (
+            <button
+              key={type}
+              onClick={() => onFilterChange(type)}
+              className={`px-3 py-1 rounded-md text-[11px] font-medium capitalize transition-colors duration-150 cursor-pointer ${
+                isActive
+                  ? 'bg-[#211F26] text-[#F4F2F7] shadow-sm'
+                  : 'text-[#9A96A5] hover:text-[#F4F2F7] hover:bg-[#1D1C23]'
+              }`}
+            >
+              {type}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Actions */}
+      {/* Right: Library Count & Rescan Action */}
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 text-[11px] text-gray-400">
-          <span>{tracks.length} offline tracks</span>
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-[#777381] font-mono">
+          <span>{tracks.length} tracks</span>
         </div>
 
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors duration-150 disabled:opacity-50 cursor-pointer"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#16151C] hover:bg-[#1D1C23] border border-[#292731] text-[#9A96A5] hover:text-[#F4F2F7] transition-colors duration-150 disabled:opacity-50 cursor-pointer"
           title="Rescan audio library"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#19E6A0]' : ''}`} />
           <span className="hidden sm:inline">Rescan</span>
         </button>
       </div>

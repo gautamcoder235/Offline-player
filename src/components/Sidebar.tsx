@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Music,
   Heart,
-  ListMusic,
   Download,
   Mic2,
   Settings,
@@ -12,6 +11,7 @@ import {
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
+  ListMusic,
 } from 'lucide-react';
 
 import { usePlayer } from '../context/PlayerContext';
@@ -50,7 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setIsCreatingPlaylist(false);
   };
 
-  const navItems = [
+  // Group 1: Primary Navigation
+  const primaryNav = [
     {
       id: 'songs' as ViewMode,
       label: 'Library',
@@ -62,54 +63,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Liked Songs',
       icon: Heart,
       badge: likedTrackIds.size,
-      activeColor: 'text-rose-400',
     },
     {
       id: 'download' as ViewMode,
       label: 'Downloader',
       icon: Download,
-      highlight: true,
+    },
+  ];
+
+  // Group 2: Playback Tools
+  const toolNav = [
+    {
+      id: 'visualizer',
+      label: 'Visualizer',
+      icon: Radio,
+      onClick: onOpenVisualizer,
+    },
+    {
+      id: 'equalizer',
+      label: 'Equalizer',
+      icon: Sliders,
+      onClick: onOpenEqualizer,
     },
     {
       id: 'lyrics' as ViewMode,
       label: 'Live Lyrics',
       icon: Mic2,
+      onClick: () => {
+        onSelectPlaylist(null);
+        onViewChange('lyrics');
+      },
+      isActive: currentView === 'lyrics',
     },
   ];
 
   return (
-    <aside className={`${isCollapsed ? 'w-[60px]' : 'w-56'} transition-[width] duration-200 ease-out h-full flex flex-col glass-panel border-r border-white/5 bg-[#0e0f14]/80 select-none z-10 overflow-hidden shrink-0`}>
-      {/* Brand Header */}
-      <div className={`p-4 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-3 border-b border-white/5 shrink-0`}>
+    <aside
+      className={`${
+        isCollapsed ? 'w-[60px]' : 'w-56'
+      } transition-[width] duration-200 ease-out h-full flex flex-col bg-[#0E0D12] border-r border-[#292731] select-none z-10 overflow-hidden shrink-0`}
+    >
+      {/* Top Header: Collapse Toggle */}
+      <div
+        className={`h-14 px-3 flex items-center ${
+          isCollapsed ? 'justify-center' : 'justify-between'
+        } border-b border-[#292731] shrink-0`}
+      >
         {!isCollapsed && (
-          <div className="flex items-center gap-3">
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-600">
-              <Radio className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-sm tracking-wide text-white">
-                Offline Player
-              </h1>
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                Offline Mode
-              </div>
-            </div>
-          </div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#777381] pl-1">
+            Navigation
+          </span>
         )}
         <button
           onClick={onToggle}
-          className="text-gray-400 hover:text-white transition-colors cursor-pointer"
-          title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+          className="p-1.5 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#16151C] transition-colors duration-150 cursor-pointer"
+          title={isCollapsed ? 'Expand Sidebar (Ctrl+B)' : 'Collapse Sidebar (Ctrl+B)'}
           aria-label="Toggle Sidebar"
         >
-          {isCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Main Navigation */}
-      <div className="p-2 space-y-1">
-        {navItems.map((item) => {
+      {/* Primary Navigation */}
+      <div className="p-2 space-y-0.5">
+        {primaryNav.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
           return (
@@ -119,73 +136,87 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onSelectPlaylist(null);
                 onViewChange(item.id);
               }}
-              className={`relative w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 cursor-pointer ${
+              className={`relative w-full flex items-center ${
+                isCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+              } py-2 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
                 isActive
-                  ? 'bg-white/8 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  ? 'bg-[#19181F] text-[#F4F2F7]'
+                  : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
               }`}
               title={isCollapsed ? item.label : undefined}
             >
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4/5 bg-emerald-400 rounded-r-full" />
+                <div className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-[#19E6A0] rounded-r-full" />
               )}
               <div className="flex items-center gap-3">
                 <Icon
-                  className={`w-4 h-4 ${
-                    isActive
-                      ? item.activeColor || 'text-emerald-400'
-                      : 'text-gray-400 group-hover:text-white'
+                  className={`w-4 h-4 transition-colors ${
+                    isActive ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#B8B4C0]'
                   }`}
                 />
                 {!isCollapsed && <span>{item.label}</span>}
               </div>
               {!isCollapsed && item.badge !== undefined && item.badge > 0 && (
-                <span className="text-[11px] font-semibold text-gray-400">
-                  {item.badge}
-                </span>
-              )}
-              {!isCollapsed && item.highlight && (
-                <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded bg-emerald-500/20 text-emerald-300">
-                  New
-                </span>
+                <span className="text-[10px] font-mono text-[#65616F]">{item.badge}</span>
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Quick Audio Tools */}
-      <div className="px-2 py-2 space-y-1">
-        <div className="border-t border-white/5 my-1"></div>
-        <button
-          onClick={onOpenVisualizer}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2 rounded-lg text-xs font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-150 cursor-pointer`}
-          title={isCollapsed ? "Visualizer" : undefined}
-        >
-          <Radio className="w-4 h-4 text-cyan-400" />
-          {!isCollapsed && <span>Visualizer</span>}
-        </button>
-        <button
-          onClick={onOpenEqualizer}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2 rounded-lg text-xs font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-150 cursor-pointer`}
-          title={isCollapsed ? "Equalizer" : undefined}
-        >
-          <Sliders className="w-4 h-4 text-purple-400" />
-          {!isCollapsed && <span>Equalizer</span>}
-        </button>
+      {/* 1px Thin Divider */}
+      <div className="mx-3 my-1 border-t border-[#292731]" />
+
+      {/* Playback Tools */}
+      <div className="p-2 space-y-0.5">
+        {!isCollapsed && (
+          <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#65616F]">
+            Playback Tools
+          </div>
+        )}
+        {toolNav.map((tool) => {
+          const Icon = tool.icon;
+          const isActive = tool.isActive || false;
+          return (
+            <button
+              key={tool.id}
+              onClick={tool.onClick}
+              className={`relative w-full flex items-center ${
+                isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+              } py-2 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
+                isActive
+                  ? 'bg-[#19181F] text-[#F4F2F7]'
+                  : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
+              }`}
+              title={isCollapsed ? tool.label : undefined}
+            >
+              {isActive && (
+                <div className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-[#19E6A0] rounded-r-full" />
+              )}
+              <Icon
+                className={`w-4 h-4 transition-colors ${
+                  isActive ? 'text-[#19E6A0]' : 'text-[#777381]'
+                }`}
+              />
+              {!isCollapsed && <span>{tool.label}</span>}
+            </button>
+          );
+        })}
       </div>
+
+      {/* 1px Thin Divider */}
+      <div className="mx-3 my-1 border-t border-[#292731]" />
 
       {/* Playlists Section */}
       {!isCollapsed && (
-        <div className="flex-1 px-2 py-2 overflow-y-auto flex flex-col min-h-0">
-          <div className="border-t border-white/5 my-1"></div>
+        <div className="flex-1 px-2 py-1 overflow-y-auto flex flex-col min-h-0">
           <div className="flex items-center justify-between px-3 py-1.5">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#65616F]">
               Playlists
             </span>
             <button
               onClick={() => setIsCreatingPlaylist(true)}
-              className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-150 cursor-pointer"
+              className="p-1 rounded-md text-[#777381] hover:text-[#F4F2F7] hover:bg-[#16151C] transition-colors duration-150 cursor-pointer"
               title="Create Playlist"
               aria-label="Create Playlist"
             >
@@ -204,15 +235,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onBlur={() => {
                   if (!newPlaylistName.trim()) setIsCreatingPlaylist(false);
                 }}
-                className="w-full px-2 py-1 text-xs bg-black/40 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                className="w-full px-2.5 py-1 text-xs bg-[#14131A] border border-[#282631] rounded-md text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50"
               />
             </form>
           )}
 
           <div className="space-y-0.5 overflow-y-auto flex-1">
             {playlists.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-gray-500">
-                No playlists yet. Click + to create one.
+              <div className="px-3 py-3 text-center text-[11px] text-[#65616F]">
+                No custom playlists
               </div>
             ) : (
               playlists.map((pl) => {
@@ -220,10 +251,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <div
                     key={pl.id}
-                    className={`group relative flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors duration-150 ${
+                    className={`group relative flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors duration-150 ${
                       isPlActive
-                        ? 'bg-white/8 text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-white/5'
+                        ? 'bg-[#19181F] text-[#F4F2F7]'
+                        : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
                     }`}
                     onClick={() => {
                       onSelectPlaylist(pl.id);
@@ -231,10 +262,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }}
                   >
                     {isPlActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3/5 bg-emerald-400 rounded-r-full" />
+                      <div className="absolute left-0 top-1 bottom-1 w-[2px] bg-[#19E6A0] rounded-r-full" />
                     )}
                     <div className="flex items-center gap-2.5 truncate">
-                      <ListMusic className="w-3.5 h-3.5 text-gray-400 group-hover:text-emerald-400" />
+                      <ListMusic
+                        className={`w-3.5 h-3.5 ${
+                          isPlActive ? 'text-[#19E6A0]' : 'text-[#777381]'
+                        }`}
+                      />
                       <span className="truncate">{pl.name}</span>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -246,7 +281,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             onViewChange('songs');
                           }
                         }}
-                        className="p-1 text-gray-400 hover:text-rose-400 cursor-pointer"
+                        className="p-1 text-[#777381] hover:text-[#FF667A] cursor-pointer"
                         aria-label="Delete playlist"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -261,23 +296,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Footer / Settings */}
-      <div className={`p-2 border-t border-white/5 bg-black/20 ${isCollapsed ? 'mt-auto' : ''}`}>
+      <div className={`p-2 border-t border-[#292731] bg-[#0E0D12] ${isCollapsed ? 'mt-auto' : ''}`}>
         <button
           onClick={() => {
             onSelectPlaylist(null);
             onViewChange('settings');
           }}
-          className={`relative w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2.5 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
+          className={`relative w-full flex items-center ${
+            isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+          } py-2 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
             currentView === 'settings'
-              ? 'bg-white/8 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              ? 'bg-[#19181F] text-[#F4F2F7]'
+              : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
           }`}
-          title={isCollapsed ? "Settings" : undefined}
+          title={isCollapsed ? 'Settings' : undefined}
         >
           {currentView === 'settings' && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3/5 bg-emerald-400 rounded-r-full" />
+            <div className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-[#19E6A0] rounded-r-full" />
           )}
-          <Settings className="w-4 h-4" />
+          <Settings
+            className={`w-4 h-4 ${
+              currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#777381]'
+            }`}
+          />
           {!isCollapsed && <span>Settings</span>}
         </button>
       </div>

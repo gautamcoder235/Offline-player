@@ -115,7 +115,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-primary,#0a0b0e)] text-[var(--text-primary,#f1f1f1)] relative">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0B0A0F] text-[#F4F2F7] relative">
       <TitleBar />
       {/* Dynamic Ambient Glow Tinted by Album Art */}
       <AmbientGlow />

@@ -1,40 +1,105 @@
+import React from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Minus, Square, X } from 'lucide-react';
 
 export function TitleBar() {
   const appWindow = getCurrentWindow();
 
+  const handleMouseDown = async (e: React.MouseEvent) => {
+    if (e.button === 0) {
+      try {
+        await appWindow.startDragging();
+      } catch (err) {
+        console.warn('startDragging failed:', err);
+      }
+    }
+  };
+
+  const handleDoubleClick = async () => {
+    try {
+      await appWindow.toggleMaximize();
+    } catch (err) {
+      console.warn('toggleMaximize failed:', err);
+    }
+  };
+
+  const handleMinimize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await appWindow.minimize();
+    } catch (err) {
+      console.warn('minimize failed:', err);
+    }
+  };
+
+  const handleToggleMaximize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await appWindow.toggleMaximize();
+    } catch (err) {
+      console.warn('toggleMaximize failed:', err);
+    }
+  };
+
+  const handleClose = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await appWindow.close();
+    } catch (err) {
+      console.warn('close failed:', err);
+    }
+  };
+
   return (
     <div
       data-tauri-drag-region
-      className="flex justify-between items-center w-full h-[36px] bg-[#0a0b0e]/80 backdrop-blur-xl border-b border-white/[0.06] select-none z-50 sticky top-0"
+      onMouseDown={handleMouseDown}
+      onDoubleClick={handleDoubleClick}
+      className="flex justify-between items-center w-full h-[36px] bg-[#100F14] border-b border-[#292731] select-none z-50 sticky top-0 cursor-default"
     >
-      <div className="flex items-center gap-2 px-3 pointer-events-none text-white">
-        <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-sm" />
-        <span className="text-xs font-semibold tracking-wide">Offline Player</span>
+      {/* Left: App Brand & Quiet Status */}
+      <div className="flex items-center gap-3 px-3.5 pointer-events-none">
+        <div className="flex items-center gap-2">
+          <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-sm object-contain" />
+          <span className="text-[12px] font-semibold text-[#F4F2F7] tracking-tight">Offline Player</span>
+        </div>
+        <div className="flex items-center gap-1.5 pl-2 border-l border-[#292731]/80 text-[11px] text-[#777381]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
+          <span>Offline</span>
+        </div>
       </div>
 
-      <div className="flex h-full">
+      {/* Middle Drag Spacer */}
+      <div data-tauri-drag-region className="flex-1 h-full" />
+
+      {/* Right: Window Controls */}
+      <div className="flex h-full items-stretch">
         <button
-          aria-label="Minimize"
-          className="flex items-center justify-center w-[46px] h-[36px] text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150 cursor-pointer"
-          onClick={() => appWindow.minimize()}
+          type="button"
+          aria-label="Minimize window"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={handleMinimize}
+          className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] transition-colors duration-150 cursor-pointer"
         >
-          <Minus className="w-4 h-4" />
+          <Minus className="w-3.5 h-3.5" />
         </button>
         <button
-          aria-label="Maximize or Restore"
-          className="flex items-center justify-center w-[46px] h-[36px] text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150 cursor-pointer"
-          onClick={() => appWindow.toggleMaximize()}
+          type="button"
+          aria-label="Maximize or Restore window"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={handleToggleMaximize}
+          className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] transition-colors duration-150 cursor-pointer"
         >
-          <Square className="w-4 h-4" />
+          <Square className="w-3 h-3" />
         </button>
         <button
-          aria-label="Close"
-          className="flex items-center justify-center w-[46px] h-[36px] text-white/70 hover:bg-red-500 hover:text-white transition-colors duration-150 cursor-pointer"
-          onClick={() => appWindow.close()}
+          type="button"
+          aria-label="Close to background tray"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={handleClose}
+          className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#FF667A] hover:text-white transition-colors duration-150 cursor-pointer"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

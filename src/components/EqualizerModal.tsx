@@ -23,71 +23,74 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md select-none transition-opacity duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md select-none transition-opacity duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg glass-panel-elevated rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col gap-6"
+        className="relative w-full max-w-lg rounded-2xl bg-[#16151C] p-6 border border-[#292731] shadow-2xl flex flex-col gap-5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="flex items-center justify-between pb-3 border-b border-[#292731]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
-              <Sliders className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-[#14131A] text-[#19E6A0] border border-[#282631]">
+              <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-wide">Audio Equalizer</h2>
-              <p className="text-xs text-gray-400">Fine-tune frequencies & audio dynamics</p>
+              <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight">Audio Equalizer</h2>
+              <p className="text-[11px] text-[#777381]">5-band frequency shaping</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1D1C23] transition-colors cursor-pointer"
             aria-label="Close Equalizer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Preset Selector */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider">
               Presets
             </span>
             <button
               onClick={() => setPreset('Flat')}
-              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-[11px] text-[#777381] hover:text-[#F4F2F7] transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset</span>
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {EQUALIZER_PRESETS.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => setPreset(p.name)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
-                  equalizerPreset.toLowerCase() === p.name.toLowerCase()
-                    ? 'bg-white/12 text-white'
-                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
-                }`}
-              >
-                {p.name}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-1.5">
+            {EQUALIZER_PRESETS.map((p) => {
+              const isActive = equalizerPreset.toLowerCase() === p.name.toLowerCase();
+              return (
+                <button
+                  key={p.name}
+                  onClick={() => setPreset(p.name)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#211F26] text-[#19E6A0] border border-[#19E6A0]/40'
+                      : 'bg-[#14131A] text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1D1C23] border border-[#282631]'
+                  }`}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Sliders */}
-        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-end gap-3 h-52">
+        <div className="p-4 rounded-xl bg-[#100F14] border border-[#282631] flex justify-between items-end gap-3 h-52">
           {bandLabels.map((band, idx) => {
             const gain = customGains[idx] || 0;
             return (
               <div key={band.freq} className="flex-1 flex flex-col items-center justify-between h-full">
-                <span className="text-[10px] font-mono text-gray-400">
+                <span className="text-[10px] font-mono text-[#777381]">
                   {gain > 0 ? `+${gain}` : gain} dB
                 </span>
 
@@ -102,15 +105,15 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                     className="slider-track appearance-none cursor-pointer"
                     style={{
                       transform: 'rotate(-90deg)',
-                      width: '100px',
+                      width: '90px',
                     }}
                     aria-label={`${band.name} EQ`}
                   />
                 </div>
 
                 <div className="text-center">
-                  <span className="block text-xs font-semibold text-white">{band.freq}</span>
-                  <span className="block text-[9px] text-gray-500">{band.name}</span>
+                  <span className="block text-[11px] font-medium text-[#F4F2F7]">{band.freq}</span>
+                  <span className="block text-[9px] text-[#65616F]">{band.name}</span>
                 </div>
               </div>
             );

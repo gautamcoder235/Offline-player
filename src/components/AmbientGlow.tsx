@@ -1,51 +1,51 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
 
 export const AmbientGlow: React.FC = () => {
   const { currentTrack, isPlaying } = usePlayer();
 
-  const glowStyle = useMemo(() => {
-    if (!currentTrack) {
-      return {
-        background: 'radial-gradient(circle at 50% 20%, rgba(30, 215, 96, 0.12) 0%, rgba(11, 12, 16, 0) 70%)',
-      };
-    }
-
-    const { glow } = getTrackColor(currentTrack.title, currentTrack.artist);
-
-    return {
-      background: `radial-gradient(circle at 50% 15%, ${glow} 0%, rgba(15, 23, 42, 0.25) 50%, rgba(11, 12, 16, 0) 80%)`,
-      filter: 'blur(60px)',
-      opacity: isPlaying ? 0.5 : 0.2,
-      transition: 'opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), background 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
-    };
-  }, [currentTrack, isPlaying]);
+  const trackColor = currentTrack ? getTrackColor(currentTrack.title, currentTrack.artist) : null;
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#0B0A0F]"
       aria-hidden="true"
     >
-      {/* Blurred album cover art backdrop */}
-      {currentTrack?.cover_art && (
+      {/* 1. Permanent subtle dual ambient gradient: Electric Mint (top right) & Champagne Gold (left) */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(700px circle at 75% 5%, rgba(25, 230, 160, 0.035), transparent 60%),
+            radial-gradient(600px circle at 15% 25%, rgba(232, 199, 122, 0.018), transparent 60%)
+          `,
+        }}
+      />
+
+      {/* 2. When a track plays: extremely soft ambient aura extracted from cover artwork */}
+      {currentTrack?.cover_art ? (
         <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform scale-125 pointer-events-none"
+          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 transform scale-110 pointer-events-none"
           style={{
             backgroundImage: `url(${currentTrack.cover_art})`,
-            filter: 'blur(100px) brightness(0.35) saturate(1.8)',
-            opacity: isPlaying ? 0.35 : 0.18,
+            filter: 'blur(90px) brightness(0.28) saturate(1.4)',
+            opacity: isPlaying ? 0.22 : 0.08,
           }}
         />
-      )}
+      ) : trackColor ? (
+        <div
+          className="w-[100%] h-[100%] -top-[10%] left-[10%] absolute transition-opacity duration-1000 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 20%, ${trackColor.glow} 0%, transparent 60%)`,
+            filter: 'blur(80px)',
+            opacity: isPlaying ? 0.16 : 0.06,
+          }}
+        />
+      ) : null}
 
-      {/* Dynamic color-tuned radial glow */}
-      <div
-        className="w-[120%] h-[120%] -top-[10%] -left-[10%] absolute transition-all duration-1000"
-        style={glowStyle}
-      />
-      {/* Subtle vignette overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-primary)]/40 to-[var(--bg-primary)] pointer-events-none" />
+      {/* 3. Deep obsidian vignette to ground all edges firmly in #0B0A0F */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0B0A0F]/20 via-transparent to-[#0B0A0F]/80 pointer-events-none" />
     </div>
   );
 };

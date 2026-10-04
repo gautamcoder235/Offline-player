@@ -46,29 +46,28 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
         audioEngine.getFrequencyData(dataArray);
 
         const barCount = 48;
-        const gap = 4;
-        const totalBarWidth = (width - gap * (barCount - 1)) / barCount;
-        const barWidth = Math.max(2, totalBarWidth);
+        const gap = 3;
+        const barWidth = (width - gap * (barCount - 1)) / barCount;
 
         for (let i = 0; i < barCount; i++) {
           const sampleIdx = Math.floor((i / barCount) * (bufferLength / 2));
           const val = dataArray[sampleIdx] || 0;
-          const barHeight = isPlaying ? Math.max(4, (val / 255) * (height - 20)) : 4;
+          const barHeight = isPlaying ? Math.max(3, ((val / 255) * height) * 0.95) : 3;
           const x = i * (barWidth + gap);
           const y = height - barHeight;
 
-          // Glowing gradient
+          // Electric Mint to Champagne Gold peak gradient
           const grad = ctx.createLinearGradient(0, height, 0, y);
-          grad.addColorStop(0, '#10b981'); // Emerald
-          grad.addColorStop(0.5, '#06b6d4'); // Cyan
-          grad.addColorStop(1, '#a855f7'); // Purple
+          grad.addColorStop(0, '#19E6A0'); // Electric Mint base
+          grad.addColorStop(0.7, '#35F0B1');
+          grad.addColorStop(1, '#E8C77A'); // Champagne Gold peak
 
           ctx.fillStyle = grad;
-          ctx.shadowBlur = isPlaying ? 12 : 2;
-          ctx.shadowColor = '#06b6d4';
+          ctx.shadowBlur = isPlaying ? 8 : 1;
+          ctx.shadowColor = 'rgba(25, 230, 160, 0.4)';
 
           ctx.beginPath();
-          ctx.roundRect(x, y, barWidth, barHeight, [4, 4, 0, 0]);
+          ctx.roundRect(x, y, barWidth, barHeight, [3, 3, 0, 0]);
           ctx.fill();
         }
       } else if (visMode === 'mirror') {
@@ -86,13 +85,13 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
           const x = i * (barWidth + gap);
 
           const grad = ctx.createLinearGradient(0, centerY - halfH, 0, centerY + halfH);
-          grad.addColorStop(0, '#a855f7');
-          grad.addColorStop(0.5, '#10b981');
-          grad.addColorStop(1, '#a855f7');
+          grad.addColorStop(0, '#E8C77A'); // Champagne Gold peak
+          grad.addColorStop(0.5, '#19E6A0'); // Mint center
+          grad.addColorStop(1, '#E8C77A'); // Champagne Gold peak
 
           ctx.fillStyle = grad;
-          ctx.shadowBlur = isPlaying ? 10 : 2;
-          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = isPlaying ? 8 : 1;
+          ctx.shadowColor = 'rgba(25, 230, 160, 0.35)';
 
           ctx.beginPath();
           ctx.roundRect(x, centerY - halfH, barWidth, halfH * 2, [3, 3, 3, 3]);
@@ -101,10 +100,10 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
       } else if (visMode === 'wave') {
         audioEngine.getTimeDomainData(dataArray);
 
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = '#34d399';
-        ctx.shadowBlur = isPlaying ? 14 : 2;
-        ctx.shadowColor = '#34d399';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#19E6A0';
+        ctx.shadowBlur = isPlaying ? 10 : 2;
+        ctx.shadowColor = 'rgba(25, 230, 160, 0.4)';
 
         ctx.beginPath();
         const sliceWidth = width / bufferLength;
@@ -140,36 +139,36 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md select-none transition-opacity duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md select-none transition-opacity duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-3xl glass-panel-elevated rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col gap-4"
+        className="relative w-full max-w-3xl rounded-2xl bg-[#16151C] p-6 border border-[#292731] shadow-2xl flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="flex items-center justify-between pb-3 border-b border-[#292731]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
-              <Radio className={`w-5 h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
+            <div className="p-2 rounded-lg bg-[#14131A] text-[#19E6A0] border border-[#282631]">
+              <Radio className={`w-4 h-4 ${isPlaying ? 'animate-pulse' : ''}`} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-wide">
-                Real-Time Audio Visualizer
+              <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight">
+                Audio Visualizer
               </h2>
-              <p className="text-xs text-gray-400">
+              <p className="text-[11px] text-[#777381]">
                 {currentTrack ? `${currentTrack.title} — ${currentTrack.artist}` : 'No track active'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Visualizer Mode Switcher */}
-            <div className="flex bg-white/5 p-1 rounded-lg border border-white/5 text-xs">
+            {/* Mode Switcher */}
+            <div className="flex bg-[#14131A] p-0.5 rounded-lg border border-[#282631] text-xs">
               <button
                 onClick={() => setVisMode('bars')}
-                className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
-                  visMode === 'bars' ? 'bg-white/12 text-white font-medium' : 'text-gray-400 hover:text-white'
+                className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
+                  visMode === 'bars' ? 'bg-[#211F26] text-[#19E6A0] font-medium' : 'text-[#777381] hover:text-[#F4F2F7]'
                 }`}
               >
                 <BarChart2 className="w-3.5 h-3.5" />
@@ -177,8 +176,8 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
               </button>
               <button
                 onClick={() => setVisMode('mirror')}
-                className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
-                  visMode === 'mirror' ? 'bg-white/12 text-white font-medium' : 'text-gray-400 hover:text-white'
+                className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
+                  visMode === 'mirror' ? 'bg-[#211F26] text-[#19E6A0] font-medium' : 'text-[#777381] hover:text-[#F4F2F7]'
                 }`}
               >
                 <Disc3 className="w-3.5 h-3.5" />
@@ -186,8 +185,8 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
               </button>
               <button
                 onClick={() => setVisMode('wave')}
-                className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
-                  visMode === 'wave' ? 'bg-white/12 text-white font-medium' : 'text-gray-400 hover:text-white'
+                className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
+                  visMode === 'wave' ? 'bg-[#211F26] text-[#19E6A0] font-medium' : 'text-[#777381] hover:text-[#F4F2F7]'
                 }`}
               >
                 <Activity className="w-3.5 h-3.5" />
@@ -197,16 +196,16 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1D1C23] transition-colors cursor-pointer"
               aria-label="Close visualizer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Canvas Display */}
-        <div className="relative w-full h-64 rounded-xl bg-black/50 border border-white/5 overflow-hidden flex items-center justify-center">
+        <div className="relative w-full h-64 rounded-xl bg-[#100F14] border border-[#282631] overflow-hidden flex items-center justify-center">
           <canvas ref={canvasRef} className="w-full h-full block" />
         </div>
       </div>
