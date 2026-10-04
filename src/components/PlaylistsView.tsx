@@ -156,7 +156,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-[#F4F2F7] tracking-tight">Your Playlists</h2>
-            <span className="text-xs font-mono text-[#19E6A0] bg-[#19E6A0]/10 border border-[#19E6A0]/20 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-mono text-[#AAA6B2] bg-[#16151C] border border-[#282631] px-2.5 py-0.5 rounded-full">
               {playlists.length + 1} collections
             </span>
           </div>
@@ -269,7 +269,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg">
               <Heart className="w-6 h-6 fill-[#19E6A0] text-[#19E6A0]" />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#19E6A0] bg-[#19E6A0]/10 border border-[#19E6A0]/20 px-2.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#AAA6B2] bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full">
               Auto Playlist
             </span>
           </div>

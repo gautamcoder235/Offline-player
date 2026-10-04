@@ -328,7 +328,7 @@ export const DownloaderView: React.FC = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#F4F2F7] tracking-tight">Downloader</h2>
-            <span className="text-[11px] font-mono text-[#19E6A0] bg-[#19E6A0]/10 border border-[#19E6A0]/20 px-2.5 py-0.5 rounded-full">
+            <span className="text-[11px] font-mono text-[#AAA6B2] bg-[#16151C] border border-[#282631] px-2.5 py-0.5 rounded-full">
               {sessionTracks.length} session tracks
             </span>
           </div>
