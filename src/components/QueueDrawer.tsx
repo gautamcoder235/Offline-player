@@ -9,7 +9,28 @@ interface QueueDrawerProps {
 }
 
 export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => {
-  const { currentTrack, queue, playTrack, removeFromQueue, moveQueueItem, clearQueue, isPlaying } = usePlayer();
+  const {
+    currentTrack,
+    queue,
+    contextTracks,
+    playTrack,
+    playQueueTrack,
+    addToQueue,
+    removeFromQueue,
+    moveQueueItem,
+    clearQueue,
+    isPlaying,
+  } = usePlayer();
+
+  // Upcoming tracks from the current album/playlist context
+  const upcomingContextTracks = React.useMemo(() => {
+    if (!currentTrack || contextTracks.length === 0) return [];
+    const idx = contextTracks.findIndex((t) => t.id === currentTrack.id);
+    if (idx !== -1) {
+      return contextTracks.slice(idx + 1);
+    }
+    return contextTracks;
+  }, [currentTrack, contextTracks]);
 
   return (
     <div
@@ -56,7 +77,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
 
         {/* Now Playing */}
         {currentTrack && (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 shrink-0">
             <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider">
               Now Playing
             </span>
@@ -90,15 +111,16 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
           </div>
         )}
 
-        {/* Up Next List */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider mb-2">
-            Next Up
-          </span>
+        {/* Scrollable Streams: User Queue + Context Queue */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto space-y-4 pr-1">
+          {/* User Queue (Next Up) */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider block mb-1">
+              Next in Queue
+            </span>
 
-          <div className="flex-1 overflow-y-auto space-y-1 pr-1">
             {queue.length === 0 ? (
-              <div className="py-12 text-center text-xs text-[#65616F]">
+              <div className="py-4 text-center text-xs text-[#65616F] bg-[#141318]/50 rounded-lg border border-[#23212B] px-3">
                 Queue is empty. Use ••• on any track to add to queue.
               </div>
             ) : (
@@ -108,7 +130,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                   <div
                     key={`${track.id}-${idx}`}
                     className="group flex items-center justify-between p-2 rounded-lg hover:bg-[#1D1C23] transition-colors duration-150 cursor-pointer"
-                    onClick={() => playTrack(track)}
+                    onClick={() => playQueueTrack(idx)}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
                       <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-[#292731] bg-[#16151C] relative">
@@ -184,6 +206,67 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
               })
             )}
           </div>
+
+          {/* Context Queue (Next from Playlist) */}
+          {upcomingContextTracks.length > 0 && (
+            <div className="space-y-1 pt-2 border-t border-[#23212B]">
+              <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider block mb-1">
+                Next From Playlist
+              </span>
+              {upcomingContextTracks.slice(0, 20).map((track) => {
+                const trackColor = getTrackColor(track.title, track.artist);
+                return (
+                  <div
+                    key={`ctx-${track.id}`}
+                    className="group flex items-center justify-between p-2 rounded-lg hover:bg-[#1D1C23] transition-colors duration-150 cursor-pointer"
+                    onClick={() => playTrack(track)}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                      <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-[#292731] bg-[#16151C] relative">
+                        {track.cover_art ? (
+                          <img src={track.cover_art} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div
+                            className="w-full h-full flex items-center justify-center font-bold text-[9px]"
+                            style={{ background: trackColor.bg, color: trackColor.text }}
+                          >
+                            <Disc3 className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
+                          <Play className="w-3.5 h-3.5 text-white fill-current" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-medium text-[#F4F2F7] truncate group-hover:text-[#19E6A0] transition-colors duration-150">
+                          {track.title}
+                        </span>
+                        <span className="text-[10px] text-[#777381] truncate">{track.artist}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-mono text-[#65616F] mr-0.5">
+                        {track.duration_str}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToQueue(track);
+                        }}
+                        className="p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[#19E6A0] rounded transition-opacity cursor-pointer"
+                        title="Add to queue"
+                        aria-label="Add to queue"
+                      >
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

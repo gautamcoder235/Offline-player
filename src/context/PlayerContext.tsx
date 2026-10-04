@@ -25,6 +25,7 @@ interface PlayerContextType {
   shuffle: boolean;
   repeatMode: RepeatMode;
   queue: Track[];
+  contextTracks: Track[];
   likedTrackIds: Set<string>;
   playlists: Playlist[];
   equalizerPreset: string;
@@ -37,6 +38,7 @@ interface PlayerContextType {
   setSearchQuery: (q: string) => void;
   // Controls
   playTrack: (track: Track, newQueue?: Track[]) => Promise<void>;
+  playQueueTrack: (index: number) => Promise<void>;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -121,6 +123,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
   const [queue, setQueue] = useState<Track[]>([]);
+  const [contextTracks, setContextTracks] = useState<Track[]>([]);
   const [likedTrackIds, setLikedTrackIds] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('offline_player_liked');
@@ -149,6 +152,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Refs for audio engine callbacks to avoid stale closures
   const queueRef = useRef(queue);
   queueRef.current = queue;
+  const contextTracksRef = useRef(contextTracks);
+  contextTracksRef.current = contextTracks;
+  const lastContextIndexRef = useRef<number>(-1);
   const currentTrackRef = useRef(currentTrack);
   currentTrackRef.current = currentTrack;
   const repeatModeRef = useRef(repeatMode);
@@ -241,9 +247,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       setTracks(scannedTracks);
 
-      // If queue is empty, populate with scanned tracks so user can use next/prev immediately
-      if (scannedTracks.length > 0 && queueRef.current.length === 0) {
-        setQueue(scannedTracks);
+      // If contextTracks is empty, populate with scanned tracks so user can use next/prev immediately
+      if (scannedTracks.length > 0 && contextTracksRef.current.length === 0) {
+        setContextTracks(scannedTracks);
       }
 
       // If current track was restored from localStorage, sync its metadata and stream_url with scanned library
@@ -400,9 +406,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentTime, currentLyrics]);
 
   const playTrack = useCallback(
-    async (track: Track, newQueue?: Track[]) => {
-      if (newQueue) {
-        setQueue(newQueue);
+    async (track: Track, newContextTracks?: Track[]) => {
+      if (newContextTracks) {
+        setContextTracks(newContextTracks);
+        const idx = newContextTracks.findIndex((t) => t.id === track.id);
+        if (idx !== -1) {
+          lastContextIndexRef.current = idx;
+        }
+      } else {
+        const idx = contextTracksRef.current.findIndex((t) => t.id === track.id);
+        if (idx !== -1) {
+          lastContextIndexRef.current = idx;
+        }
       }
 
       let trackToPlay = track;
@@ -439,30 +454,53 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [fetchLyrics, saveLastPlayed, showToast]
   );
 
-  // Next Track Logic
-  const handleNextTrack = useCallback(() => {
-    let q = queueRef.current;
-    if (q.length === 0 && tracksRef.current.length > 0) {
-      q = tracksRef.current;
-      setQueue(q);
-    }
-    const current = currentTrackRef.current;
-    if (!current || q.length === 0) return;
-
-    if (shuffleRef.current && q.length > 1) {
-      let randIdx = Math.floor(Math.random() * q.length);
-      while (q[randIdx].id === current.id && q.length > 1) {
-        randIdx = Math.floor(Math.random() * q.length);
+  const playQueueTrack = useCallback(
+    async (index: number) => {
+      const q = queueRef.current;
+      if (index >= 0 && index < q.length) {
+        const track = q[index];
+        setQueue((prev) => prev.filter((_, i) => i !== index));
+        await playTrack(track);
       }
-      playTrack(q[randIdx]);
+    },
+    [playTrack]
+  );
+
+  // Next Track Logic: User Queue first, then context playlist
+  const handleNextTrack = useCallback(() => {
+    // 1. First priority: Play from user explicit queue
+    const q = queueRef.current;
+    if (q.length > 0) {
+      const [nextTrack, ...remaining] = q;
+      setQueue(remaining);
+      playTrack(nextTrack);
       return;
     }
 
-    const currentIndex = q.findIndex((t) => t.id === current.id);
-    if (currentIndex !== -1 && currentIndex + 1 < q.length) {
-      playTrack(q[currentIndex + 1]);
-    } else if (repeatModeRef.current === 'all' && q.length > 0) {
-      playTrack(q[0]);
+    // 2. Play next track from context tracks (or all library tracks)
+    let playlist = contextTracksRef.current.length > 0 ? contextTracksRef.current : tracksRef.current;
+    if (playlist.length === 0) return;
+
+    if (shuffleRef.current && playlist.length > 1) {
+      const curId = currentTrackRef.current?.id;
+      let randIdx = Math.floor(Math.random() * playlist.length);
+      while (playlist[randIdx].id === curId && playlist.length > 1) {
+        randIdx = Math.floor(Math.random() * playlist.length);
+      }
+      playTrack(playlist[randIdx]);
+      return;
+    }
+
+    const curId = currentTrackRef.current?.id;
+    let currentIndex = curId ? playlist.findIndex((t) => t.id === curId) : -1;
+    if (currentIndex === -1) {
+      currentIndex = lastContextIndexRef.current;
+    }
+
+    if (currentIndex !== -1 && currentIndex + 1 < playlist.length) {
+      playTrack(playlist[currentIndex + 1]);
+    } else if (repeatModeRef.current === 'all' && playlist.length > 0) {
+      playTrack(playlist[0]);
     } else {
       setIsPlaying(false);
     }
@@ -477,19 +515,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return;
     }
-    let q = queueRef.current;
-    if (q.length === 0 && tracksRef.current.length > 0) {
-      q = tracksRef.current;
-      setQueue(q);
-    }
-    const current = currentTrackRef.current;
-    if (!current || q.length === 0) return;
+    let playlist = contextTracksRef.current.length > 0 ? contextTracksRef.current : tracksRef.current;
+    if (playlist.length === 0) return;
 
-    const currentIndex = q.findIndex((t) => t.id === current.id);
+    const curId = currentTrackRef.current?.id;
+    let currentIndex = curId ? playlist.findIndex((t) => t.id === curId) : -1;
+    if (currentIndex === -1) {
+      currentIndex = lastContextIndexRef.current;
+    }
+
     if (currentIndex > 0) {
-      playTrack(q[currentIndex - 1]);
-    } else if (q.length > 0) {
-      playTrack(q[q.length - 1]);
+      playTrack(playlist[currentIndex - 1]);
+    } else if (playlist.length > 0) {
+      playTrack(playlist[playlist.length - 1]);
     }
   }, [playTrack, saveLastPlayed]);
 
@@ -883,6 +921,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         shuffle,
         repeatMode,
         queue,
+        contextTracks,
         likedTrackIds,
         playlists,
         equalizerPreset,
@@ -894,6 +933,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         searchQuery,
         setSearchQuery,
         playTrack,
+        playQueueTrack,
         togglePlay,
         nextTrack: handleNextTrack,
         prevTrack: handlePrevTrack,

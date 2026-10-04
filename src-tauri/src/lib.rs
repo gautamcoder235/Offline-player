@@ -159,21 +159,47 @@ fn save_track_lyrics(file_path: String, lyrics_content: String) -> Result<(), St
 
 #[tauri::command]
 fn open_in_explorer(file_path: String) -> Result<(), String> {
-    let path = Path::new(&file_path);
+    let mut clean_path = file_path.replace('/', "\\");
+    if clean_path.starts_with(r"\\?\") {
+        clean_path = clean_path[4..].to_string();
+    }
+    let path = Path::new(&clean_path);
     if !path.exists() {
+        if let Some(parent) = path.parent() {
+            if parent.exists() {
+                #[cfg(windows)]
+                {
+                    use std::os::windows::process::CommandExt;
+                    use std::process::Command;
+                    let parent_str = parent.to_string_lossy().replace('/', "\\");
+                    let _ = Command::new("explorer")
+                        .raw_arg(format!("\"{}\"", parent_str))
+                        .spawn();
+                    return Ok(());
+                }
+            }
+        }
         return Err("File or folder does not exist".to_string());
     }
 
     #[cfg(windows)]
     {
+        use std::os::windows::process::CommandExt;
         use std::process::Command;
         if path.is_dir() {
-            let _ = Command::new("explorer").arg(path).spawn();
+            let _ = Command::new("explorer")
+                .raw_arg(format!("\"{}\"", clean_path))
+                .spawn();
         } else {
             let _ = Command::new("explorer")
-                .arg(format!("/select,{}", path.display()))
+                .raw_arg(format!("/select,\"{}\"", clean_path))
                 .spawn();
         }
+    }
+    #[cfg(not(windows))]
+    {
+        use std::process::Command;
+        let _ = Command::new("xdg-open").arg(path).spawn();
     }
     Ok(())
 }
@@ -489,6 +515,25 @@ pub fn run() {
                     }
                     if let Ok(hwnd) = window.hwnd() {
                         taskbar::init_taskbar(app.handle().clone(), hwnd);
+                    }
+                }
+
+                #[cfg(not(debug_assertions))]
+                {
+                    for label in ["main", "tray_popup"] {
+                        if let Some(w) = app.get_webview_window(label) {
+                            let _ = w.with_webview(|wv| {
+                                unsafe {
+                                    let controller = wv.controller();
+                                    if let Ok(core) = controller.CoreWebView2() {
+                                        if let Ok(settings) = core.Settings() {
+                                            let _ = settings.SetAreDefaultContextMenusEnabled(false);
+                                            let _ = settings.SetAreDevToolsEnabled(false);
+                                        }
+                                    }
+                                }
+                            });
+                        }
                     }
                 }
             }
