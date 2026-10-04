@@ -24,8 +24,8 @@
       {
         "label": "tray_popup",
         "title": "Offline Player",
-        "width": 260,
-        "height": 340,
+        "width": 220,
+        "height": 210,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,

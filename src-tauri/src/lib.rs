@@ -440,10 +440,11 @@ pub fn run() {
                             if let Some(popup) = tray.app_handle().get_webview_window("tray_popup") {
                                 let click_x = position.x;
                                 let click_y = position.y;
-                                let popup_w = 260.0;
-                                let popup_h = 340.0;
-                                let pos_x = (click_x - popup_w + 10.0).max(10.0);
-                                let pos_y = (click_y - popup_h - 10.0).max(10.0);
+                                let scale = popup.scale_factor().unwrap_or(1.0);
+                                let phys_w = 220.0 * scale;
+                                let phys_h = 210.0 * scale;
+                                let pos_x = (click_x - phys_w + 10.0 * scale).max(10.0);
+                                let pos_y = (click_y - phys_h - 10.0 * scale).max(10.0);
 
                                 let _ = popup.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(pos_x as i32, pos_y as i32)));
                                 let _ = popup.show();
