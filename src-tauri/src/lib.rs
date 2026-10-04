@@ -189,6 +189,36 @@ fn save_settings(state: State<'_, AppState>, settings: AppSettings) -> AppSettin
     settings
 }
 
+use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+use tauri::{Manager, WindowEvent, Emitter};
+
+#[tauri::command]
+fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
+    let term = format!("{} {}", artist, title);
+    let url = format!("https://itunes.apple.com/search?term={}&media=music&limit=1", percent_encoding::utf8_percent_encode(&term, percent_encoding::NON_ALPHANUMERIC));
+    
+    if let Ok(resp) = reqwest::blocking::get(&url) {
+        if let Ok(json) = resp.json::<serde_json::Value>() {
+            if let Some(results) = json.get("results").and_then(|r| r.as_array()) {
+                if let Some(first) = results.first() {
+                    if let Some(art_url) = first.get("artworkUrl100").and_then(|u| u.as_str()) {
+                        let high_res_url = art_url.replace("100x100", "600x600");
+                        if let Ok(img_resp) = reqwest::blocking::get(&high_res_url) {
+                            if let Ok(bytes) = img_resp.bytes() {
+                                use base64::{Engine as _, engine::general_purpose};
+                                let encoded = general_purpose::STANDARD.encode(&bytes);
+                                return Ok(Some(format!("data:image/jpeg;base64,{}", encoded)));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let port = streamer::start_stream_server();
@@ -203,6 +233,68 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(app_state)
+        .setup(|app| {
+            let show_i = MenuItemBuilder::with_id("show", "Show Offline Player").build(app)?;
+            let play_i = MenuItemBuilder::with_id("play-pause", "Play / Pause").build(app)?;
+            let next_i = MenuItemBuilder::with_id("next", "Next Track").build(app)?;
+            let prev_i = MenuItemBuilder::with_id("prev", "Previous Track").build(app)?;
+            let quit_i = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+            let sep1 = PredefinedMenuItem::separator(app)?;
+            let sep2 = PredefinedMenuItem::separator(app)?;
+
+            let menu = MenuBuilder::new(app)
+                .items(&[&show_i, &sep1, &play_i, &next_i, &prev_i, &sep2, &quit_i])
+                .build()?;
+
+            let _tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .icon(app.default_window_icon().unwrap().clone())
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "play-pause" => {
+                            let _ = app.emit("tray://play-pause", ());
+                        }
+                        "next" => {
+                            let _ = app.emit("tray://next", ());
+                        }
+                        "prev" => {
+                            let _ = app.emit("tray://prev", ());
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        if let Some(window) = tray.app_handle().get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             scan_library,
             get_audio_url,
@@ -213,6 +305,7 @@ pub fn run() {
             open_in_explorer,
             get_settings,
             save_settings,
+            fetch_cover_art,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

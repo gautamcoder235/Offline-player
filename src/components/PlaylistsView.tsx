@@ -69,7 +69,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             {playlistTracks.length > 0 && (
               <button
                 onClick={() => playTrack(playlistTracks[0], playlistTracks)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-all shadow-lg shadow-emerald-500/20"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors duration-150 shadow-lg cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-black" />
                 <span>Play All</span>
@@ -77,7 +77,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             )}
             <button
               onClick={() => onSelectPlaylist(null)}
-              className="px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold border border-white/10 transition-all"
+              className="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold border border-white/10 transition-colors duration-150 cursor-pointer"
             >
               Back
             </button>
@@ -100,7 +100,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-all shadow-lg shadow-emerald-500/20"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors duration-150 shadow-lg cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Playlist</span>

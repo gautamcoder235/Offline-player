@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic2, Edit3, Check, Disc3, Sparkles } from 'lucide-react';
+import { Mic2, Edit3, Check, Disc3 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
 
@@ -55,7 +55,7 @@ export const LyricsView: React.FC = () => {
       {/* Top Bar */}
       <div className="px-8 py-5 flex items-center justify-between border-b border-white/5 z-10 glass-panel bg-black/20">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0">
+          <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0">
             {currentTrack.cover_art ? (
               <img src={currentTrack.cover_art} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -79,8 +79,8 @@ export const LyricsView: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {currentLyrics?.isSynced && (
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs border border-emerald-500/20">
-              <Sparkles className="w-3 h-3" />
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs border border-emerald-500/20">
+              <Check className="w-3 h-3" />
               <span>Synced Lyrics</span>
             </span>
           )}
@@ -88,7 +88,7 @@ export const LyricsView: React.FC = () => {
           {isEditing ? (
             <button
               onClick={handleSaveEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-all shadow"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors duration-150 cursor-pointer"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Save Lyrics</span>
@@ -96,7 +96,7 @@ export const LyricsView: React.FC = () => {
           ) : (
             <button
               onClick={handleStartEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-xs font-medium border border-white/10 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-xs font-medium border border-white/10 transition-colors duration-150 cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span>Edit LRC</span>
@@ -144,9 +144,9 @@ export const LyricsView: React.FC = () => {
                   key={`${line.time}-${idx}`}
                   ref={isActive ? activeLineRef : null}
                   onClick={() => seekTo(line.time)}
-                  className={`cursor-pointer transition-all duration-300 transform ${
+                  className={`cursor-pointer transition-[color,transform] duration-300 transform ${
                     isActive
-                      ? 'text-2xl sm:text-3xl font-extrabold text-white scale-105 drop-shadow-[0_0_25px_rgba(16,185,129,0.5)]'
+                      ? 'text-2xl sm:text-3xl font-extrabold text-white scale-105'
                       : 'text-lg sm:text-xl font-medium text-gray-500 hover:text-gray-300 hover:scale-101 opacity-60'
                   }`}
                 >

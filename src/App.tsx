@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -16,6 +16,8 @@ import { AmbientGlow } from './components/AmbientGlow';
 import { ViewMode } from './types';
 import './App.css';
 
+import { TitleBar } from './components/TitleBar';
+
 const MainApp: React.FC = () => {
   const { tracks, searchQuery, likedTrackIds } = usePlayer();
   const [currentView, setCurrentView] = useState<ViewMode>('songs');
@@ -25,6 +27,29 @@ const MainApp: React.FC = () => {
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isVisualizerOpen, setIsVisualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('offline_player_sidebar_collapsed') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('offline_player_sidebar_collapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarCollapsed(true);
+      }
+    };
+    const handleToggle = () => setIsSidebarCollapsed(prev => !prev);
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('toggle-sidebar', handleToggle);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('toggle-sidebar', handleToggle);
+    };
+  }, []);
 
   // Filtered tracks based on search query & category
   const filteredTracks = useMemo(() => {
@@ -90,12 +115,13 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0a0b0e] text-white relative">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-primary,#0a0b0e)] text-[var(--text-primary,#f1f1f1)] relative">
+      <TitleBar />
       {/* Dynamic Ambient Glow Tinted by Album Art */}
       <AmbientGlow />
 
       {/* Main App Frame */}
-      <div className="flex flex-1 overflow-hidden z-10">
+      <div className="flex flex-1 overflow-hidden z-10 pt-0">
         {/* Left Sidebar */}
         <Sidebar
           currentView={currentView}
@@ -104,6 +130,8 @@ const MainApp: React.FC = () => {
           onSelectPlaylist={setSelectedPlaylistId}
           onOpenEqualizer={() => setIsEqualizerOpen(true)}
           onOpenVisualizer={() => setIsVisualizerOpen(true)}
+          isCollapsed={isSidebarCollapsed}
+          onToggle={() => setIsSidebarCollapsed(prev => !prev)}
         />
 
         {/* Center Main Stage */}

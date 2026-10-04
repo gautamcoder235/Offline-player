@@ -16,9 +16,9 @@ export const AmbientGlow: React.FC = () => {
 
     return {
       background: `radial-gradient(circle at 50% 15%, ${glow} 0%, rgba(15, 23, 42, 0.25) 50%, rgba(11, 12, 16, 0) 80%)`,
-      filter: 'blur(80px)',
-      opacity: isPlaying ? 0.85 : 0.45,
-      transition: 'all 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
+      filter: 'blur(60px)',
+      opacity: isPlaying ? 0.5 : 0.2,
+      transition: 'opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), background 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
     };
   }, [currentTrack, isPlaying]);
 
@@ -45,7 +45,7 @@ export const AmbientGlow: React.FC = () => {
         style={glowStyle}
       />
       {/* Subtle vignette overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0b0c10]/40 to-[#0b0c10] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-primary)]/40 to-[var(--bg-primary)] pointer-events-none" />
     </div>
   );
 };

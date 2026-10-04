@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { Track, RepeatMode, Playlist, ParsedLyrics } from '../types';
 
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
@@ -304,15 +305,30 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (newQueue) {
         setQueue(newQueue);
       }
-      setCurrentTrack(track);
-      setDuration(track.duration || 0);
+      
+      let trackToPlay = track;
+      // Fetch cover art if missing
+      if (!track.cover_art) {
+        try {
+          const art = await invoke<string | null>('fetch_cover_art', { artist: track.artist, title: track.title });
+          if (art) {
+            trackToPlay = { ...track, cover_art: art };
+            setTracks(prev => prev.map(t => t.id === track.id ? { ...t, cover_art: art } : t));
+          }
+        } catch (e) {
+          console.warn('Cover art fetch failed:', e);
+        }
+      }
+
+      setCurrentTrack(trackToPlay);
+      setDuration(trackToPlay.duration || 0);
       setCurrentTime(0);
 
-      showToast(track.title, track.artist, track.cover_art);
-      fetchLyrics(track);
+      showToast(trackToPlay.title, trackToPlay.artist, trackToPlay.cover_art);
+      fetchLyrics(trackToPlay);
 
       try {
-        await audioEngine.loadTrack(track.stream_url);
+        await audioEngine.loadTrack(trackToPlay.stream_url);
         await audioEngine.play();
         setIsPlaying(true);
       } catch (e) {
@@ -338,6 +354,27 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsPlaying(true);
     }
   }, [currentTrack, isPlaying, playTrack, tracks]);
+
+  // Tray Event Listeners
+  useEffect(() => {
+    let unlistenPlayPause: (() => void) | undefined;
+    let unlistenNext: (() => void) | undefined;
+    let unlistenPrev: (() => void) | undefined;
+
+    const setupTrayListeners = async () => {
+      unlistenPlayPause = await listen('tray://play-pause', () => togglePlay());
+      unlistenNext = await listen('tray://next', () => handleNextTrack());
+      unlistenPrev = await listen('tray://prev', () => handlePrevTrack());
+    };
+
+    setupTrayListeners();
+
+    return () => {
+      if (unlistenPlayPause) unlistenPlayPause();
+      if (unlistenNext) unlistenNext();
+      if (unlistenPrev) unlistenPrev();
+    };
+  }, [togglePlay, handleNextTrack, handlePrevTrack]);
 
   const seekTo = useCallback((time: number) => {
     audioEngine.seek(time);
@@ -523,6 +560,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } else if (e.code === 'KeyL' && currentTrackRef.current) {
         e.preventDefault();
         toggleLike(currentTrackRef.current.id);
+      } else if (e.ctrlKey && e.code === 'KeyB') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('toggle-sidebar'));
       }
     };
 

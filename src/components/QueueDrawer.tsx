@@ -14,12 +14,18 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-sm select-none animate-in fade-in duration-200">
-      <div className="w-80 h-full glass-panel-elevated bg-[#111219]/95 border-l border-white/10 p-5 flex flex-col gap-4 shadow-2xl animate-in slide-in-from-right duration-250">
+    <div
+      className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-sm select-none transition-opacity duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-80 h-full glass-panel-elevated bg-[#111219]/95 border-l border-white/10 p-5 flex flex-col gap-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <ListOrdered className="w-4 h-4 text-emerald-400" />
+            <ListOrdered className="w-4 h-4 text-[var(--accent)]" />
             <h2 className="text-sm font-bold text-white tracking-wide">Play Queue</h2>
             <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-gray-300 font-semibold">
               {queue.length}
@@ -29,15 +35,17 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             {queue.length > 0 && (
               <button
                 onClick={clearQueue}
-                className="p-1.5 text-gray-400 hover:text-rose-400 rounded-lg transition-colors"
+                className="p-1.5 text-gray-400 hover:text-rose-400 rounded-lg transition-colors cursor-pointer"
                 title="Clear queue"
+                aria-label="Clear queue"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
             <button
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors"
+              className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              aria-label="Close queue drawer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -50,8 +58,8 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
               Now Playing
             </span>
-            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-white/10 shadow">
+            <div className="p-3 rounded-xl bg-[var(--accent-muted)] border border-[var(--accent)]/20 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-white/10 shadow-sm">
                 {currentTrack.cover_art ? (
                   <img src={currentTrack.cover_art} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -73,7 +81,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                 <span className="text-xs font-semibold text-white truncate">
                   {currentTrack.title}
                 </span>
-                <span className="text-[11px] text-emerald-400 truncate">
+                <span className="text-[11px] text-[var(--accent)] truncate">
                   {currentTrack.artist}
                 </span>
               </div>
@@ -98,11 +106,11 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                 return (
                   <div
                     key={`${track.id}-${idx}`}
-                    className="group flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer"
+                    className="group flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors duration-150 cursor-pointer"
                     onClick={() => playTrack(track)}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-white/5 relative">
+                      <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-white/5 relative">
                         {track.cover_art ? (
                           <img src={track.cover_art} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -119,7 +127,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                       </div>
 
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-medium text-white truncate group-hover:text-emerald-400">
+                        <span className="text-xs font-medium text-white truncate group-hover:text-[var(--accent)] transition-colors duration-150">
                           {track.title}
                         </span>
                         <span className="text-[10px] text-gray-400 truncate">{track.artist}</span>
@@ -137,8 +145,9 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                               e.stopPropagation();
                               moveQueueItem(idx, idx - 1);
                             }}
-                            className="p-0.5 text-gray-400 hover:text-emerald-400 rounded transition-colors"
+                            className="p-0.5 text-gray-400 hover:text-[var(--accent)] rounded transition-colors cursor-pointer"
                             title="Move track up"
+                            aria-label="Move track up"
                           >
                             <ChevronUp className="w-3.5 h-3.5" />
                           </button>
@@ -149,8 +158,9 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                               e.stopPropagation();
                               moveQueueItem(idx, idx + 1);
                             }}
-                            className="p-0.5 text-gray-400 hover:text-emerald-400 rounded transition-colors"
+                            className="p-0.5 text-gray-400 hover:text-[var(--accent)] rounded transition-colors cursor-pointer"
                             title="Move track down"
+                            aria-label="Move track down"
                           >
                             <ChevronDown className="w-3.5 h-3.5" />
                           </button>
@@ -160,8 +170,9 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                             e.stopPropagation();
                             removeFromQueue(idx);
                           }}
-                          className="p-0.5 text-gray-400 hover:text-rose-400 rounded transition-colors ml-0.5"
+                          className="p-0.5 text-gray-400 hover:text-[var(--danger)] rounded transition-colors ml-0.5 cursor-pointer"
                           title="Remove from queue"
+                          aria-label="Remove from queue"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

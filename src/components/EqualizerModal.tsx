@@ -22,12 +22,18 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md select-none animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg glass-panel-elevated rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col gap-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md select-none transition-opacity duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg glass-panel-elevated rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col gap-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <div className="p-2 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
@@ -37,7 +43,8 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Close Equalizer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -51,7 +58,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
             </span>
             <button
               onClick={() => setPreset('Flat')}
-              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors"
+              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset</span>
@@ -62,9 +69,9 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
               <button
                 key={p.name}
                 onClick={() => setPreset(p.name)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
                   equalizerPreset.toLowerCase() === p.name.toLowerCase()
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow'
+                    ? 'bg-white/12 text-white'
                     : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
                 }`}
               >
@@ -75,7 +82,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Sliders */}
-        <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex justify-between items-end gap-3 h-52">
+        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-end gap-3 h-52">
           {bandLabels.map((band, idx) => {
             const gain = customGains[idx] || 0;
             return (
@@ -97,6 +104,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                       transform: 'rotate(-90deg)',
                       width: '100px',
                     }}
+                    aria-label={`${band.name} EQ`}
                   />
                 </div>
 

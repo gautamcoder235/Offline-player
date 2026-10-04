@@ -110,6 +110,7 @@ export const SettingsView: React.FC = () => {
     { key: 'Ctrl + ← / →', desc: 'Previous / Next track' },
     { key: 'M', desc: 'Mute / Unmute audio' },
     { key: 'L', desc: 'Like / Favorite current track' },
+    { key: 'Ctrl + B', desc: 'Toggle sidebar' },
   ];
 
   return (
@@ -132,7 +133,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Music Folders Section */}
-      <div className="p-6 rounded-3xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
+      <div className="p-6 rounded-xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -149,7 +150,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleRescan}
             disabled={isScanning}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-colors duration-150 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin text-emerald-400' : ''}`} />
             <span>Rescan All</span>
@@ -161,7 +162,7 @@ export const SettingsView: React.FC = () => {
           {settings.music_directories.map((dir) => (
             <div
               key={dir}
-              className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.04] border border-white/5 hover:bg-white/[0.07] transition-all"
+              className="flex items-center justify-between p-3 rounded-lg bg-white/[0.04] border border-white/5 hover:bg-white/[0.07] transition-colors duration-150"
             >
               <div className="flex items-center gap-3 min-w-0 pr-3">
                 <Folder className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -171,16 +172,18 @@ export const SettingsView: React.FC = () => {
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openInExplorer(dir)}
-                  className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors"
+                  className="p-1.5 text-gray-400 hover:text-white rounded-md transition-colors cursor-pointer"
                   title="Open folder in Explorer"
+                  aria-label="Open folder in Explorer"
                 >
                   <FolderOpen className="w-4 h-4" />
                 </button>
                 {settings.music_directories.length > 1 && (
                   <button
                     onClick={() => handleRemoveDirectory(dir)}
-                    className="p-1.5 text-gray-400 hover:text-rose-400 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-rose-400 rounded-md transition-colors cursor-pointer"
                     title="Remove folder"
+                    aria-label="Remove folder"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -197,12 +200,12 @@ export const SettingsView: React.FC = () => {
             value={newDirInput}
             onChange={(e) => setNewDirInput(e.target.value)}
             placeholder="Enter absolute directory path (e.g. D:\MyMusic)..."
-            className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+            className="flex-1 px-4 py-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
           />
           <button
             onClick={handleAddDirectory}
             disabled={!newDirInput.trim()}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold text-xs transition-all shadow"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold text-xs transition-colors duration-150 shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Folder</span>
@@ -211,7 +214,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Download Directory Configuration Section */}
-      <div className="p-6 rounded-3xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
+      <div className="p-6 rounded-xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -228,7 +231,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => openInExplorer(settings.download_directory)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 hover:text-white border border-white/10 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 hover:text-white border border-white/10 transition-colors duration-150 cursor-pointer"
               title="Reveal in Windows Explorer"
             >
               <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
@@ -236,7 +239,7 @@ export const SettingsView: React.FC = () => {
             </button>
             <button
               onClick={handleResetDownloadDir}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-400 hover:text-white border border-white/10 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-400 hover:text-white border border-white/10 transition-colors duration-150 cursor-pointer"
               title="Reset to default music directory"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -251,12 +254,12 @@ export const SettingsView: React.FC = () => {
             value={downloadDirInput}
             onChange={(e) => setDownloadDirInput(e.target.value)}
             placeholder="Enter absolute download folder path..."
-            className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+            className="flex-1 px-4 py-2.5 rounded-lg bg-black/40 border border-white/10 font-mono text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
           />
           <button
             onClick={handleSaveDownloadDir}
             disabled={!downloadDirInput.trim() || downloadDirInput === settings.download_directory}
-            className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black font-bold text-xs transition-all shadow"
+            className="px-4 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black font-bold text-xs transition-colors duration-150 shadow-sm cursor-pointer"
           >
             Save Target
           </button>
@@ -265,30 +268,30 @@ export const SettingsView: React.FC = () => {
 
       {/* Library Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl glass-panel bg-white/[0.02] border border-white/5">
+        <div className="p-5 rounded-xl glass-panel bg-white/[0.02] border border-white/5">
           <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
             Offline Tracks
           </span>
           <span className="text-2xl font-black text-white">{tracks.length}</span>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel bg-white/[0.02] border border-white/5">
+        <div className="p-5 rounded-xl glass-panel bg-white/[0.02] border border-white/5">
           <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
             Storage Size
           </span>
           <span className="text-2xl font-black text-white">{formatBytes(totalBytes)}</span>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel bg-white/[0.02] border border-white/5">
+        <div className="p-5 rounded-xl glass-panel bg-white/[0.02] border border-white/5">
           <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
             Audio Quality
           </span>
-          <span className="text-2xl font-black text-emerald-400">320 kbps</span>
+          <span className="text-2xl font-black text-[var(--accent)]">320 kbps</span>
         </div>
       </div>
 
       {/* Keyboard Shortcuts Table */}
-      <div className="p-6 rounded-3xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
+      <div className="p-6 rounded-xl glass-panel bg-black/30 border border-white/10 space-y-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
             <Keyboard className="w-5 h-5" />
@@ -303,10 +306,10 @@ export const SettingsView: React.FC = () => {
           {shortcuts.map((sc) => (
             <div
               key={sc.key}
-              className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.03] border border-white/5"
+              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5"
             >
               <span className="text-xs text-gray-300">{sc.desc}</span>
-              <kbd className="px-2.5 py-1 rounded-lg bg-black/60 border border-white/20 font-mono text-[11px] text-emerald-400 font-bold shadow-inner">
+              <kbd className="px-2.5 py-1 rounded-md bg-black/60 border border-white/20 font-mono text-[11px] text-[var(--accent)] font-bold shadow-inner">
                 {sc.key}
               </kbd>
             </div>

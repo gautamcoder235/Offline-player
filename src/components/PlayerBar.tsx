@@ -50,7 +50,6 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     isMuted,
     shuffle,
     repeatMode,
-    queue,
     likedTrackIds,
     togglePlay,
     nextTrack,
@@ -99,7 +98,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
       <div className="flex items-center gap-3 w-1/4 min-w-[220px]">
         {currentTrack ? (
           <>
-            <div className="relative w-14 h-14 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0 group">
+            <div className="relative w-14 h-14 rounded-lg overflow-hidden shadow-sm border border-white/10 shrink-0 group">
               {currentTrack.cover_art ? (
                 <img
                   src={currentTrack.cover_art}
@@ -125,17 +124,18 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             </div>
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className={`p-1.5 rounded-full transition-transform hover:scale-110 active:scale-95 ${
+              className={`p-1.5 rounded-full transition-transform hover:scale-110 active:scale-95 cursor-pointer ${
                 isLiked ? 'text-rose-500' : 'text-gray-400 hover:text-white'
               }`}
               title={isLiked ? 'Remove from Liked' : 'Save to Liked'}
+              aria-label={isLiked ? 'Remove from Liked' : 'Save to Liked'}
             >
               <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
             </button>
           </>
         ) : (
           <div className="flex items-center gap-3 text-xs text-gray-500">
-            <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center">
               <Disc3 className="w-6 h-6 text-gray-600" />
             </div>
             <span>No song selected</span>
@@ -149,29 +149,29 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <div className="flex items-center gap-5">
           <button
             onClick={toggleShuffle}
-            className={`p-1.5 rounded-full transition-colors relative ${
+            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
               shuffle ? 'text-emerald-400' : 'text-gray-400 hover:text-white'
             }`}
             title="Shuffle"
+            aria-label="Shuffle"
           >
             <Shuffle className="w-4 h-4" />
-            {shuffle && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400"></span>
-            )}
           </button>
 
           <button
             onClick={prevTrack}
-            className="p-1.5 rounded-full text-gray-300 hover:text-white hover:bg-white/5 transition-transform active:scale-95"
+            className="p-1.5 rounded-full text-gray-300 hover:text-white hover:bg-white/5 transition-transform active:scale-95 cursor-pointer"
             title="Previous (Ctrl+Left)"
+            aria-label="Previous Track"
           >
             <SkipBack className="w-5 h-5 fill-current" />
           </button>
 
           <button
             onClick={togglePlay}
-            className="w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shadow-lg shadow-emerald-500/25 transition-transform hover:scale-105 active:scale-95"
+            className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
             title="Play / Pause (Space)"
+            aria-label="Play or Pause"
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 fill-black text-black" />
@@ -182,23 +182,22 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={nextTrack}
-            className="p-1.5 rounded-full text-gray-300 hover:text-white hover:bg-white/5 transition-transform active:scale-95"
+            className="p-1.5 rounded-full text-gray-300 hover:text-white hover:bg-white/5 transition-transform active:scale-95 cursor-pointer"
             title="Next (Ctrl+Right)"
+            aria-label="Next Track"
           >
             <SkipForward className="w-5 h-5 fill-current" />
           </button>
 
           <button
             onClick={cycleRepeat}
-            className={`p-1.5 rounded-full transition-colors relative ${
+            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
               repeatMode !== 'off' ? 'text-emerald-400' : 'text-gray-400 hover:text-white'
             }`}
             title={`Repeat: ${repeatMode}`}
+            aria-label={`Repeat: ${repeatMode}`}
           >
             {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
-            {repeatMode !== 'off' && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400"></span>
-            )}
           </button>
         </div>
 
@@ -224,21 +223,21 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               )}
               {/* Active filled progress */}
               <div
-                className="h-full bg-emerald-500 rounded-full relative group-hover:bg-emerald-400"
+               className="h-full bg-[var(--accent)] rounded-full relative group-hover:bg-[var(--accent-hover)]"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
 
             {/* Scrubber Knob */}
             <div
-              className="absolute w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity -translate-x-1/2"
+              className="absolute w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity -translate-x-1/2 pointer-events-none"
               style={{ left: `${progressPercent}%` }}
             />
 
             {/* Hover Tooltip */}
             {hoverTime !== null && (
               <div
-                className="absolute -top-7 px-1.5 py-0.5 rounded bg-gray-900 border border-white/20 text-[10px] text-white font-mono -translate-x-1/2 pointer-events-none shadow"
+                className="absolute -top-7 px-1.5 py-0.5 rounded bg-gray-900 border border-white/20 text-[10px] text-white font-mono -translate-x-1/2 shadow"
                 style={{ left: `${hoverPercent}%` }}
               >
                 {formatTime(hoverTime)}
@@ -255,10 +254,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Real-time Visualizer Button */}
         <button
           onClick={onToggleVisualizer}
-          className={`p-2 rounded-lg transition-colors ${
-            isVisualizerActive ? 'text-cyan-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'
+          className={`p-2 transition-colors cursor-pointer ${
+            isVisualizerActive ? 'text-[var(--accent)]' : 'text-gray-400 hover:text-white'
           }`}
           title="Audio Visualizer"
+          aria-label="Toggle Audio Visualizer"
         >
           <Radio className="w-4 h-4" />
         </button>
@@ -266,10 +266,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Live Lyrics Button */}
         <button
           onClick={onToggleLyrics}
-          className={`p-2 rounded-lg transition-colors ${
-            isLyricsActive ? 'text-emerald-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'
+          className={`p-2 transition-colors cursor-pointer ${
+            isLyricsActive ? 'text-[var(--accent)]' : 'text-gray-400 hover:text-white'
           }`}
           title="Lyrics"
+          aria-label="Toggle Lyrics"
         >
           <Mic2 className="w-4 h-4" />
         </button>
@@ -277,10 +278,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Equalizer Button */}
         <button
           onClick={onToggleEqualizer}
-          className={`p-2 rounded-lg transition-colors ${
-            isEqualizerActive ? 'text-purple-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'
+          className={`p-2 transition-colors cursor-pointer ${
+            isEqualizerActive ? 'text-[var(--accent)]' : 'text-gray-400 hover:text-white'
           }`}
           title="Equalizer"
+          aria-label="Toggle Equalizer"
         >
           <Sliders className="w-4 h-4" />
         </button>
@@ -288,25 +290,22 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Queue Button */}
         <button
           onClick={onToggleQueue}
-          className={`p-2 rounded-lg transition-colors relative ${
-            isQueueActive ? 'text-emerald-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'
+          className={`p-2 transition-colors cursor-pointer ${
+            isQueueActive ? 'text-[var(--accent)]' : 'text-gray-400 hover:text-white'
           }`}
           title="Playing Queue"
+          aria-label="Toggle Playing Queue"
         >
           <ListOrdered className="w-4 h-4" />
-          {queue.length > 0 && (
-            <span className="absolute -top-1 -right-1 px-1 rounded-full bg-emerald-500 text-black text-[9px] font-bold">
-              {queue.length}
-            </span>
-          )}
         </button>
 
         {/* Volume Scrubber */}
         <div className="flex items-center gap-2 pl-2 border-l border-white/10">
           <button
             onClick={toggleMute}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-white transition-colors cursor-pointer"
             title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
+            aria-label="Toggle Mute"
           >
             {isMuted || volume === 0 ? (
               <VolumeX className="w-4 h-4 text-rose-400" />
@@ -324,8 +323,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             step="0.01"
             value={isMuted ? 0 : volume}
             onChange={(e) => setVolumeLevel(parseFloat(e.target.value))}
-            className="w-20 h-1 slider-track cursor-pointer"
+            className="w-24 h-1 slider-track cursor-pointer"
             title={`Volume: ${Math.round(volume * 100)}%`}
+            aria-label="Volume slider"
           />
         </div>
       </div>

@@ -6,7 +6,6 @@ import {
   Terminal,
   Loader2,
   ClipboardPaste,
-  Sparkles,
   StopCircle,
 } from 'lucide-react';
 
@@ -134,10 +133,10 @@ export const DownloaderView: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto px-8 py-6 select-none max-w-5xl mx-auto w-full gap-6">
       {/* Header Banner */}
-      <div className="p-6 rounded-3xl glass-panel-elevated bg-gradient-to-r from-emerald-950/40 via-[#13141c]/90 to-cyan-950/30 border border-white/10 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-6 rounded-xl glass-panel-elevated bg-gradient-to-r from-emerald-950/40 via-[#13141c]/90 to-cyan-950/30 border border-white/10 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[10px] uppercase tracking-wider border border-emerald-500/30">
+            <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] uppercase tracking-wider border border-emerald-500/30">
               Savify Engine
             </span>
             <span className="text-xs text-gray-400">Strictly 320 kbps MP3</span>
@@ -150,7 +149,7 @@ export const DownloaderView: React.FC = () => {
 
         <button
           onClick={() => openInExplorer(downloadDir)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white border border-white/10 text-xs font-semibold transition-all shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white border border-white/10 text-xs font-semibold transition-colors duration-150 shrink-0"
         >
           <FolderOpen className="w-4 h-4 text-emerald-400" />
           <span>Open Music Folder</span>
@@ -166,14 +165,14 @@ export const DownloaderView: React.FC = () => {
             onChange={(e) => setUrl(e.target.value)}
             disabled={isDownloading}
             placeholder="Paste Spotify track, album, or playlist URL (e.g. https://open.spotify.com/...)"
-            className="w-full pl-5 pr-28 py-3.5 rounded-2xl bg-black/50 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-all shadow-inner disabled:opacity-50"
+            className="w-full pl-5 pr-28 py-3.5 rounded-lg bg-black/50 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors duration-150 shadow-inner disabled:opacity-50"
           />
           <div className="absolute right-3 flex items-center gap-1.5">
             <button
               type="button"
               onClick={handlePaste}
               disabled={isDownloading}
-              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs flex items-center gap-1 transition-colors"
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 text-xs flex items-center gap-1 transition-colors duration-150"
               title="Paste from clipboard"
             >
               <ClipboardPaste className="w-4 h-4" />
@@ -191,7 +190,7 @@ export const DownloaderView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-all shadow-lg shadow-rose-600/20"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors duration-150 shadow-lg"
               >
                 <StopCircle className="w-4 h-4" />
                 <span>Stop Download</span>
@@ -200,7 +199,7 @@ export const DownloaderView: React.FC = () => {
               <button
                 type="submit"
                 disabled={!url.trim()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-800 disabled:text-gray-500 text-black font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-800 disabled:text-gray-500 text-black font-bold text-xs transition-colors duration-150 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Download className="w-4 h-4" />
                 <span>Start Download</span>
@@ -212,16 +211,14 @@ export const DownloaderView: React.FC = () => {
 
       {/* Live Download Status & Progress Bar */}
       {(isDownloading || progressPercent > 0 || summary) && (
-        <div className="p-5 rounded-2xl glass-panel bg-black/40 border border-white/10 space-y-3">
+        <div className="p-5 rounded-xl glass-panel bg-black/40 border border-white/10 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               {isDownloading ? (
                 <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
               ) : summary ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-              )}
+              ) : null}
               <span className="text-xs font-semibold text-white">{statusMessage}</span>
             </div>
             <span className="text-xs font-mono font-bold text-emerald-400">
@@ -238,7 +235,7 @@ export const DownloaderView: React.FC = () => {
           {/* Progress bar */}
           <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden relative">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-300 relative"
+              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-colors duration-150 relative"
               style={{ width: `${progressPercent}%` }}
             >
               {isDownloading && (
@@ -259,7 +256,7 @@ export const DownloaderView: React.FC = () => {
       )}
 
       {/* Terminal Log Console */}
-      <div className="flex-1 flex flex-col min-h-[220px] rounded-2xl bg-black/70 border border-white/10 overflow-hidden shadow-2xl">
+      <div className="flex-1 flex flex-col min-h-[220px] rounded-xl bg-black/70 border border-white/10 overflow-hidden shadow-2xl">
         <div className="px-4 py-2.5 bg-white/5 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
             <Terminal className="w-3.5 h-3.5 text-emerald-400" />
@@ -267,7 +264,7 @@ export const DownloaderView: React.FC = () => {
           </div>
           <button
             onClick={() => setLogs([])}
-            className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors duration-150"
           >
             Clear logs
           </button>
