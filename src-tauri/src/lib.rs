@@ -518,22 +518,21 @@ pub fn run() {
                     }
                 }
 
-                #[cfg(not(debug_assertions))]
-                {
-                    for label in ["main", "tray_popup"] {
-                        if let Some(w) = app.get_webview_window(label) {
-                            let _ = w.with_webview(|wv| {
-                                unsafe {
-                                    let controller = wv.controller();
-                                    if let Ok(core) = controller.CoreWebView2() {
-                                        if let Ok(settings) = core.Settings() {
-                                            let _ = settings.SetAreDefaultContextMenusEnabled(false);
-                                            let _ = settings.SetAreDevToolsEnabled(false);
-                                        }
+                // Always disable default WebView2 browser context menus on all windows
+                for label in ["main", "tray_popup"] {
+                    if let Some(w) = app.get_webview_window(label) {
+                        let _ = w.with_webview(|wv| {
+                            unsafe {
+                                let controller = wv.controller();
+                                if let Ok(core) = controller.CoreWebView2() {
+                                    if let Ok(settings) = core.Settings() {
+                                        let _ = settings.SetAreDefaultContextMenusEnabled(false);
+                                        #[cfg(not(debug_assertions))]
+                                        let _ = settings.SetAreDevToolsEnabled(false);
                                     }
                                 }
-                            });
-                        }
+                            }
+                        });
                     }
                 }
             }

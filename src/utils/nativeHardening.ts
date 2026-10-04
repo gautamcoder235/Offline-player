@@ -5,19 +5,24 @@
  */
 
 export function setupNativeHardening(): () => void {
-  // In development, keep all browser developer interactions available for debugging
-  if (!import.meta.env.PROD) {
-    return () => {};
-  }
-
-  // 1. Right-click context menu handling
+  // Always prevent the native browser right-click context menu (Back, Reload, Save as, Print, Inspect)
+  // so the application feels like a native desktop app at all times.
   const handleContextMenu = (e: MouseEvent) => {
-    // Prevent the native browser context menu (Inspect, Reload, Back, Print, etc.)
-    // Note: custom application menus/listeners can still receive the event or dispatch custom UI
     e.preventDefault();
   };
 
-  // 2. Browser / WebView developer shortcuts interception
+  window.addEventListener('contextmenu', handleContextMenu, true);
+  document.addEventListener('contextmenu', handleContextMenu, true);
+
+  // In development, keep browser developer shortcuts (F12, etc.) available for debugging if needed
+  if (!import.meta.env.PROD) {
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+    };
+  }
+
+  // 2. Browser / WebView developer shortcuts interception (production only)
   const handleKeyDown = (e: KeyboardEvent) => {
     const code = e.code;
     const key = e.key;
