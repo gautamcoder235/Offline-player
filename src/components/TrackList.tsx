@@ -100,7 +100,7 @@ export const TrackList: React.FC<TrackListProps> = ({
             </p>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-separate border-spacing-y-1 text-xs">
             <thead>
               <tr className="border-b border-[#292731] text-[#65616F] uppercase tracking-wider font-semibold text-[10px]">
                 <th className="w-12 pb-2.5 pl-3 text-center">#</th>
@@ -112,7 +112,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 <th className="w-12 pb-2.5 text-center"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#292731]/40">
+            <tbody>
               {tracks.map((track, idx) => {
                 const isCurrent = currentTrack?.id === track.id;
                 const isLiked = likedTrackIds.has(track.id);
@@ -124,13 +124,17 @@ export const TrackList: React.FC<TrackListProps> = ({
                     key={track.id}
                     onDoubleClick={() => playTrack(track, tracks)}
                     className={`group transition-colors duration-150 cursor-pointer ${
-                      isCurrent
-                        ? 'bg-[#19181F] border-l-2 border-[#19E6A0] shadow-[inset_0_0_24px_rgba(25,230,160,0.04)]'
-                        : 'hover:bg-[#1D1C23] border-l-2 border-transparent text-[#9A96A5]'
+                      isCurrent ? 'text-[#F4F2F7]' : 'text-[#9A96A5]'
                     }`}
                   >
-                    {/* Index / Play Button */}
-                    <td className="py-2 pl-3 text-center relative w-12">
+                    {/* Index / Play Button - Left Rounded Cap */}
+                    <td
+                      className={`py-2 pl-3 text-center relative w-12 border-l border-y transition-colors duration-150 ${
+                        isCurrent
+                          ? 'rounded-l-xl border-[#19E6A0]/50 bg-[#19181F] shadow-[0_0_12px_rgba(25,230,160,0.06)]'
+                          : 'border-transparent group-hover:rounded-l-xl group-hover:bg-[#1D1C23] group-hover:border-[#292731]/40'
+                      }`}
+                    >
                       <span
                         className={`inline-block font-mono text-[11px] group-hover:hidden ${
                           isCurrent ? 'text-[#19E6A0] font-bold' : 'text-[#65616F]'
@@ -158,8 +162,14 @@ export const TrackList: React.FC<TrackListProps> = ({
                       </button>
                     </td>
 
-                    {/* Title & Artist */}
-                    <td className="py-2 pr-4">
+                    {/* Title & Artist - Middle Body */}
+                    <td
+                      className={`py-2 pr-4 border-y transition-colors duration-150 ${
+                        isCurrent
+                          ? 'border-[#19E6A0]/50 bg-[#19181F] shadow-[0_0_12px_rgba(25,230,160,0.06)]'
+                          : 'border-transparent group-hover:bg-[#1D1C23] group-hover:border-[#292731]/40'
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-md overflow-hidden shrink-0 border border-[#292731] shadow-sm bg-[#16151C]">
                           {track.cover_art ? (
@@ -192,13 +202,25 @@ export const TrackList: React.FC<TrackListProps> = ({
                       </div>
                     </td>
 
-                    {/* Album */}
-                    <td className="py-2 pr-4 hidden md:table-cell text-[#777381] truncate max-w-xs text-[11px]">
+                    {/* Album - Middle Body */}
+                    <td
+                      className={`py-2 pr-4 hidden md:table-cell text-[#777381] truncate max-w-xs text-[11px] border-y transition-colors duration-150 ${
+                        isCurrent
+                          ? 'border-[#19E6A0]/50 bg-[#19181F] shadow-[0_0_12px_rgba(25,230,160,0.06)]'
+                          : 'border-transparent group-hover:bg-[#1D1C23] group-hover:border-[#292731]/40'
+                      }`}
+                    >
                       {track.album}
                     </td>
 
-                    {/* Duration & Like (Champagne Gold for Liked State) */}
-                    <td className="py-2 pr-4 text-right font-mono text-[11px] text-[#777381]">
+                    {/* Duration & Like - Middle Body */}
+                    <td
+                      className={`py-2 pr-4 text-right font-mono text-[11px] text-[#777381] border-y transition-colors duration-150 ${
+                        isCurrent
+                          ? 'border-[#19E6A0]/50 bg-[#19181F] shadow-[0_0_12px_rgba(25,230,160,0.06)]'
+                          : 'border-transparent group-hover:bg-[#1D1C23] group-hover:border-[#292731]/40'
+                      }`}
+                    >
                       <div className="flex items-center justify-end gap-2.5">
                         <button
                           onClick={(e) => {
@@ -222,8 +244,14 @@ export const TrackList: React.FC<TrackListProps> = ({
                       </div>
                     </td>
 
-                    {/* Context / More Menu */}
-                    <td className="py-2 pr-3 text-center relative w-12">
+                    {/* Context / More Menu - Right Rounded Cap */}
+                    <td
+                      className={`py-2 pr-3 text-center relative w-12 border-r border-y transition-colors duration-150 ${
+                        isCurrent
+                          ? 'rounded-r-xl border-[#19E6A0]/50 bg-[#19181F] shadow-[0_0_12px_rgba(25,230,160,0.06)]'
+                          : 'border-transparent group-hover:rounded-r-xl group-hover:bg-[#1D1C23] group-hover:border-[#292731]/40'
+                      }`}
+                    >
                       <div className="relative inline-block" ref={isMenuOpen ? menuRef : null}>
                         <button
                           onClick={(e) => {
