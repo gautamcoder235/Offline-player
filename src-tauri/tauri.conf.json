@@ -16,8 +16,8 @@
         "title": "MusicVault",
         "width": 1280,
         "height": 840,
-        "minWidth": 320,
-        "minHeight": 110,
+        "minWidth": 1150,
+        "minHeight": 750,
         "center": true,
         "decorations": false
       },

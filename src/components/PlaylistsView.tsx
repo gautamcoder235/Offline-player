@@ -156,7 +156,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           <div className="flex items-center gap-2.5">
             {playlistTracks.length > 0 && (
               <button
-                onClick={() => playTrack(playlistTracks[0], playlistTracks)}
+                onClick={() => playTrack(playlistTracks[0], playlistTracks, selectedPlaylist.id)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-black" />
@@ -198,7 +198,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           </div>
         </div>
 
-        <TrackList tracks={playlistTracks} />
+        <TrackList tracks={playlistTracks} playlistId={selectedPlaylist.id} />
 
         {/* Modals for Detail View */}
         <DeletePlaylistModal
@@ -384,7 +384,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                playTrack(likedTracks[0], likedTracks);
+                playTrack(likedTracks[0], likedTracks, 'liked');
               }}
               className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
               title="Play Liked Songs"
@@ -421,7 +421,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                playTrack(topTracks[0], topTracks);
+                playTrack(topTracks[0], topTracks, 'top_tracks');
               }}
               className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#E8C77A] hover:bg-[#F2D795] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
               title="Play Top Tracks"
@@ -474,7 +474,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      playTrack(playlistTracks[0], playlistTracks);
+                      playTrack(playlistTracks[0], playlistTracks, pl.id);
                     }}
                     className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
                     title={`Play ${pl.name}`}

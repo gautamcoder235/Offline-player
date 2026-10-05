@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { LogicalSize } from '@tauri-apps/api/dpi';
+import { LogicalSize, PhysicalSize } from '@tauri-apps/api/dpi';
 import { Track, RepeatMode, Playlist, ParsedLyrics } from '../types';
 
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
@@ -39,7 +39,7 @@ interface PlayerContextType {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   // Controls
-  playTrack: (track: Track, newQueue?: Track[]) => Promise<void>;
+  playTrack: (track: Track, newQueue?: Track[], sourcePlaylistId?: string | null) => Promise<void>;
   playQueueTrack: (index: number) => Promise<void>;
   togglePlay: () => void;
   nextTrack: () => void;
@@ -64,8 +64,11 @@ interface PlayerContextType {
   refreshLibrary: (directories?: string[]) => Promise<void>;
   saveLyrics: (track: Track, lrcContent: string) => Promise<void>;
   openInExplorer: (filePath: string) => Promise<void>;
+  deleteTrack: (track: Track, deleteFileFromDisk?: boolean) => Promise<void>;
   getPlayCount: (trackId: string) => number;
   topTracks: Track[];
+  playingPlaylistId: string | null;
+  setPlayingPlaylistId: (id: string | null) => void;
   exportPlaylistM3U: (playlistId: string) => void;
   importPlaylistM3U: (file: File) => Promise<{ playlistName: string; totalInFile: number; matchedCount: number }>;
   crossfadeDuration: number;
@@ -163,6 +166,26 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
+  const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('offline_player_playing_playlist') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (playingPlaylistId) {
+        localStorage.setItem('offline_player_playing_playlist', playingPlaylistId);
+      } else {
+        localStorage.removeItem('offline_player_playing_playlist');
+      }
+    } catch {
+      // ignore
+    }
+  }, [playingPlaylistId]);
+
   const getPlayCount = useCallback((trackId: string) => {
     return playCounts[trackId] || 0;
   }, [playCounts]);
@@ -250,19 +273,34 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Always-On-Top Floating Mini-Player state
   const [isMiniPlayer, setIsMiniPlayer] = useState<boolean>(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(false);
-  const previousSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const previousSizeRef = useRef<PhysicalSize | LogicalSize | null>(null);
 
   const toggleMiniPlayer = useCallback(async () => {
     try {
       const appWindow = getCurrentWindow();
       if (!isMiniPlayer) {
         // Entering Mini Player mode
+        const wasMaximized = await appWindow.isMaximized();
+        if (wasMaximized) {
+          await appWindow.unmaximize();
+        }
         const currentSize = await appWindow.innerSize();
-        previousSizeRef.current = { width: currentSize.width, height: currentSize.height };
+        previousSizeRef.current = currentSize;
+
+        // 1. Lower min size so window can shrink to fixed 400x250
+        await appWindow.setMinSize(new LogicalSize(400, 250));
+        await appWindow.setMaxSize(new LogicalSize(400, 250));
+
+        // 2. Set exact fixed dimensions
+        await appWindow.setSize(new LogicalSize(400, 250));
+
+        // 3. Make mini player size fixed
+        await appWindow.setResizable(false);
+
+        // 4. Set always on top
         await appWindow.setAlwaysOnTop(true);
         setIsAlwaysOnTop(true);
-        // Set compact glass widget dimensions (350x135)
-        await appWindow.setSize(new LogicalSize(350, 135));
+
         setIsMiniPlayer(true);
         if (typeof document !== 'undefined') {
           document.body.classList.add('mini-player-active');
@@ -271,9 +309,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Restoring Full Player
         await appWindow.setAlwaysOnTop(false);
         setIsAlwaysOnTop(false);
-        const restoreW = previousSizeRef.current?.width || 1280;
-        const restoreH = previousSizeRef.current?.height || 840;
-        await appWindow.setSize(new LogicalSize(restoreW, restoreH));
+
+        // Remove max size constraint
+        await appWindow.setMaxSize(null);
+
+        // Restore minimum size of full app (1150 x 750)
+        await appWindow.setMinSize(new LogicalSize(1150, 750));
+
+        // Re-enable resizing
+        await appWindow.setResizable(true);
+
+        // Restore previous dimensions
+        if (previousSizeRef.current) {
+          await appWindow.setSize(previousSizeRef.current);
+        } else {
+          await appWindow.setSize(new LogicalSize(1280, 840));
+        }
+
         setIsMiniPlayer(false);
         if (typeof document !== 'undefined') {
           document.body.classList.remove('mini-player-active');
@@ -556,7 +608,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentTime, currentLyrics]);
 
   const playTrack = useCallback(
-    async (track: Track, newContextTracks?: Track[]) => {
+    async (track: Track, newContextTracks?: Track[], sourcePlaylistId?: string | null) => {
+      if (sourcePlaylistId !== undefined) {
+        setPlayingPlaylistId(sourcePlaylistId);
+      }
       if (newContextTracks) {
         setContextTracks(newContextTracks);
         const idx = newContextTracks.findIndex((t) => t.id === track.id);
@@ -1047,6 +1102,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 
   const deletePlaylist = useCallback((id: string) => {
+    setPlayingPlaylistId((cur) => (cur === id ? null : cur));
     setPlaylists((prev) => {
       const target = prev.find((p) => p.id === id);
       if (target) {
@@ -1079,6 +1135,65 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       })
     );
   }, []);
+
+  const deleteTrack = useCallback(
+    async (track: Track, deleteFileFromDisk: boolean = false) => {
+      try {
+        if (deleteFileFromDisk) {
+          await invoke('delete_track_file', { filePath: track.file_path });
+        }
+
+        // If the deleted track is currently playing, advance to next track or stop
+        if (currentTrackRef.current?.id === track.id) {
+          if (tracksRef.current.length > 1) {
+            handleNextTrack();
+          } else {
+            audioEngine.pause();
+            setCurrentTrack(null);
+            setIsPlaying(false);
+          }
+        }
+
+        // Remove from library tracks
+        setTracks((prev) => prev.filter((t) => t.id !== track.id));
+
+        // Remove from contextTracks
+        setContextTracks((prev) => prev.filter((t) => t.id !== track.id));
+
+        // Remove from queue
+        setQueue((prev) => prev.filter((t) => t.id !== track.id));
+
+        // Remove from liked tracks
+        setLikedTrackIds((prev) => {
+          const next = new Set(prev);
+          next.delete(track.id);
+          return next;
+        });
+
+        // Remove from all playlists
+        setPlaylists((prev) =>
+          prev.map((pl) => {
+            if (pl.track_ids.includes(track.id)) {
+              return {
+                ...pl,
+                track_ids: pl.track_ids.filter((id) => id !== track.id),
+              };
+            }
+            return pl;
+          })
+        );
+
+        showToast(
+          deleteFileFromDisk ? 'Track Deleted from Disk' : 'Track Removed',
+          track.title
+        );
+      } catch (err) {
+        console.error('Failed to delete track:', err);
+        showToast('Delete Failed', typeof err === 'string' ? err : 'Could not delete file');
+      }
+    },
+    [handleNextTrack, showToast]
+  );
 
   const setPreset = useCallback((name: string) => {
     setEqualizerPreset(name);
@@ -1227,8 +1342,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshLibrary,
         saveLyrics: saveLyricsHandler,
         openInExplorer,
+        deleteTrack,
         getPlayCount,
         topTracks,
+        playingPlaylistId,
+        setPlayingPlaylistId,
         exportPlaylistM3U,
         importPlaylistM3U,
         crossfadeDuration,

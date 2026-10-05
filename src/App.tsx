@@ -173,6 +173,7 @@ const MainApp: React.FC = () => {
             tracks={topTracks}
             title="Top Played Tracks"
             subtitle="Your most listened offline songs"
+            playlistId="top_tracks"
           />
         );
       case 'liked':
@@ -181,6 +182,7 @@ const MainApp: React.FC = () => {
             tracks={filteredTracks}
             title="Liked Songs"
             subtitle={`${filteredTracks.length} saved favorite songs`}
+            playlistId="liked"
           />
         );
       case 'songs':
@@ -190,6 +192,7 @@ const MainApp: React.FC = () => {
             tracks={filteredTracks}
             title="All Offline Music"
             subtitle={`${filteredTracks.length} tracks found on this computer`}
+            playlistId="all"
           />
         );
     }

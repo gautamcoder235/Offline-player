@@ -209,6 +209,20 @@ fn open_in_explorer(file_path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn delete_track_file(file_path: String) -> Result<(), String> {
+    let mut clean_path = file_path.replace('/', "\\");
+    if clean_path.starts_with(r"\\?\") {
+        clean_path = clean_path[4..].to_string();
+    }
+    let path = Path::new(&clean_path);
+    if !path.exists() {
+        return Err("File does not exist on disk".to_string());
+    }
+    std::fs::remove_file(path).map_err(|e| format!("Failed to delete file from disk: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
 fn get_settings(state: State<'_, AppState>) -> AppSettings {
     let lock = state.settings.lock().unwrap();
     lock.clone()
@@ -606,6 +620,7 @@ pub fn run() {
             get_track_lyrics,
             save_track_lyrics,
             open_in_explorer,
+            delete_track_file,
             get_settings,
             save_settings,
             fetch_cover_art,

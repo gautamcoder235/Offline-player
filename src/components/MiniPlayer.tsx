@@ -12,6 +12,9 @@ import {
   X,
   Volume2,
   VolumeX,
+  Shuffle,
+  Repeat,
+  Repeat1,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { formatTime } from '../utils/helpers';
@@ -35,6 +38,10 @@ export const MiniPlayer: React.FC = () => {
     volume,
     isMuted,
     toggleMute,
+    shuffle,
+    toggleShuffle,
+    repeatMode,
+    cycleRepeat,
   } = usePlayer();
 
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -68,21 +75,21 @@ export const MiniPlayer: React.FC = () => {
 
   return (
     <div
-      className="w-full h-full p-2.5 flex flex-col justify-between bg-[#0E0D13]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl select-none overflow-hidden text-[#F4F2F7]"
+      className="w-full h-full p-3.5 flex flex-col justify-between bg-[#0E0D13]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl select-none overflow-hidden text-[#F4F2F7]"
       data-tauri-drag-region
       onMouseDown={handleStartDragging}
     >
-      {/* Top Drag & Control Bar */}
+      {/* Top Header Bar */}
       <div
-        className="flex items-center justify-between text-[10px] text-[#777381] px-0.5 cursor-grab active:cursor-grabbing shrink-0"
+        className="flex items-center justify-between text-[11px] text-[#777381] px-1 cursor-grab active:cursor-grabbing shrink-0"
         data-tauri-drag-region
         onMouseDown={handleStartDragging}
       >
-        <div className="flex items-center gap-1.5 pointer-events-none" data-tauri-drag-region>
-          <img src="/app-icon.png" alt="MusicVault" className="w-3.5 h-3.5 rounded-full object-contain" />
-          <span className="font-semibold uppercase tracking-wider text-[#A29EAD] text-[9.5px]">MusicVault</span>
+        <div className="flex items-center gap-2 pointer-events-none" data-tauri-drag-region>
+          <img src="/app-icon.png" alt="MusicVault" className="w-4 h-4 rounded-full object-contain" />
+          <span className="font-semibold uppercase tracking-wider text-[#A29EAD] text-[10px]">MusicVault</span>
           {isAlwaysOnTop && (
-            <span className="bg-[#19E6A0]/15 text-[#19E6A0] text-[8.5px] font-bold px-1 py-0.2 rounded">
+            <span className="bg-[#19E6A0]/15 text-[#19E6A0] text-[9px] font-bold px-1.5 py-0.5 rounded border border-[#19E6A0]/30 animate-in fade-in duration-200">
               PINNED
             </span>
           )}
@@ -92,136 +99,169 @@ export const MiniPlayer: React.FC = () => {
           {/* Always on top pin toggle */}
           <button
             onClick={toggleAlwaysOnTop}
-            className={`p-1 rounded-md transition-colors duration-150 cursor-pointer ${
-              isAlwaysOnTop ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7] hover:bg-white/5'
+            className={`p-1.5 rounded-lg transition-colors duration-150 cursor-pointer ${
+              isAlwaysOnTop ? 'text-[#19E6A0] bg-[#19E6A0]/15 border border-[#19E6A0]/30' : 'text-[#777381] hover:text-[#F4F2F7] hover:bg-white/5'
             }`}
             title={isAlwaysOnTop ? 'Unpin from Top' : 'Pin Always on Top'}
             aria-label="Toggle Always on Top"
           >
-            {isAlwaysOnTop ? <Pin className="w-3 h-3 fill-current" /> : <PinOff className="w-3 h-3" />}
+            {isAlwaysOnTop ? <Pin className="w-3.5 h-3.5 fill-current" /> : <PinOff className="w-3.5 h-3.5" />}
           </button>
 
           {/* Quick Mute */}
           <button
             onClick={toggleMute}
-            className="p-1 rounded-md text-[#777381] hover:text-[#F4F2F7] hover:bg-white/5 transition-colors duration-150 cursor-pointer"
+            className="p-1.5 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-white/5 transition-colors duration-150 cursor-pointer"
             title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
             aria-label="Toggle Mute"
           >
-            {isMuted || volume === 0 ? <VolumeX className="w-3 h-3 text-[#FF667A]" /> : <Volume2 className="w-3 h-3" />}
+            {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5 text-[#FF667A]" /> : <Volume2 className="w-3.5 h-3.5" />}
           </button>
 
           {/* Expand to Full App */}
           <button
             onClick={toggleMiniPlayer}
-            className="p-1 rounded-md text-[#777381] hover:text-[#19E6A0] hover:bg-white/5 transition-colors duration-150 cursor-pointer"
+            className="p-1.5 rounded-lg text-[#777381] hover:text-[#19E6A0] hover:bg-white/5 transition-colors duration-150 cursor-pointer"
             title="Expand to Full Player (Ctrl+M)"
             aria-label="Expand Player"
           >
-            <Maximize2 className="w-3 h-3" />
+            <Maximize2 className="w-3.5 h-3.5" />
           </button>
 
           {/* Close / Hide to Tray */}
           <button
             onClick={handleClose}
-            className="p-1 rounded-md text-[#777381] hover:text-[#FF667A] hover:bg-[#FF667A]/10 transition-colors duration-150 cursor-pointer"
+            className="p-1.5 rounded-lg text-[#777381] hover:text-[#FF667A] hover:bg-[#FF667A]/10 transition-colors duration-150 cursor-pointer"
             title="Hide to Tray"
             aria-label="Close"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Main Track & Playback Row */}
-      <div className="flex items-center gap-2.5 px-0.5 min-w-0" onMouseDown={(e) => e.stopPropagation()}>
+      {/* Center Stage: Artwork & Track Metadata */}
+      <div className="flex items-center gap-3.5 px-1 py-1 min-w-0" onMouseDown={(e) => e.stopPropagation()}>
         {/* Cover Artwork */}
-        <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#181720] border border-white/10 shrink-0 shadow flex items-center justify-center relative">
+        <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#181720] border border-white/10 shrink-0 shadow-lg flex items-center justify-center relative group">
           {currentTrack?.cover_art ? (
-            <img src={currentTrack.cover_art} alt={currentTrack.title} className="w-full h-full object-cover" />
+            <img src={currentTrack.cover_art} alt={currentTrack.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
           ) : (
-            <Music className="w-5 h-5 text-[#65616F]" />
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1C1B24] to-[#121118]">
+              <Music className="w-7 h-7 text-[#65616F]" />
+            </div>
           )}
         </div>
 
-        {/* Track Title & Artist */}
+        {/* Track Title, Artist, & Album */}
         <div className="flex-1 min-w-0 pr-1">
-          <p className="text-xs font-bold text-[#F4F2F7] truncate leading-tight">
-            {currentTrack?.title || 'No Track Selected'}
-          </p>
-          <p className="text-[10.5px] text-[#AAA6B2] truncate leading-tight mt-0.5">
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-sm font-bold text-[#F4F2F7] truncate leading-tight">
+              {currentTrack?.title || 'No Track Selected'}
+            </h4>
+            {currentTrack && (
+              <button
+                onClick={() => toggleLike(currentTrack.id)}
+                className={`p-1 rounded-lg transition-transform duration-150 active:scale-90 cursor-pointer shrink-0 ${
+                  isLiked ? 'text-[#E8C77A]' : 'text-[#65616F] hover:text-[#E8C77A]'
+                }`}
+                title={isLiked ? 'Remove from Liked' : 'Add to Liked'}
+                aria-label="Like Track"
+              >
+                <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-[#E8C77A]' : ''}`} />
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-[#AAA6B2] truncate leading-tight mt-1 font-medium">
             {currentTrack?.artist || 'MusicVault Offline'}
           </p>
+          {currentTrack?.album && (
+            <p className="text-[11px] text-[#65616F] truncate leading-tight mt-0.5">
+              {currentTrack.album}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Area: Progress Scrubber & Controls */}
+      <div className="space-y-2 px-1" onMouseDown={(e) => e.stopPropagation()}>
+        {/* Progress Bar & Timestamps */}
+        <div className="flex items-center gap-2 text-[10px] font-mono text-[#777381]">
+          <span className="w-7 text-right shrink-0">{formatTime(currentTime)}</span>
+          <div
+            ref={progressBarRef}
+            onClick={handleProgressClick}
+            className="relative flex-1 h-3 flex items-center cursor-pointer group py-1"
+          >
+            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden group-hover:h-1.5 transition-all duration-150">
+              <div
+                className="h-full bg-[#19E6A0] rounded-full"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <div
+              className="absolute w-2.5 h-2.5 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity duration-150 -translate-x-1/2 pointer-events-none"
+              style={{ left: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="w-7 text-left shrink-0">{formatTime(duration)}</span>
         </div>
 
-        {/* Controls Cluster */}
-        <div className="flex items-center gap-1 shrink-0">
-          {currentTrack && (
-            <button
-              onClick={() => toggleLike(currentTrack.id)}
-              className={`p-1 rounded-lg transition-transform duration-150 active:scale-90 cursor-pointer ${
-                isLiked ? 'text-[#E8C77A]' : 'text-[#65616F] hover:text-[#E8C77A]'
-              }`}
-              title={isLiked ? 'Remove from Liked' : 'Add to Liked'}
-              aria-label="Like Track"
-            >
-              <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-[#E8C77A]' : ''}`} />
-            </button>
-          )}
+        {/* Playback Controls Row */}
+        <div className="flex items-center justify-center gap-3 pt-0.5">
+          <button
+            onClick={toggleShuffle}
+            className={`p-1.5 rounded-lg transition-colors duration-150 active:scale-90 cursor-pointer ${
+              shuffle ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#65616F] hover:text-[#AAA6B2]'
+            }`}
+            title={shuffle ? 'Shuffle On' : 'Shuffle Off'}
+            aria-label="Toggle Shuffle"
+          >
+            <Shuffle className="w-3.5 h-3.5" />
+          </button>
 
           <button
             onClick={prevTrack}
-            className="p-1 text-[#AAA6B2] hover:text-white transition-colors duration-150 active:scale-90 cursor-pointer"
+            className="p-1.5 text-[#AAA6B2] hover:text-white transition-colors duration-150 active:scale-90 cursor-pointer"
             title="Previous Track"
             aria-label="Previous Track"
           >
-            <SkipBack className="w-3.5 h-3.5 fill-current" />
+            <SkipBack className="w-4 h-4 fill-current" />
           </button>
 
           <button
             onClick={togglePlay}
-            className="w-7 h-7 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-lg transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             title="Play / Pause"
             aria-label="Play or Pause"
           >
             {isPlaying ? (
-              <Pause className="w-3.5 h-3.5 fill-black text-black" />
+              <Pause className="w-4 h-4 fill-black text-black" />
             ) : (
-              <Play className="w-3.5 h-3.5 fill-black text-black ml-0.5" />
+              <Play className="w-4 h-4 fill-black text-black ml-0.5" />
             )}
           </button>
 
           <button
             onClick={nextTrack}
-            className="p-1 text-[#AAA6B2] hover:text-white transition-colors duration-150 active:scale-90 cursor-pointer"
+            className="p-1.5 text-[#AAA6B2] hover:text-white transition-colors duration-150 active:scale-90 cursor-pointer"
             title="Next Track"
             aria-label="Next Track"
           >
-            <SkipForward className="w-3.5 h-3.5 fill-current" />
+            <SkipForward className="w-4 h-4 fill-current" />
+          </button>
+
+          <button
+            onClick={cycleRepeat}
+            className={`p-1.5 rounded-lg transition-colors duration-150 active:scale-90 cursor-pointer ${
+              repeatMode !== 'off' ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#65616F] hover:text-[#AAA6B2]'
+            }`}
+            title={`Repeat: ${repeatMode}`}
+            aria-label="Cycle Repeat Mode"
+          >
+            {repeatMode === 'one' ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />}
           </button>
         </div>
-      </div>
-
-      {/* Slim Progress Bar & Timers */}
-      <div className="flex items-center gap-2 text-[9.5px] font-mono text-[#777381] px-0.5" onMouseDown={(e) => e.stopPropagation()}>
-        <span className="w-6 text-right shrink-0">{formatTime(currentTime)}</span>
-        <div
-          ref={progressBarRef}
-          onClick={handleProgressClick}
-          className="relative flex-1 h-3 flex items-center cursor-pointer group py-1"
-        >
-          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden group-hover:h-1.5 transition-all duration-150">
-            <div
-              className="h-full bg-[#19E6A0] rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div
-            className="absolute w-2 h-2 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity duration-150 -translate-x-1/2 pointer-events-none"
-            style={{ left: `${progressPercent}%` }}
-          />
-        </div>
-        <span className="w-6 text-left shrink-0">{formatTime(duration)}</span>
       </div>
     </div>
   );

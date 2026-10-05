@@ -12,16 +12,19 @@ import {
   ListPlus,
   ListMusic,
   Flame,
+  Trash2,
 } from 'lucide-react';
 import { Track } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
+import { DeleteTrackModal } from './DeleteTrackModal';
 
 interface TrackListProps {
   tracks: Track[];
   title?: string;
   subtitle?: string;
   coverArt?: string | null;
+  playlistId?: string;
 }
 
 export const TrackList: React.FC<TrackListProps> = ({
@@ -29,6 +32,7 @@ export const TrackList: React.FC<TrackListProps> = ({
   title,
   subtitle,
   coverArt,
+  playlistId,
 }) => {
   const {
     currentTrack,
@@ -42,9 +46,17 @@ export const TrackList: React.FC<TrackListProps> = ({
     addTrackToPlaylist,
     openInExplorer,
     getPlayCount,
+    deleteTrack,
   } = usePlayer();
 
   const [activeMenuTrackId, setActiveMenuTrackId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    track: Track;
+  } | null>(null);
+  const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
   const [actionFeedback, setActionFeedback] = useState<{
     trackId: string;
     action: 'queue' | 'playlist' | 'explorer';
@@ -71,6 +83,53 @@ export const TrackList: React.FC<TrackListProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [activeMenuTrackId]);
+
+  // Context menu dismissal handler (click outside, scroll, Escape)
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleDismiss = (event: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+
+    const handleKeyOrScroll = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key === 'Escape') {
+        setContextMenu(null);
+      } else if (event.type === 'scroll') {
+        setContextMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDismiss);
+    document.addEventListener('scroll', handleKeyOrScroll, true);
+    window.addEventListener('keydown', handleKeyOrScroll);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDismiss);
+      document.removeEventListener('scroll', handleKeyOrScroll, true);
+      window.removeEventListener('keydown', handleKeyOrScroll);
+    };
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, track: Track) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveMenuTrackId(null);
+
+    // Approximate context menu dimensions to prevent overflow off-screen
+    const menuWidth = 230;
+    const menuHeight = 310;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 12);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 12);
+
+    setContextMenu({
+      x: Math.max(12, x),
+      y: Math.max(12, y),
+      track,
+    });
+  };
 
   useEffect(() => {
     return () => {
@@ -117,7 +176,7 @@ export const TrackList: React.FC<TrackListProps> = ({
     if (currentTrack?.id === track.id) {
       togglePlay();
     } else {
-      playTrack(track, tracks);
+      playTrack(track, tracks, playlistId);
     }
   };
 
@@ -208,7 +267,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                   <div
                     key={track.id}
                     onClick={() => handleRowClick(track)}
-                    onDoubleClick={() => playTrack(track, tracks)}
+                    onDoubleClick={() => playTrack(track, tracks, playlistId)}
+                    onContextMenu={(e) => handleContextMenu(e, track)}
                     className={`group grid grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px] items-center px-3 py-2 rounded-xl transition-colors duration-150 cursor-pointer ${
                       isCurrent
                         ? 'bg-[#19181F] border border-[#19E6A0]/50 shadow-[0_0_14px_rgba(25,230,160,0.06)] text-[#F4F2F7]'
@@ -455,6 +515,22 @@ export const TrackList: React.FC<TrackListProps> = ({
                               </div>
                             </button>
                           </div>
+
+                          {/* Delete Track */}
+                          <div className="border-t border-[#25232F] my-1 pt-1">
+                            <button
+                              onClick={() => {
+                                setActiveMenuTrackId(null);
+                                setTrackToDelete(track);
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#FF667A] hover:bg-[#FF667A]/15 active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group/item"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <Trash2 className="w-3.5 h-3.5 text-[#FF667A] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                                <span className="truncate font-medium">Delete Track...</span>
+                              </div>
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -465,6 +541,155 @@ export const TrackList: React.FC<TrackListProps> = ({
           </div>
         )}
       </div>
+
+      {/* Global Right-Click Context Menu */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          style={{
+            position: 'fixed',
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+          className="w-56 p-1.5 rounded-xl bg-[#14131A]/95 backdrop-blur-2xl border border-[#2B2936] text-xs shadow-[0_20px_40px_rgba(0,0,0,0.85)] z-50 animate-menu-enter select-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Track Summary Header */}
+          <div className="px-2.5 py-1.5 border-b border-[#25232F] mb-1">
+            <p className="font-semibold text-[#F4F2F7] truncate text-xs">{contextMenu.track.title}</p>
+            <p className="text-[10px] text-[#777381] truncate">{contextMenu.track.artist}</p>
+          </div>
+
+          {/* Play / Pause */}
+          <button
+            onClick={() => {
+              if (currentTrack?.id === contextMenu.track.id) {
+                togglePlay();
+              } else {
+                playTrack(contextMenu.track, tracks, playlistId);
+              }
+              setContextMenu(null);
+            }}
+            className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              {currentTrack?.id === contextMenu.track.id && isPlaying ? (
+                <Pause className="w-3.5 h-3.5 text-[#19E6A0] shrink-0" />
+              ) : (
+                <Play className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 fill-[#19E6A0]" />
+              )}
+              <span className="truncate">
+                {currentTrack?.id === contextMenu.track.id && isPlaying ? 'Pause' : 'Play Now'}
+              </span>
+            </div>
+          </button>
+
+          {/* Add to Queue */}
+          <button
+            onClick={() => {
+              addToQueue(contextMenu.track);
+              setContextMenu(null);
+            }}
+            className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <ListPlus className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+              <span className="truncate">Add to Queue</span>
+            </div>
+          </button>
+
+          {/* Save to Liked */}
+          <button
+            onClick={() => {
+              toggleLike(contextMenu.track.id);
+              setContextMenu(null);
+            }}
+            className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Heart
+                className={`w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110 ${
+                  likedTrackIds.has(contextMenu.track.id)
+                    ? 'fill-[#E8C77A] text-[#E8C77A]'
+                    : 'text-[#E8C77A]'
+                }`}
+              />
+              <span className="truncate">
+                {likedTrackIds.has(contextMenu.track.id) ? 'Remove from Liked' : 'Save to Liked Songs'}
+              </span>
+            </div>
+          </button>
+
+          {/* Add to Playlist */}
+          {playlists.length > 0 && (
+            <div className="border-t border-[#25232F] my-1 pt-1">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] text-[#65616F] uppercase font-semibold tracking-wider">
+                <ListMusic className="w-3 h-3 text-[#65616F]" />
+                <span>Add to Playlist</span>
+              </div>
+              <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                {playlists.map((pl) => (
+                  <button
+                    key={pl.id}
+                    onClick={() => {
+                      addTrackToPlaylist(pl.id, contextMenu.track.id);
+                      setContextMenu(null);
+                    }}
+                    className="w-full px-2.5 py-1 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 cursor-pointer group text-xs"
+                  >
+                    <span className="truncate flex-1">{pl.name}</span>
+                    <Plus className="w-3 h-3 text-[#65616F] group-hover:text-[#19E6A0] shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reveal in Explorer */}
+          <div className="border-t border-[#25232F] my-1 pt-1">
+            <button
+              onClick={() => {
+                openInExplorer(contextMenu.track.file_path);
+                setContextMenu(null);
+              }}
+              className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                <span className="truncate">Reveal in File Explorer</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Delete Track */}
+          <div className="border-t border-[#25232F] my-1 pt-1">
+            <button
+              onClick={() => {
+                const track = contextMenu.track;
+                setContextMenu(null);
+                setTrackToDelete(track);
+              }}
+              className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#FF667A] hover:bg-[#FF667A]/15 active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Trash2 className="w-3.5 h-3.5 text-[#FF667A] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                <span className="truncate font-medium">Delete Track...</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Track Confirmation Modal */}
+      <DeleteTrackModal
+        track={trackToDelete}
+        isOpen={!!trackToDelete}
+        onClose={() => setTrackToDelete(null)}
+        onConfirm={async (track, deleteFromDisk) => {
+          await deleteTrack(track, deleteFromDisk);
+          setTrackToDelete(null);
+        }}
+      />
     </div>
   );
 };
