@@ -24,7 +24,17 @@ import { TitleBar } from './components/TitleBar';
 import { TrayPopup } from './components/TrayPopup';
 
 const MainApp: React.FC = () => {
-  const { tracks, searchQuery, likedTrackIds, createPlaylist, playlists, topTracks, isMiniPlayer } = usePlayer();
+  const {
+    tracks,
+    searchQuery,
+    likedTrackIds,
+    createPlaylist,
+    playlists,
+    topTracks,
+    isMiniPlayer,
+    themeAppearance,
+  } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
   const [currentView, setCurrentView] = useState<ViewMode>('songs');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'artists' | 'albums' | 'top'>('all');
@@ -207,7 +217,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0B0A0F] text-[#F4F2F7] relative">
+    <div className={`flex flex-col h-screen w-screen overflow-hidden ${isGlass ? 'bg-[#07060A]' : 'bg-[#0B0A0F]'} text-[#F4F2F7] relative`}>
       <TitleBar />
       {/* Dynamic Ambient Glow Tinted by Album Art */}
       <AmbientGlow />
@@ -227,7 +237,11 @@ const MainApp: React.FC = () => {
         />
 
         {/* Center Main Stage - Rounded Card Canvas with Uniform Decreased Spacing */}
-        <main className="flex-1 flex flex-col overflow-hidden relative min-h-0 m-1.5 rounded-2xl bg-[#100F14] border border-[#292731]/40 shadow-sm">
+        <main className={`flex-1 flex flex-col overflow-hidden relative min-h-0 m-1.5 rounded-2xl transition-all duration-300 ${
+          isGlass
+            ? 'bg-[#0F0E15]/45 backdrop-blur-2xl border border-white/[0.08] shadow-2xl'
+            : 'bg-[#100F14] border border-[#292731]/40 shadow-sm'
+        }`}>
           <Header 
             filterType={currentView === 'top_tracks' ? 'top' : filterType} 
             onFilterChange={(type) => {

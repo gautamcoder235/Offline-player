@@ -17,6 +17,8 @@ import {
   AlertCircle,
   Loader2,
   Sliders,
+  Layers,
+  Palette,
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -26,7 +28,16 @@ import { AppSettings } from '../types';
 import { formatBytes } from '../utils/helpers';
 
 export const SettingsView: React.FC = () => {
-  const { tracks, refreshLibrary, openInExplorer, crossfadeDuration, setCrossfadeDuration } = usePlayer();
+  const {
+    tracks,
+    refreshLibrary,
+    openInExplorer,
+    crossfadeDuration,
+    setCrossfadeDuration,
+    themeAppearance,
+    setThemeAppearance,
+  } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
   const {
     status: updateStatus,
     updateInfo,
@@ -135,13 +146,13 @@ export const SettingsView: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 select-none w-full space-y-6 pb-12 bg-[#0B0A0F]">
+    <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 select-none w-full space-y-6 pb-12 bg-transparent">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#292731]/60">
         <div>
           <h2 className="text-xl font-bold text-[#F4F2F7] tracking-tight">Settings & Library</h2>
           <p className="text-xs text-[#777381] mt-0.5">
-            Configure local audio directories, downloader storage, and view shortcuts.
+            Configure local audio directories, downloader storage, appearance, and view shortcuts.
           </p>
         </div>
 
@@ -154,7 +165,9 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Music Folders Section */}
-      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
@@ -248,8 +261,128 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Theme & Background Appearance Section */}
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+              <Palette className="w-4 h-4 text-[#19E6A0]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-[#F4F2F7]">Theme & Background Appearance</h3>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#19E6A0] font-semibold">
+                  {isGlass ? 'Transparent Front Panels' : 'Classic Obsidian'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Choose between solid obsidian panels and transparent front panels that react with the playing song's artwork & bass
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2 Selectable Options */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+          {/* Option 1: Classic Obsidian (Default) */}
+          <button
+            type="button"
+            onClick={() => setThemeAppearance('default')}
+            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 ${
+              !isGlass
+                ? 'bg-[#19E6A0]/10 border-[#19E6A0]/50 shadow-sm'
+                : 'bg-[#0E0D14]/80 border-[#282631] hover:border-[#383545] hover:bg-[#121118]'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-colors ${
+                  !isGlass
+                    ? 'bg-[#19E6A0]/20 border-[#19E6A0]/40 text-[#19E6A0]'
+                    : 'bg-[#16151D] border-[#282631] text-[#777381] group-hover:text-[#AAA6B2]'
+                }`}>
+                  <Layers className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-[#F4F2F7]">Classic Obsidian</span>
+                    <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-[#1C1B24] text-[#AAA6B2] border border-[#282631]">
+                      Default
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[#777381]">Solid Opaque Panels</span>
+                </div>
+              </div>
+
+              {!isGlass && (
+                <div className="w-4 h-4 rounded-full bg-[#19E6A0] flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 text-black stroke-[3]" />
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[#AAA6B2] leading-relaxed">
+              Solid dark opaque panels with subtle edge ambient lighting. Distraction-free, crisp contrast, minimal GPU overhead.
+            </p>
+
+            <div className="h-2 rounded-full w-full bg-[#0E0D14] border border-[#282631] overflow-hidden flex">
+              <div className="w-1/3 h-full bg-[#181722]" />
+              <div className="w-2/3 h-full bg-[#100F14]" />
+            </div>
+          </button>
+
+          {/* Option 2: Vibrant Aura Glass (Transparent Panels) */}
+          <button
+            type="button"
+            onClick={() => setThemeAppearance('aura_glass')}
+            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 ${
+              isGlass
+                ? 'bg-[#19E6A0]/10 border-[#19E6A0]/50 shadow-sm'
+                : 'bg-[#0E0D14]/80 border-[#282631] hover:border-[#383545] hover:bg-[#121118]'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-colors ${
+                  isGlass
+                    ? 'bg-[#19E6A0]/20 border-[#19E6A0]/40 text-[#19E6A0]'
+                    : 'bg-[#16151D] border-[#282631] text-[#777381] group-hover:text-[#AAA6B2]'
+                }`}>
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-[#F4F2F7]">Vibrant Aura Glass</span>
+                    <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 font-semibold">
+                      Transparent
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[#777381]">Dynamic Reactive Glass</span>
+                </div>
+              </div>
+
+              {isGlass && (
+                <div className="w-4 h-4 rounded-full bg-[#19E6A0] flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 text-black stroke-[3]" />
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[#AAA6B2] leading-relaxed">
+              Transparent frosted glass front panels that let the playing song's dynamic colors, animated aura blobs, and live bass energy pulse through the entire window.
+            </p>
+
+            <div className="h-2 rounded-full w-full bg-gradient-to-r from-[#19E6A0] via-[#E8C77A] to-[#8A5CF6] opacity-80" />
+          </button>
+        </div>
+      </div>
+
       {/* Download Directory Configuration Section */}
-      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
@@ -310,7 +443,9 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Audio Playback & Transitions: Smooth Crossfade */}
-      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
@@ -382,7 +517,9 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Application Updates Section */}
-      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
@@ -586,7 +723,9 @@ export const SettingsView: React.FC = () => {
 
       {/* Library Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="p-4 rounded-2xl bg-[#14131A] border border-[#282631] flex items-center gap-3.5 shadow-sm">
+        <div className={`p-4 rounded-2xl border flex items-center gap-3.5 shadow-sm transition-colors duration-200 ${
+          isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        }`}>
           <div className="w-10 h-10 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shrink-0">
             <Music className="w-5 h-5" />
           </div>
@@ -599,7 +738,9 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#14131A] border border-[#282631] flex items-center gap-3.5 shadow-sm">
+        <div className={`p-4 rounded-2xl border flex items-center gap-3.5 shadow-sm transition-colors duration-200 ${
+          isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        }`}>
           <div className="w-10 h-10 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shrink-0">
             <HardDrive className="w-5 h-5" />
           </div>
@@ -612,7 +753,9 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#14131A] border border-[#282631] flex items-center gap-3.5 shadow-sm">
+        <div className={`p-4 rounded-2xl border flex items-center gap-3.5 shadow-sm transition-colors duration-200 ${
+          isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        }`}>
           <div className="w-10 h-10 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shrink-0">
             <Volume2 className="w-5 h-5" />
           </div>
@@ -627,7 +770,9 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Keyboard Shortcuts Table */}
-      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
             <Keyboard className="w-4 h-4" />

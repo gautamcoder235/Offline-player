@@ -20,7 +20,9 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
     moveQueueItem,
     clearQueue,
     isPlaying,
+    themeAppearance,
   } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
 
   // Upcoming tracks from the current album/playlist context
   const upcomingContextTracks = React.useMemo(() => {
@@ -40,7 +42,9 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
       onClick={onClose}
     >
       <div
-        className={`w-80 h-full bg-[#100F14] border-l border-[#292731] p-5 flex flex-col gap-4 shadow-2xl transform transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`w-80 h-full ${
+          isGlass ? 'bg-[#100F14]/80 backdrop-blur-2xl border-l border-white/[0.08]' : 'bg-[#100F14] border-l border-[#292731]'
+        } p-5 flex flex-col gap-4 shadow-2xl transform transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         onClick={(e) => e.stopPropagation()}

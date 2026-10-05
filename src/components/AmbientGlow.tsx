@@ -36,7 +36,7 @@ const AuraLayer: React.FC<{ palette: Palette; paused: boolean }> = ({ palette, p
             left: b.left,
             width: b.size,
             height: b.size,
-            background: `radial-gradient(circle, ${palette.colors[i]} 0%, transparent 65%)`,
+            background: `radial-gradient(circle, ${palette.colors[i]} 0%, transparent 70%)`,
             animation: `${b.anim} ${b.dur} ease-in-out infinite alternate`,
             animationPlayState: paused ? 'paused' : 'running',
             willChange: 'transform',
@@ -48,10 +48,13 @@ const AuraLayer: React.FC<{ palette: Palette; paused: boolean }> = ({ palette, p
 };
 
 export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffects = false }) => {
-  const { currentTrack, isPlaying } = usePlayer();
+  const { currentTrack, isPlaying, themeAppearance } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
   const pulseRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(0);
-  const [layers, setLayers] = useState<Layer[]>([]);
+  const [layers, setLayers] = useState<Layer[]>(() => [
+    { id: 0, palette: DEFAULT_PALETTE }
+  ]);
 
   const trackKey = currentTrack ? `${currentTrack.title}|${currentTrack.artist}` : null;
   const cover = currentTrack?.cover_art ?? null;
@@ -115,16 +118,18 @@ export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffec
       <div
         className="absolute inset-0"
         style={{
-          opacity: isPlaying ? 0.34 : 0.14,
-          transition: 'opacity 1000ms ease-in-out',
-          filter: reduceEffects ? 'none' : 'blur(70px)',
+          opacity: isGlass
+            ? (isPlaying ? 0.65 : 0.28)
+            : (isPlaying ? 0.32 : 0.12),
+          transition: 'opacity 800ms ease-in-out',
+          filter: reduceEffects ? 'none' : 'blur(75px)',
         }}
       >
         <div
           ref={pulseRef}
           className="absolute inset-0"
           style={{
-            opacity: 'calc(0.7 + var(--bass, 0) * 0.3)',
+            opacity: 'calc(0.75 + var(--bass, 0) * 0.25)',
             transform: 'scale(calc(1 + var(--bass, 0) * 0.04))',
           }}
         >
@@ -134,8 +139,14 @@ export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffec
         </div>
       </div>
 
-      {/* Obsidian vignette to ground the edges in #0B0A0F */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0B0A0F]/20 via-transparent to-[#0B0A0F]/80" />
+      {/* Obsidian vignette */}
+      <div
+        className={`absolute inset-0 transition-opacity duration-500 ${
+          isGlass
+            ? 'bg-gradient-to-b from-black/20 via-transparent to-black/55'
+            : 'bg-gradient-to-b from-[#0B0A0F]/20 via-transparent to-[#0B0A0F]/85'
+        }`}
+      />
     </div>
   );
 };

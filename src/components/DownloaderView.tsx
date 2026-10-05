@@ -340,7 +340,7 @@ export const DownloaderView: React.FC = () => {
   } = globalSession;
 
   return (
-    <div className="flex-1 flex flex-col h-full w-full overflow-hidden select-none bg-[#0B0A0F]">
+    <div className="flex-1 flex flex-col h-full w-full overflow-hidden select-none bg-transparent">
       {/* Top Compact Controls & Action Header */}
       <div className="px-6 pt-5 pb-3 flex flex-col gap-3 shrink-0">
         {/* Title & Folder Button */}

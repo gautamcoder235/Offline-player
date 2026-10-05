@@ -51,9 +51,9 @@ export const LyricsView: React.FC = () => {
   const trackColor = getTrackColor(currentTrack.title, currentTrack.artist);
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden select-none relative bg-[#0B0A0F]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden select-none relative bg-transparent">
       {/* Top Bar */}
-      <div className="px-8 py-4 flex items-center justify-between border-b border-[#292731] z-10 bg-[#100F14]/90 backdrop-blur-md min-w-0">
+      <div className="px-8 py-4 flex items-center justify-between border-b border-[#292731] z-10 bg-[#100F14]/60 backdrop-blur-md min-w-0">
         <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
           <div className="w-11 h-11 rounded-lg overflow-hidden border border-[#292731] shrink-0 bg-[#16151C]">
             {currentTrack.cover_art ? (

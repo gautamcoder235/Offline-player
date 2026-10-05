@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize, PhysicalSize } from '@tauri-apps/api/dpi';
-import { Track, RepeatMode, Playlist, ParsedLyrics } from '../types';
+import { Track, RepeatMode, Playlist, ParsedLyrics, ThemeAppearance } from '../types';
 
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
 import { parseLrcLyrics } from '../utils/helpers';
@@ -77,6 +77,8 @@ interface PlayerContextType {
   toggleMiniPlayer: () => Promise<void>;
   isAlwaysOnTop: boolean;
   toggleAlwaysOnTop: () => Promise<void>;
+  themeAppearance: ThemeAppearance;
+  setThemeAppearance: (appearance: ThemeAppearance) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -268,6 +270,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     crossfadeDurationRef.current = clamped;
     audioEngine.setCrossfadeDuration(clamped);
     localStorage.setItem('offline_player_crossfade_duration', clamped.toString());
+  }, []);
+
+  // Theme & Background Appearance: 'default' (Classic Obsidian) vs 'aura_glass' (Transparent Panels)
+  const [themeAppearance, setThemeAppearanceState] = useState<ThemeAppearance>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_theme_appearance');
+      return (saved === 'default' || saved === 'aura_glass') ? saved : 'aura_glass';
+    } catch {
+      return 'aura_glass';
+    }
+  });
+
+  const setThemeAppearance = useCallback((appearance: ThemeAppearance) => {
+    setThemeAppearanceState(appearance);
+    try {
+      localStorage.setItem('offline_player_theme_appearance', appearance);
+    } catch (e) {
+      console.warn('Failed to save theme appearance:', e);
+    }
   }, []);
 
   // Always-On-Top Floating Mini-Player state
@@ -1355,6 +1376,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleMiniPlayer,
         isAlwaysOnTop,
         toggleAlwaysOnTop,
+        themeAppearance,
+        setThemeAppearance,
       }}
     >
       {children}

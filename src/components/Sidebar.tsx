@@ -56,7 +56,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     exportPlaylistM3U,
     playingPlaylistId,
     isPlaying,
+    themeAppearance,
   } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
   const { status: updateStatus } = useUpdate();
   const hasUpdateNotification = updateStatus === 'update-available' || updateStatus === 'completed';
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
@@ -254,7 +256,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className={`${
         isCollapsed ? 'w-[68px]' : 'w-[284px]'
-      } transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-[width] h-full flex flex-col bg-[#0E0D12]/85 backdrop-blur-xl border-r border-white/5 select-none z-10 overflow-hidden shrink-0 no-scrollbar`}
+      } transition-[width,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-[width] h-full flex flex-col ${
+        isGlass
+          ? 'bg-[#0E0D12]/45 backdrop-blur-2xl border-r border-white/[0.08]'
+          : 'bg-[#0E0D12] border-r border-[#292731]/40'
+      } select-none z-10 overflow-hidden shrink-0 no-scrollbar`}
     >
       {/* Top Header: Clean header without unnecessary border lines */}
       <div

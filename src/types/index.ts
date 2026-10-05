@@ -16,6 +16,8 @@ export interface Track {
 
 export type RepeatMode = 'off' | 'all' | 'one';
 
+export type ThemeAppearance = 'default' | 'aura_glass';
+
 export type ViewMode =
   | 'songs'
   | 'albums'

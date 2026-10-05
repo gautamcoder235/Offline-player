@@ -2,8 +2,11 @@ import React from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Minus, Square, X } from 'lucide-react';
+import { usePlayer } from '../context/PlayerContext';
 
 export function TitleBar() {
+  const { themeAppearance } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
   const appWindow = getCurrentWindow();
 
   const handleMinimize = async (e: React.MouseEvent) => {
@@ -63,7 +66,11 @@ export function TitleBar() {
       data-tauri-drag-region
       onMouseDown={handleStartDragging}
       onDoubleClick={handleToggleMaximize}
-      className="flex justify-between items-center w-full h-[40px] shrink-0 bg-[#0E0D12] select-none z-50 sticky top-0 cursor-default"
+      className={`flex justify-between items-center w-full h-[40px] shrink-0 transition-colors duration-300 ${
+        isGlass
+          ? 'bg-[#0E0D12]/45 backdrop-blur-xl border-b border-white/[0.06]'
+          : 'bg-[#0E0D12]'
+      } select-none z-50 sticky top-0 cursor-default`}
     >
       {/* Left: App Brand */}
       <div data-tauri-drag-region className="flex items-center gap-2 px-3.5 pointer-events-none shrink-0">

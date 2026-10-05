@@ -93,7 +93,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
     const uniqueCovers = Array.from(new Set(coverArts));
 
     return (
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0B0A0F]">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent">
         <div className="p-6 md:p-8 flex items-end justify-between gap-6 bg-gradient-to-b from-[#181722]/80 via-[#100F14]/40 to-transparent border-b border-[#292731]/40 shrink-0 min-w-0">
           <div className="flex items-end gap-6 min-w-0 flex-1">
             <div
@@ -227,7 +227,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
   // All Playlists Grid View
   return (
-    <div className="flex-1 flex flex-col h-full w-full overflow-y-auto px-8 py-7 select-none bg-[#0B0A0F]">
+    <div className="flex-1 flex flex-col h-full w-full overflow-y-auto px-8 py-7 select-none bg-transparent">
       {/* Top Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#292731]/40 shrink-0 mb-6">
         <div>
