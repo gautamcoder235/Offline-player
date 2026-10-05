@@ -77,15 +77,10 @@ export const MiniPlayer: React.FC = () => {
     >
       {/* Top Header Bar / Drag Region */}
       <div
-        className="flex items-center justify-between px-1 h-6 cursor-grab active:cursor-grabbing shrink-0"
+        className="flex items-center justify-end px-1 h-6 cursor-grab active:cursor-grabbing shrink-0"
         data-tauri-drag-region
         onMouseDown={handleStartDragging}
       >
-        {/* Subtle discreet drag pill handle */}
-        <div className="flex items-center pointer-events-none pl-1" data-tauri-drag-region>
-          <div className="w-8 h-1 rounded-full bg-white/15" />
-        </div>
-
         <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()}>
           {/* Quick Mute */}
           <button
