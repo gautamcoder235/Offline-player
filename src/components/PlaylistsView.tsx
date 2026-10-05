@@ -10,10 +10,13 @@ import {
   Flame,
   FileUp,
   FileDown,
+  Pencil,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackList } from './TrackList';
-import { ViewMode } from '../types';
+import { ViewMode, Playlist } from '../types';
+import { DeletePlaylistModal } from './DeletePlaylistModal';
+import { EditPlaylistModal } from './EditPlaylistModal';
 
 interface PlaylistsViewProps {
   selectedPlaylistId: string | null;
@@ -40,6 +43,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
     tracks,
     likedTrackIds,
     createPlaylist,
+    updatePlaylist,
     deletePlaylist,
     playTrack,
     topTracks,
@@ -51,6 +55,8 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
+  const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,9 +96,19 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0B0A0F]">
         <div className="p-6 md:p-8 flex items-end justify-between gap-6 bg-gradient-to-b from-[#181722]/80 via-[#100F14]/40 to-transparent border-b border-[#292731]/40 shrink-0 min-w-0">
           <div className="flex items-end gap-6 min-w-0 flex-1">
-            <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden bg-[#16151C] border border-[#292731]/60 flex items-center justify-center shadow-2xl shrink-0">
-              {uniqueCovers.length >= 4 ? (
-                <div className="w-full h-full grid grid-cols-2 grid-rows-2">
+            <div
+              onClick={() => setPlaylistToEdit(selectedPlaylist)}
+              className="relative group w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden bg-[#16151C] border border-[#292731]/60 flex items-center justify-center shadow-2xl shrink-0 cursor-pointer"
+              title="Click to edit playlist artwork and details"
+            >
+              {selectedPlaylist.cover_art ? (
+                <img
+                  src={selectedPlaylist.cover_art}
+                  alt={selectedPlaylist.name}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : uniqueCovers.length >= 4 ? (
+                <div className="w-full h-full grid grid-cols-2 grid-rows-2 transition-transform duration-300 group-hover:scale-105">
                   {uniqueCovers.slice(0, 4).map((art, i) => (
                     <img key={i} src={art} alt="" className="w-full h-full object-cover" />
                   ))}
@@ -101,7 +117,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 <img
                   src={uniqueCovers[0]}
                   alt={selectedPlaylist.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
                 <div
@@ -116,7 +132,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   />
                 </div>
               )}
+
+              {/* Hover overlay for quick edit */}
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-white">
+                <Pencil className="w-5 h-5 text-[#19E6A0]" />
+                <span className="text-[10px] font-medium">Edit Details</span>
+              </div>
             </div>
+
             <div className="space-y-1.5 min-w-0 flex-1 pb-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
                 Playlist
@@ -132,24 +155,40 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
           <div className="flex items-center gap-2.5">
             {playlistTracks.length > 0 && (
-              <>
-                <button
-                  onClick={() => playTrack(playlistTracks[0], playlistTracks)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
-                >
-                  <Play className="w-3.5 h-3.5 fill-black" />
-                  <span>Play All</span>
-                </button>
-                <button
-                  onClick={() => exportPlaylistM3U(selectedPlaylist.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#19E6A0] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
-                  title="Export playlist as .m3u8"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  <span>Export (.m3u8)</span>
-                </button>
-              </>
+              <button
+                onClick={() => playTrack(playlistTracks[0], playlistTracks)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-black" />
+                <span>Play All</span>
+              </button>
             )}
+            <button
+              onClick={() => setPlaylistToEdit(selectedPlaylist)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#19E6A0] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
+              title="Edit playlist name, description, and cover"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              <span>Edit</span>
+            </button>
+            {playlistTracks.length > 0 && (
+              <button
+                onClick={() => exportPlaylistM3U(selectedPlaylist.id)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#19E6A0] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
+                title="Export playlist as .m3u8"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span>Export (.m3u8)</span>
+              </button>
+            )}
+            <button
+              onClick={() => setPlaylistToDelete(selectedPlaylist)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#FF667A] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
+              title="Delete playlist"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
             <button
               onClick={() => onSelectPlaylist(null)}
               className="px-3.5 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
@@ -160,6 +199,28 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         </div>
 
         <TrackList tracks={playlistTracks} />
+
+        {/* Modals for Detail View */}
+        <DeletePlaylistModal
+          playlist={playlistToDelete}
+          isOpen={Boolean(playlistToDelete)}
+          tracks={tracks}
+          onClose={() => setPlaylistToDelete(null)}
+          onConfirm={(pl) => {
+            deletePlaylist(pl.id);
+            onSelectPlaylist(null);
+          }}
+        />
+
+        <EditPlaylistModal
+          playlist={playlistToEdit}
+          isOpen={Boolean(playlistToEdit)}
+          tracks={tracks}
+          onClose={() => setPlaylistToEdit(null)}
+          onSave={(id, updates) => {
+            updatePlaylist(id, updates);
+          }}
+        />
       </div>
     );
   }
@@ -387,7 +448,9 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             >
               {/* Square Aspect Ratio Cover with 2x2 Collage or Artwork */}
               <div className="aspect-square w-full rounded-xl overflow-hidden shadow-md bg-[#0E0D14] relative border border-[#292731]/70 flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
-                {uniqueCovers.length >= 4 ? (
+                {pl.cover_art ? (
+                  <img src={pl.cover_art} alt={pl.name} className="w-full h-full object-cover" />
+                ) : uniqueCovers.length >= 4 ? (
                   <div className="w-full h-full grid grid-cols-2 grid-rows-2">
                     {uniqueCovers.slice(0, 4).map((art, i) => (
                       <img key={i} src={art} alt="" className="w-full h-full object-cover" />
@@ -436,6 +499,17 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      setPlaylistToEdit(pl);
+                    }}
+                    className="p-1.5 text-[#65616F] hover:text-[#19E6A0] rounded-lg hover:bg-[#19E6A0]/10 cursor-pointer active:scale-90"
+                    title="Edit playlist"
+                    aria-label="Edit playlist"
+                  >
+                    <Pencil className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       exportPlaylistM3U(pl.id);
                     }}
                     className="p-1.5 text-[#65616F] hover:text-[#19E6A0] rounded-lg hover:bg-[#19E6A0]/10 cursor-pointer active:scale-90"
@@ -447,7 +521,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      deletePlaylist(pl.id);
+                      setPlaylistToDelete(pl);
                     }}
                     className="p-1.5 text-[#65616F] hover:text-[#FF667A] rounded-lg hover:bg-[#FF667A]/10 cursor-pointer active:scale-90"
                     title="Delete playlist"
@@ -474,6 +548,27 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           </button>
         )}
       </div>
+
+      {/* Modals for Grid View */}
+      <DeletePlaylistModal
+        playlist={playlistToDelete}
+        isOpen={Boolean(playlistToDelete)}
+        tracks={tracks}
+        onClose={() => setPlaylistToDelete(null)}
+        onConfirm={(pl) => {
+          deletePlaylist(pl.id);
+        }}
+      />
+
+      <EditPlaylistModal
+        playlist={playlistToEdit}
+        isOpen={Boolean(playlistToEdit)}
+        tracks={tracks}
+        onClose={() => setPlaylistToEdit(null)}
+        onSave={(id, updates) => {
+          updatePlaylist(id, updates);
+        }}
+      />
     </div>
   );
 };

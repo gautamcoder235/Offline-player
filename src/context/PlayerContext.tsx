@@ -55,6 +55,7 @@ interface PlayerContextType {
   moveQueueItem: (fromIndex: number, toIndex: number) => void;
   clearQueue: () => void;
   createPlaylist: (name: string, description?: string, initialTrackIds?: string[], coverColor?: string) => Playlist;
+  updatePlaylist: (id: string, updates: Partial<Pick<Playlist, 'name' | 'description' | 'coverColor' | 'cover_art'>>) => void;
   deletePlaylist: (id: string) => void;
   addTrackToPlaylist: (playlistId: string, trackId: string) => void;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
@@ -1027,9 +1028,33 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return newPl;
   }, [showToast]);
 
+  const updatePlaylist = useCallback(
+    (
+      id: string,
+      updates: Partial<Pick<Playlist, 'name' | 'description' | 'coverColor' | 'cover_art'>>
+    ) => {
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === id) {
+            return { ...pl, ...updates };
+          }
+          return pl;
+        })
+      );
+      showToast('Playlist Updated', updates.name || 'Changes saved');
+    },
+    [showToast]
+  );
+
   const deletePlaylist = useCallback((id: string) => {
-    setPlaylists((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+    setPlaylists((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target) {
+        showToast('Playlist Deleted', target.name);
+      }
+      return prev.filter((p) => p.id !== id);
+    });
+  }, [showToast]);
 
   const addTrackToPlaylist = useCallback((playlistId: string, trackId: string) => {
     setPlaylists((prev) =>
@@ -1193,6 +1218,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         moveQueueItem,
         clearQueue,
         createPlaylist,
+        updatePlaylist,
         deletePlaylist,
         addTrackToPlaylist,
         removeTrackFromPlaylist,

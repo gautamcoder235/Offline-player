@@ -14,12 +14,15 @@ import {
   ListMusic,
   Flame,
   FileUp,
-  FileDown
+  FileDown,
+  Pencil,
 } from 'lucide-react';
 
 import { usePlayer } from '../context/PlayerContext';
 import { useUpdate } from '../context/UpdateContext';
-import { ViewMode } from '../types';
+import { ViewMode, Playlist } from '../types';
+import { DeletePlaylistModal } from './DeletePlaylistModal';
+import { EditPlaylistModal } from './EditPlaylistModal';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -41,11 +44,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggle,
 }) => {
-  const { tracks, likedTrackIds, playlists, createPlaylist, deletePlaylist, topTracks, importPlaylistM3U, exportPlaylistM3U } = usePlayer();
+  const {
+    tracks,
+    likedTrackIds,
+    playlists,
+    createPlaylist,
+    updatePlaylist,
+    deletePlaylist,
+    topTracks,
+    importPlaylistM3U,
+    exportPlaylistM3U,
+  } = usePlayer();
   const { status: updateStatus } = useUpdate();
   const hasUpdateNotification = updateStatus === 'update-available' || updateStatus === 'completed';
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
+  const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
 
   const RANDOM_PLAYLIST_NAMES = [
     'Late Night Chill',
@@ -130,6 +145,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const uniqueCovers = Array.from(new Set(pl.cover_art ? [pl.cover_art, ...coverArts] : coverArts));
     const accentColor = pl.coverColor || '#19E6A0';
     const sizeClass = collapsed ? 'w-7 h-7 rounded-lg' : 'w-6 h-6 rounded-md';
+
+    if (pl.cover_art) {
+      return (
+        <div
+          className={`${sizeClass} overflow-hidden shrink-0 border border-white/[0.08] shadow-sm bg-[#16151C] transition-transform duration-200 group-hover:scale-105`}
+        >
+          <img src={pl.cover_art} alt={pl.name} className="w-full h-full object-cover" />
+        </div>
+      );
+    }
 
     if (uniqueCovers.length >= 4) {
       return (
@@ -518,6 +543,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          setPlaylistToEdit(pl);
+                        }}
+                        className="p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                        aria-label="Edit playlist"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           exportPlaylistM3U(pl.id);
                         }}
                         className="p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
@@ -529,10 +565,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deletePlaylist(pl.id);
-                          if (selectedPlaylistId === pl.id) {
-                            onViewChange('songs');
-                          }
+                          setPlaylistToDelete(pl);
                         }}
                         className="p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
                         aria-label="Delete playlist"
@@ -596,6 +629,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
       </div>
+
+      {/* Modals */}
+      <DeletePlaylistModal
+        playlist={playlistToDelete}
+        isOpen={Boolean(playlistToDelete)}
+        tracks={tracks}
+        onClose={() => setPlaylistToDelete(null)}
+        onConfirm={(pl) => {
+          deletePlaylist(pl.id);
+          if (selectedPlaylistId === pl.id) {
+            onViewChange('songs');
+          }
+        }}
+      />
+
+      <EditPlaylistModal
+        playlist={playlistToEdit}
+        isOpen={Boolean(playlistToEdit)}
+        tracks={tracks}
+        onClose={() => setPlaylistToEdit(null)}
+        onSave={(id, updates) => {
+          updatePlaylist(id, updates);
+        }}
+      />
     </aside>
   );
 };
