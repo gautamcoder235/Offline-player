@@ -6,8 +6,6 @@ import {
   SkipForward,
   Heart,
   Maximize2,
-  Pin,
-  PinOff,
   Music,
   X,
   Volume2,
@@ -33,8 +31,6 @@ export const MiniPlayer: React.FC = () => {
     toggleLike,
     likedTrackIds,
     toggleMiniPlayer,
-    isAlwaysOnTop,
-    toggleAlwaysOnTop,
     volume,
     isMuted,
     toggleMute,
@@ -75,39 +71,22 @@ export const MiniPlayer: React.FC = () => {
 
   return (
     <div
-      className="w-full h-full p-3.5 flex flex-col justify-between bg-[#0E0D13]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl select-none overflow-hidden text-[#F4F2F7]"
+      className="w-full h-full p-3.5 flex flex-col justify-between bg-[#0E0D13] select-none overflow-hidden text-[#F4F2F7] border border-white/[0.08]"
       data-tauri-drag-region
       onMouseDown={handleStartDragging}
     >
-      {/* Top Header Bar */}
+      {/* Top Header Bar / Drag Region */}
       <div
-        className="flex items-center justify-between text-[11px] text-[#777381] px-1 cursor-grab active:cursor-grabbing shrink-0"
+        className="flex items-center justify-between px-1 h-6 cursor-grab active:cursor-grabbing shrink-0"
         data-tauri-drag-region
         onMouseDown={handleStartDragging}
       >
-        <div className="flex items-center gap-2 pointer-events-none" data-tauri-drag-region>
-          <img src="/app-icon.png" alt="MusicVault" className="w-4 h-4 rounded-full object-contain" />
-          <span className="font-semibold uppercase tracking-wider text-[#A29EAD] text-[10px]">MusicVault</span>
-          {isAlwaysOnTop && (
-            <span className="bg-[#19E6A0]/15 text-[#19E6A0] text-[9px] font-bold px-1.5 py-0.5 rounded border border-[#19E6A0]/30 animate-in fade-in duration-200">
-              PINNED
-            </span>
-          )}
+        {/* Subtle discreet drag pill handle */}
+        <div className="flex items-center pointer-events-none pl-1" data-tauri-drag-region>
+          <div className="w-8 h-1 rounded-full bg-white/15" />
         </div>
 
         <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()}>
-          {/* Always on top pin toggle */}
-          <button
-            onClick={toggleAlwaysOnTop}
-            className={`p-1.5 rounded-lg transition-colors duration-150 cursor-pointer ${
-              isAlwaysOnTop ? 'text-[#19E6A0] bg-[#19E6A0]/15 border border-[#19E6A0]/30' : 'text-[#777381] hover:text-[#F4F2F7] hover:bg-white/5'
-            }`}
-            title={isAlwaysOnTop ? 'Unpin from Top' : 'Pin Always on Top'}
-            aria-label="Toggle Always on Top"
-          >
-            {isAlwaysOnTop ? <Pin className="w-3.5 h-3.5 fill-current" /> : <PinOff className="w-3.5 h-3.5" />}
-          </button>
-
           {/* Quick Mute */}
           <button
             onClick={toggleMute}
@@ -141,11 +120,15 @@ export const MiniPlayer: React.FC = () => {
       </div>
 
       {/* Center Stage: Artwork & Track Metadata */}
-      <div className="flex items-center gap-3.5 px-1 py-1 min-w-0" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-3.5 px-1 py-0.5 min-w-0" onMouseDown={(e) => e.stopPropagation()}>
         {/* Cover Artwork */}
-        <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#181720] border border-white/10 shrink-0 shadow-lg flex items-center justify-center relative group">
+        <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#16151C] border border-white/[0.08] shrink-0 shadow-lg flex items-center justify-center relative group">
           {currentTrack?.cover_art ? (
-            <img src={currentTrack.cover_art} alt={currentTrack.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img
+              src={currentTrack.cover_art}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1C1B24] to-[#121118]">
               <Music className="w-7 h-7 text-[#65616F]" />

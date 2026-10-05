@@ -200,7 +200,7 @@ const MainApp: React.FC = () => {
 
   if (isMiniPlayer) {
     return (
-      <div className="w-screen h-screen overflow-hidden bg-transparent">
+      <div className="w-screen h-screen overflow-hidden bg-[#0E0D13]">
         <MiniPlayer />
       </div>
     );
