@@ -3,8 +3,8 @@ import { Search, RefreshCw, X } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 
 interface HeaderProps {
-  filterType: 'all' | 'artists' | 'albums';
-  onFilterChange: (type: 'all' | 'artists' | 'albums') => void;
+  filterType: 'all' | 'artists' | 'albums' | 'top';
+  onFilterChange: (type: 'all' | 'artists' | 'albums' | 'top') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) => {
@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
 
         {/* Filter Category Tabs */}
         <div className="flex items-center gap-0.5 sm:gap-1 bg-[#14131A] p-0.5 rounded-xl border border-[#282631]/80 shrink-0">
-          {(['all', 'artists', 'albums'] as const).map((type) => {
+          {(['all', 'artists', 'albums', 'top'] as const).map((type) => {
             const isActive = filterType === type;
             return (
               <button
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
                     : 'text-[#9A96A5] hover:text-[#F4F2F7] hover:bg-[#1D1C23]'
                 }`}
               >
-                {type}
+                {type === 'top' ? 'Top Tracks' : type}
               </button>
             );
           })}

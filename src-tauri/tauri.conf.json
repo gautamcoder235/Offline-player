@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Offline player",
+  "productName": "MusicVault",
   "version": "0.1.1",
   "identifier": "com.offlineplayer.desktop",
   "build": {
@@ -13,17 +13,17 @@
     "windows": [
       {
         "label": "main",
-        "title": "Offline Player",
+        "title": "MusicVault",
         "width": 1280,
         "height": 840,
-        "minWidth": 960,
-        "minHeight": 640,
+        "minWidth": 320,
+        "minHeight": 110,
         "center": true,
         "decorations": false
       },
       {
         "label": "tray_popup",
-        "title": "Offline Player",
+        "title": "MusicVault",
         "width": 228,
         "height": 360,
         "decorations": false,

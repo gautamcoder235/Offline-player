@@ -69,11 +69,11 @@ export function TitleBar() {
       <div data-tauri-drag-region className="flex items-center gap-2 px-3.5 pointer-events-none shrink-0">
         <img
           src="/app-icon.png"
-          alt="Offline Player"
+          alt="MusicVault"
           className="w-7 h-7 rounded-full object-contain shrink-0 drop-shadow-md select-none"
         />
         <span className="text-[13.5px] font-semibold text-[#F4F2F7] tracking-tight leading-none select-none">
-          Offline Player
+          MusicVault
         </span>
         <span className="text-[11px] text-[#4B4854] select-none mx-0.5">•</span>
         <span className="text-[11.5px] font-medium text-[#777381] select-none tracking-normal">

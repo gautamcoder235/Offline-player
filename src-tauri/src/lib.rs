@@ -265,7 +265,7 @@ pub struct TrayPlaylist {
 }
 
 fn build_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _playlists: &[TrayPlaylist]) -> Result<tauri::menu::Menu<R>, tauri::Error> {
-    let show_i = MenuItemBuilder::with_id("show", "Show Offline Player").build(app)?;
+    let show_i = MenuItemBuilder::with_id("show", "Show MusicVault").build(app)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
 
     let lib_i = MenuItemBuilder::with_id("view:songs", "Library").build(app)?;
@@ -459,7 +459,7 @@ async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let port = streamer::start_stream_server();
-    println!("Offline Player local audio streaming server started on 127.0.0.1:{}", port);
+    println!("MusicVault local audio streaming server started on 127.0.0.1:{}", port);
 
     let initial_settings = load_persisted_settings();
     let app_state = AppState {

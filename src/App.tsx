@@ -15,6 +15,7 @@ import { VisualizerView } from './components/VisualizerView';
 import { QueueDrawer } from './components/QueueDrawer';
 import { ToastNotification } from './components/ToastNotification';
 import { AmbientGlow } from './components/AmbientGlow';
+import { MiniPlayer } from './components/MiniPlayer';
 import { ViewMode } from './types';
 import './App.css';
 
@@ -23,10 +24,10 @@ import { TitleBar } from './components/TitleBar';
 import { TrayPopup } from './components/TrayPopup';
 
 const MainApp: React.FC = () => {
-  const { tracks, searchQuery, likedTrackIds, createPlaylist, playlists } = usePlayer();
+  const { tracks, searchQuery, likedTrackIds, createPlaylist, playlists, topTracks, isMiniPlayer } = usePlayer();
   const [currentView, setCurrentView] = useState<ViewMode>('songs');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'artists' | 'albums'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'artists' | 'albums' | 'top'>('all');
 
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
@@ -166,6 +167,14 @@ const MainApp: React.FC = () => {
             onViewChange={setCurrentView}
           />
         );
+      case 'top_tracks':
+        return (
+          <TrackList
+            tracks={topTracks}
+            title="Top Played Tracks"
+            subtitle="Your most listened offline songs"
+          />
+        );
       case 'liked':
         return (
           <TrackList
@@ -185,6 +194,14 @@ const MainApp: React.FC = () => {
         );
     }
   };
+
+  if (isMiniPlayer) {
+    return (
+      <div className="w-screen h-screen overflow-hidden bg-transparent">
+        <MiniPlayer />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0B0A0F] text-[#F4F2F7] relative">
@@ -208,7 +225,17 @@ const MainApp: React.FC = () => {
 
         {/* Center Main Stage - Rounded Card Canvas with Uniform Decreased Spacing */}
         <main className="flex-1 flex flex-col overflow-hidden relative min-h-0 m-1.5 rounded-2xl bg-[#100F14] border border-[#292731]/40 shadow-sm">
-          <Header filterType={filterType} onFilterChange={setFilterType} />
+          <Header 
+            filterType={currentView === 'top_tracks' ? 'top' : filterType} 
+            onFilterChange={(type) => {
+              if (type === 'top') {
+                setCurrentView('top_tracks');
+              } else {
+                setFilterType(type as any);
+                if (currentView === 'top_tracks') setCurrentView('songs');
+              }
+            }} 
+          />
           <div className="flex-1 overflow-hidden flex flex-col">{renderMainContent()}</div>
         </main>
       </div>

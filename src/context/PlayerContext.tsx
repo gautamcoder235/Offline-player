@@ -2,10 +2,12 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { Track, RepeatMode, Playlist, ParsedLyrics } from '../types';
 
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
 import { parseLrcLyrics } from '../utils/helpers';
+import { generateM3U8, parseM3U8, downloadBlob } from '../utils/m3u';
 
 interface ToastInfo {
   id: string;
@@ -61,6 +63,16 @@ interface PlayerContextType {
   refreshLibrary: (directories?: string[]) => Promise<void>;
   saveLyrics: (track: Track, lrcContent: string) => Promise<void>;
   openInExplorer: (filePath: string) => Promise<void>;
+  getPlayCount: (trackId: string) => number;
+  topTracks: Track[];
+  exportPlaylistM3U: (playlistId: string) => void;
+  importPlaylistM3U: (file: File) => Promise<{ playlistName: string; totalInFile: number; matchedCount: number }>;
+  crossfadeDuration: number;
+  setCrossfadeDuration: (sec: number) => void;
+  isMiniPlayer: boolean;
+  toggleMiniPlayer: () => Promise<void>;
+  isAlwaysOnTop: boolean;
+  toggleAlwaysOnTop: () => Promise<void>;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -141,6 +153,70 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
+  const [playCounts, setPlayCounts] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_play_counts');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const getPlayCount = useCallback((trackId: string) => {
+    return playCounts[trackId] || 0;
+  }, [playCounts]);
+
+  const topTracks = React.useMemo(() => {
+    return [...tracks]
+      .filter(t => playCounts[t.id] > 0 || playCounts[`${t.artist} - ${t.title}`] > 0 || (t.playCount && t.playCount > 0))
+      .map(t => ({ ...t, playCount: playCounts[t.id] || playCounts[`${t.artist} - ${t.title}`] || t.playCount || 0 }))
+      .sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
+  }, [tracks, playCounts]);
+
+  const exportPlaylistM3U = useCallback((playlistId: string) => {
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    const plTracks = pl.track_ids.map(id => tracks.find(t => t.id === id)).filter(Boolean) as Track[];
+    const content = generateM3U8(pl.name, plTracks);
+    downloadBlob(`${pl.name}.m3u8`, content, 'audio/x-mpegurl');
+  }, [playlists, tracks]);
+
+  const importPlaylistM3U = useCallback(async (file: File) => {
+    return new Promise<{ playlistName: string; totalInFile: number; matchedCount: number }>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        const parsed = parseM3U8(content);
+        const name = parsed.name || file.name.replace(/\.m3u8?$/i, '');
+        const matchedIds: string[] = [];
+        
+        for (const entry of parsed.entries) {
+          const match = tracks.find(t => 
+            t.file_path === entry.path || 
+            `${t.artist} - ${t.title}` === `${entry.artist} - ${entry.title}` ||
+            (t.title === entry.title && t.artist === entry.artist)
+          );
+          if (match && !matchedIds.includes(match.id)) {
+            matchedIds.push(match.id);
+          }
+        }
+        
+        if (matchedIds.length > 0) {
+          const newPl: Playlist = {
+            id: Date.now().toString(),
+            name,
+            track_ids: matchedIds,
+            createdAt: Date.now()
+          };
+          setPlaylists(prev => [...prev, newPl]);
+          // showToast is called below via state update logic, or we can just call it here if we want
+        }
+        resolve({ playlistName: name, totalInFile: parsed.entries.length, matchedCount: matchedIds.length });
+      };
+      reader.readAsText(file);
+    });
+  }, [tracks]);
+
   const [equalizerPreset, setEqualizerPreset] = useState<string>('Flat');
   const [customGains, setCustomGains] = useState<[number, number, number, number, number]>([0, 0, 0, 0, 0]);
   const [currentLyrics, setCurrentLyrics] = useState<ParsedLyrics | null>(null);
@@ -148,6 +224,76 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(-1);
   const [toast, setToast] = useState<ToastInfo | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Crossfade settings (0 = Off, 1-12 seconds)
+  const [crossfadeDuration, setCrossfadeDurationState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_crossfade_duration');
+      return saved ? Math.max(0, Math.min(12, parseInt(saved, 10))) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const crossfadeDurationRef = useRef(crossfadeDuration);
+  crossfadeDurationRef.current = crossfadeDuration;
+  const isCrossfadingRef = useRef(false);
+
+  const setCrossfadeDuration = useCallback((sec: number) => {
+    const clamped = Math.max(0, Math.min(12, Math.round(sec)));
+    setCrossfadeDurationState(clamped);
+    crossfadeDurationRef.current = clamped;
+    audioEngine.setCrossfadeDuration(clamped);
+    localStorage.setItem('offline_player_crossfade_duration', clamped.toString());
+  }, []);
+
+  // Always-On-Top Floating Mini-Player state
+  const [isMiniPlayer, setIsMiniPlayer] = useState<boolean>(false);
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(false);
+  const previousSizeRef = useRef<{ width: number; height: number } | null>(null);
+
+  const toggleMiniPlayer = useCallback(async () => {
+    try {
+      const appWindow = getCurrentWindow();
+      if (!isMiniPlayer) {
+        // Entering Mini Player mode
+        const currentSize = await appWindow.innerSize();
+        previousSizeRef.current = { width: currentSize.width, height: currentSize.height };
+        await appWindow.setAlwaysOnTop(true);
+        setIsAlwaysOnTop(true);
+        // Set compact glass widget dimensions (350x135)
+        await appWindow.setSize(new LogicalSize(350, 135));
+        setIsMiniPlayer(true);
+        if (typeof document !== 'undefined') {
+          document.body.classList.add('mini-player-active');
+        }
+      } else {
+        // Restoring Full Player
+        await appWindow.setAlwaysOnTop(false);
+        setIsAlwaysOnTop(false);
+        const restoreW = previousSizeRef.current?.width || 1280;
+        const restoreH = previousSizeRef.current?.height || 840;
+        await appWindow.setSize(new LogicalSize(restoreW, restoreH));
+        setIsMiniPlayer(false);
+        if (typeof document !== 'undefined') {
+          document.body.classList.remove('mini-player-active');
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to toggle mini player:', e);
+      setIsMiniPlayer((prev) => !prev);
+    }
+  }, [isMiniPlayer]);
+
+  const toggleAlwaysOnTop = useCallback(async () => {
+    try {
+      const appWindow = getCurrentWindow();
+      const nextState = !isAlwaysOnTop;
+      await appWindow.setAlwaysOnTop(nextState);
+      setIsAlwaysOnTop(nextState);
+    } catch (e) {
+      console.warn('Failed to toggle always on top:', e);
+    }
+  }, [isAlwaysOnTop]);
 
   // Refs for audio engine callbacks to avoid stale closures
   const isPlayingRef = useRef(isPlaying);
@@ -173,6 +319,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   volumeRef.current = volume;
   const isMutedRef = useRef(isMuted);
   isMutedRef.current = isMuted;
+  const hasCountedCurrentPlayRef = useRef(false);
 
   const showToast = useCallback((title: string, subtitle: string, cover?: string | null) => {
     const id = Date.now().toString();
@@ -440,6 +587,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCurrentTrack(trackToPlay);
       setDuration(trackToPlay.duration || 0);
       setCurrentTime(0);
+      hasCountedCurrentPlayRef.current = false;
       saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
 
       showToast(trackToPlay.title, trackToPlay.artist, trackToPlay.cover_art);
@@ -449,6 +597,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         await audioEngine.loadTrack(trackToPlay.stream_url);
         await audioEngine.play();
         setIsPlaying(true);
+        if (crossfadeDurationRef.current > 0) {
+          audioEngine.fadeIn(volumeRef.current, Math.min(2.5, crossfadeDurationRef.current));
+        }
       } catch (e) {
         console.error('Failed to play track:', e);
       }
@@ -550,6 +701,41 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           saveLastPlayed(currentTrackRef.current, cTime, dur || durationRef.current);
         }
       }
+
+      const realDur = dur || durationRef.current;
+
+      // Crossfade transition trigger: gently dip volume before end of track and advance
+      const xfade = crossfadeDurationRef.current;
+      if (
+        xfade > 0 &&
+        realDur > 12 &&
+        cTime >= realDur - xfade &&
+        !isCrossfadingRef.current &&
+        isPlayingRef.current &&
+        repeatModeRef.current !== 'one'
+      ) {
+        isCrossfadingRef.current = true;
+        audioEngine.fadeOut(Math.min(xfade, 2)).then(() => {
+          handleNextTrack();
+          setTimeout(() => {
+            isCrossfadingRef.current = false;
+          }, 1200);
+        });
+      }
+
+      if (realDur > 0 && cTime >= Math.min(30, realDur * 0.5)) {
+        if (!hasCountedCurrentPlayRef.current && currentTrackRef.current) {
+          hasCountedCurrentPlayRef.current = true;
+          setPlayCounts((prev) => {
+            const track = currentTrackRef.current!;
+            const next = { ...prev };
+            const fallbackKey = `${track.artist} - ${track.title}`;
+            next[track.id] = (next[track.id] || next[fallbackKey] || 0) + 1;
+            localStorage.setItem('offline_player_play_counts', JSON.stringify(next));
+            return next;
+          });
+        }
+      }
     };
 
     audioEngine.onPlay = () => setIsPlaying(true);
@@ -561,6 +747,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     audioEngine.onEnded = () => {
+      if (!hasCountedCurrentPlayRef.current && currentTrackRef.current) {
+        hasCountedCurrentPlayRef.current = true;
+        setPlayCounts((prev) => {
+          const track = currentTrackRef.current!;
+          const next = { ...prev };
+          const fallbackKey = `${track.artist} - ${track.title}`;
+          next[track.id] = (next[track.id] || next[fallbackKey] || 0) + 1;
+          localStorage.setItem('offline_player_play_counts', JSON.stringify(next));
+          return next;
+        });
+      }
       if (currentTrackRef.current) {
         saveLastPlayed(currentTrackRef.current, 0, durationRef.current);
       }
@@ -645,9 +842,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const appWindow = getCurrentWindow();
       if (currentTrack) {
-        appWindow.setTitle(`${currentTrack.title} • ${currentTrack.artist}`);
+        appWindow.setTitle(`${currentTrack.title} • ${currentTrack.artist} — MusicVault`);
       } else {
-        appWindow.setTitle('Offline Player');
+        appWindow.setTitle('MusicVault');
       }
     } catch (e) {
       console.warn('Failed to set window title:', e);
@@ -937,7 +1134,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } else if (e.ctrlKey && e.code === 'ArrowRight') {
         e.preventDefault();
         handleNextTrack();
-      } else if (e.code === 'KeyM') {
+      } else if (e.ctrlKey && (e.code === 'KeyM' || e.key === 'm' || e.key === 'M')) {
+        e.preventDefault();
+        toggleMiniPlayer();
+      } else if (!e.ctrlKey && e.code === 'KeyM') {
         e.preventDefault();
         toggleMute();
       } else if (e.code === 'KeyL' && currentTrackRef.current) {
@@ -951,7 +1151,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNextTrack, handlePrevTrack, seekTo, setVolumeLevel, toggleLike, toggleMute, togglePlay]);
+  }, [handleNextTrack, handlePrevTrack, seekTo, setVolumeLevel, toggleLike, toggleMiniPlayer, toggleMute, togglePlay]);
 
   return (
     <PlayerContext.Provider
@@ -1001,6 +1201,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshLibrary,
         saveLyrics: saveLyricsHandler,
         openInExplorer,
+        getPlayCount,
+        topTracks,
+        exportPlaylistM3U,
+        importPlaylistM3U,
+        crossfadeDuration,
+        setCrossfadeDuration,
+        isMiniPlayer,
+        toggleMiniPlayer,
+        isAlwaysOnTop,
+        toggleAlwaysOnTop,
       }}
     >
       {children}

@@ -51,8 +51,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ inputs.tag_name || github.ref_name }}
-          releaseName: 'Offline Player ${{ inputs.tag_name || github.ref_name }}'
-          releaseBody: 'Release ${{ inputs.tag_name || github.ref_name }} for Offline Player. Includes standalone installer and updater bundles.'
+          releaseName: 'MusicVault ${{ inputs.tag_name || github.ref_name }}'
+          releaseBody: 'Release ${{ inputs.tag_name || github.ref_name }} for MusicVault. Includes standalone installer and updater bundles.'
           releaseDraft: ${{ inputs.release_draft || false }}
           prerelease: false
           uploadUpdaterJson: true

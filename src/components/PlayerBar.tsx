@@ -16,6 +16,7 @@ import {
   Sliders,
   Radio,
   Disc3,
+  PictureInPicture2,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { formatTime, getTrackColor } from '../utils/helpers';
@@ -60,6 +61,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     toggleShuffle,
     cycleRepeat,
     toggleLike,
+    toggleMiniPlayer,
   } = usePlayer();
 
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -308,6 +310,16 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           aria-label="Toggle Playing Queue"
         >
           <ListOrdered className="w-4 h-4" />
+        </button>
+
+        {/* Mini Player Toggle */}
+        <button
+          onClick={toggleMiniPlayer}
+          className="p-1 sm:p-1.5 rounded-full text-[#777381] hover:text-[#19E6A0] transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
+          title="Floating Mini Player (Ctrl+M)"
+          aria-label="Toggle Floating Mini Player"
+        >
+          <PictureInPicture2 className="w-4 h-4" />
         </button>
 
         {/* Volume Scrubber */}

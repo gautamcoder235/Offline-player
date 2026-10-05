@@ -11,6 +11,7 @@ export interface Track {
   size_bytes: number;
   cover_art?: string | null;
   stream_url: string;
+  playCount?: number;
 }
 
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -19,6 +20,7 @@ export type ViewMode =
   | 'songs'
   | 'albums'
   | 'artists'
+  | 'top_tracks'
   | 'playlists'
   | 'playlist_detail'
   | 'liked'
@@ -26,6 +28,18 @@ export type ViewMode =
   | 'lyrics'
   | 'visualizer'
   | 'settings';
+
+export interface M3UTrackEntry {
+  duration: number;
+  title: string;
+  artist?: string;
+  path: string;
+}
+
+export interface M3UPlaylist {
+  name?: string;
+  entries: M3UTrackEntry[];
+}
 
 export interface Playlist {
   id: string;
@@ -59,6 +73,7 @@ export interface AppSettings {
   download_directory: string;
   volume: number;
   equalizer_preset: string;
+  crossfade_duration?: number;
 }
 
 export interface DownloadLogEvent {

@@ -16,6 +16,7 @@ import {
   ArrowDownCircle,
   AlertCircle,
   Loader2,
+  Sliders,
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -25,7 +26,7 @@ import { AppSettings } from '../types';
 import { formatBytes } from '../utils/helpers';
 
 export const SettingsView: React.FC = () => {
-  const { tracks, refreshLibrary, openInExplorer } = usePlayer();
+  const { tracks, refreshLibrary, openInExplorer, crossfadeDuration, setCrossfadeDuration } = usePlayer();
   const {
     status: updateStatus,
     updateInfo,
@@ -130,6 +131,7 @@ export const SettingsView: React.FC = () => {
     { key: 'L', desc: 'Like / Favorite current track' },
     { key: 'Ctrl + B', desc: 'Toggle navigation sidebar' },
     { key: 'Ctrl + K', desc: 'Quick search library' },
+    { key: 'Ctrl + M', desc: 'Toggle Always-On-Top Mini-Player' },
   ];
 
   return (
@@ -307,6 +309,78 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Audio Playback & Transitions: Smooth Crossfade */}
+      <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+              <Sliders className="w-4 h-4 text-[#19E6A0]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-[#F4F2F7]">Smooth Crossfade</h3>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#19E6A0] font-semibold">
+                  {crossfadeDuration === 0 ? 'Off' : `${crossfadeDuration}s`}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Eliminates abrupt silences between consecutive tracks by gently dipping and rising volume during transitions
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {crossfadeDuration > 0 && (
+              <button
+                onClick={() => setCrossfadeDuration(0)}
+                className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-colors cursor-pointer active:scale-[0.98]"
+              >
+                Disable
+              </button>
+            )}
+            <button
+              onClick={() => setCrossfadeDuration(crossfadeDuration === 0 ? 3 : crossfadeDuration)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] ${
+                crossfadeDuration > 0
+                  ? 'bg-[#19E6A0]/15 border-[#19E6A0]/30 text-[#19E6A0]'
+                  : 'bg-[#1C1B23] border-[#282631] text-[#AAA6B2] hover:text-[#F4F2F7]'
+              }`}
+            >
+              {crossfadeDuration > 0 ? 'Active' : 'Enable (3s)'}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between text-[11px] text-[#777381]">
+            <span>Crossfade Duration</span>
+            <span className="font-mono text-[#F4F2F7] font-medium">
+              {crossfadeDuration === 0 ? 'Disabled (0s)' : `${crossfadeDuration} seconds`}
+            </span>
+          </div>
+          <div className="relative flex items-center">
+            <input
+              type="range"
+              min="0"
+              max="12"
+              step="1"
+              value={crossfadeDuration}
+              onChange={(e) => setCrossfadeDuration(parseInt(e.target.value, 10))}
+              className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-[#201F29] accent-[#19E6A0]"
+            />
+          </div>
+          <div className="flex justify-between text-[10px] text-[#65616F] font-mono px-0.5">
+            <span>Off</span>
+            <span>2s</span>
+            <span>4s</span>
+            <span>6s</span>
+            <span>8s</span>
+            <span>10s</span>
+            <span>12s</span>
+          </div>
+        </div>
+      </div>
+
       {/* Application Updates Section */}
       <div className="p-5 rounded-2xl bg-[#14131A] border border-[#282631] space-y-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -443,7 +517,7 @@ export const SettingsView: React.FC = () => {
               <Check className="w-4 h-4 text-[#19E6A0] shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-[#19E6A0]">
-                  Offline Player v{updateInfo.version} is ready to install
+                  MusicVault v{updateInfo.version} is ready to install
                 </p>
                 <p className="text-[11px] text-[#AAA6B2] mt-0.5">
                   Package has been downloaded and verified. Restart application to complete the update.
@@ -582,8 +656,8 @@ export const SettingsView: React.FC = () => {
       {/* App Info Footer */}
       <div className="flex items-center justify-between px-1 pt-2 text-xs text-[#65616F]">
         <div className="flex items-center gap-2">
-          <img src="/app-icon.png" alt="Offline Player" className="w-4 h-4 rounded-md object-contain shadow-sm" />
-          <span>Offline Player v{currentVersion} • Tauri v2 + Rust Audio Engine</span>
+          <img src="/app-icon.png" alt="MusicVault" className="w-4 h-4 rounded-md object-contain shadow-sm" />
+          <span>MusicVault v{currentVersion} • Tauri v2 + Rust Audio Engine</span>
         </div>
         <span className="font-mono text-[11px] text-[#4B4854]">Obsidian Edition</span>
       </div>

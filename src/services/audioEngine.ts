@@ -144,13 +144,65 @@ export class AudioEngine {
     }
   }
 
+  public crossfadeDuration: number = 0;
+
+  public setCrossfadeDuration(sec: number): void {
+    this.crossfadeDuration = Math.max(0, Math.min(12, sec));
+  }
+
+  public async fadeOut(durationSec: number = 0.8): Promise<void> {
+    if (!this.gainNode || !this.audioCtx) return;
+    try {
+      const dur = Math.max(0.1, durationSec);
+      const now = this.audioCtx.currentTime;
+      this.gainNode.gain.cancelScheduledValues(now);
+      this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, now);
+      this.gainNode.gain.linearRampToValueAtTime(0.0001, now + dur);
+      await new Promise((resolve) => setTimeout(resolve, dur * 1000));
+    } catch (e) {
+      console.warn('fadeOut error:', e);
+    }
+  }
+
+  public async fadeIn(targetVolume: number = 1.0, durationSec: number = 0.8): Promise<void> {
+    if (!this.gainNode || !this.audioCtx) return;
+    try {
+      const dur = Math.max(0.1, durationSec);
+      const now = this.audioCtx.currentTime;
+      const clampedVol = Math.max(0.01, Math.min(1, targetVolume));
+      this.gainNode.gain.cancelScheduledValues(now);
+      this.gainNode.gain.setValueAtTime(0.0001, now);
+      this.gainNode.gain.linearRampToValueAtTime(clampedVol, now + dur);
+    } catch (e) {
+      console.warn('fadeIn error:', e);
+    }
+  }
+
   public setVolume(volume: number): void {
     const clamped = Math.max(0, Math.min(1, volume));
     this.audio.volume = clamped;
+    if (this.gainNode && this.audioCtx) {
+      try {
+        const now = this.audioCtx.currentTime;
+        this.gainNode.gain.cancelScheduledValues(now);
+        this.gainNode.gain.setValueAtTime(clamped, now);
+      } catch {
+        // Gain scheduling catch
+      }
+    }
   }
 
   public setMuted(muted: boolean): void {
     this.audio.muted = muted;
+    if (this.gainNode && this.audioCtx) {
+      try {
+        const now = this.audioCtx.currentTime;
+        this.gainNode.gain.cancelScheduledValues(now);
+        this.gainNode.gain.setValueAtTime(muted ? 0.0001 : this.audio.volume, now);
+      } catch {
+        // Gain scheduling catch
+      }
+    }
   }
 
   public setPreset(presetName: string): void {

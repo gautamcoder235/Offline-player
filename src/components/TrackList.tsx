@@ -11,6 +11,7 @@ import {
   Check,
   ListPlus,
   ListMusic,
+  Flame,
 } from 'lucide-react';
 import { Track } from '../types';
 import { usePlayer } from '../context/PlayerContext';
@@ -40,6 +41,7 @@ export const TrackList: React.FC<TrackListProps> = ({
     playlists,
     addTrackToPlaylist,
     openInExplorer,
+    getPlayCount,
   } = usePlayer();
 
   const [activeMenuTrackId, setActiveMenuTrackId] = useState<string | null>(null);
@@ -315,6 +317,19 @@ export const TrackList: React.FC<TrackListProps> = ({
                           }`}
                         />
                       </button>
+                      {(() => {
+                        const count = track.playCount ?? getPlayCount(track.id);
+                        if (!count || count <= 0) return null;
+                        return (
+                          <span
+                            className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#E8C77A] font-semibold bg-[#E8C77A]/10 px-1.5 py-0.5 rounded-md"
+                            title={`${count} listens`}
+                          >
+                            <Flame className="w-2.5 h-2.5 text-[#E8C77A]" />
+                            <span>{count}</span>
+                          </span>
+                        );
+                      })()}
                       <span>{track.duration_str}</span>
                     </div>
 

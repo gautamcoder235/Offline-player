@@ -7,6 +7,9 @@ import {
   Heart,
   X,
   FolderPlus,
+  Flame,
+  FileUp,
+  FileDown,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackList } from './TrackList';
@@ -39,6 +42,9 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
     createPlaylist,
     deletePlaylist,
     playTrack,
+    topTracks,
+    exportPlaylistM3U,
+    importPlaylistM3U,
   } = usePlayer();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -126,13 +132,23 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
           <div className="flex items-center gap-2.5">
             {playlistTracks.length > 0 && (
-              <button
-                onClick={() => playTrack(playlistTracks[0], playlistTracks)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
-              >
-                <Play className="w-3.5 h-3.5 fill-black" />
-                <span>Play All</span>
-              </button>
+              <>
+                <button
+                  onClick={() => playTrack(playlistTracks[0], playlistTracks)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
+                >
+                  <Play className="w-3.5 h-3.5 fill-black" />
+                  <span>Play All</span>
+                </button>
+                <button
+                  onClick={() => exportPlaylistM3U(selectedPlaylist.id)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#19E6A0] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
+                  title="Export playlist as .m3u8"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>Export (.m3u8)</span>
+                </button>
+              </>
             )}
             <button
               onClick={() => onSelectPlaylist(null)}
@@ -165,13 +181,33 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Playlist</span>
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.m3u,.m3u8';
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) await importPlaylistM3U(file);
+              };
+              input.click();
+            }}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#16151C] hover:bg-[#1E1D26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 shadow-sm active:scale-95 cursor-pointer shrink-0"
+            title="Import .m3u or .m3u8 playlist file"
+          >
+            <FileUp className="w-4 h-4 text-[#19E6A0]" />
+            <span>Import Playlist</span>
+          </button>
+
+          <button
+            onClick={() => setIsCreating(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Playlist</span>
+          </button>
+        </div>
       </div>
 
       {/* Creation Modal */}
@@ -297,6 +333,43 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           )}
         </div>
 
+        {/* Special Hero Card: Top Tracks */}
+        <div
+          onClick={() => onViewChange?.('top_tracks')}
+          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#E8C77A]/20 via-[#4A2600]/30 to-[#14131A] border border-[#292731] hover:border-[#E8C77A]/50 transition-all duration-200 cursor-pointer group flex flex-col justify-between relative shadow-xl min-h-[180px] active:scale-[0.98]"
+        >
+          <div className="flex items-start justify-between">
+            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
+              <Flame className="w-6 h-6 fill-[#E8C77A] text-[#E8C77A]" />
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#E8C77A] bg-[#E8C77A]/10 border border-[#E8C77A]/20 px-2.5 py-0.5 rounded-full">
+              Most Played
+            </span>
+          </div>
+
+          <div className="pr-12">
+            <h3 className="text-xl font-black text-[#F4F2F7] tracking-tight group-hover:text-[#E8C77A] transition-colors duration-200">
+              Top Played Mix
+            </h3>
+            <p className="text-xs text-[#AAA6B2] mt-1 font-medium">
+              {topTracks.length} tracks ranked by your listens
+            </p>
+          </div>
+
+          {topTracks.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                playTrack(topTracks[0], topTracks);
+              }}
+              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#E8C77A] hover:bg-[#F2D795] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
+              title="Play Top Tracks"
+            >
+              <Play className="w-5 h-5 fill-black text-black ml-0.5" />
+            </button>
+          )}
+        </div>
+
         {/* User & Downloaded Custom Playlists */}
         {playlists.map((pl) => {
           const playlistTracks = tracks.filter((t) => pl.track_ids.includes(t.id));
@@ -359,17 +432,30 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   </span>
                 </div>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deletePlaylist(pl.id);
-                  }}
-                  className="p-1.5 text-[#65616F] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg hover:bg-[#FF667A]/10 cursor-pointer active:scale-90"
-                  title="Delete playlist"
-                  aria-label="Delete playlist"
-                >
-                  <Trash2 className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
-                </button>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      exportPlaylistM3U(pl.id);
+                    }}
+                    className="p-1.5 text-[#65616F] hover:text-[#19E6A0] rounded-lg hover:bg-[#19E6A0]/10 cursor-pointer active:scale-90"
+                    title="Export playlist (.m3u8)"
+                    aria-label="Export playlist"
+                  >
+                    <FileDown className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePlaylist(pl.id);
+                    }}
+                    className="p-1.5 text-[#65616F] hover:text-[#FF667A] rounded-lg hover:bg-[#FF667A]/10 cursor-pointer active:scale-90"
+                    title="Delete playlist"
+                    aria-label="Delete playlist"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
+                  </button>
+                </div>
               </div>
             </div>
           );

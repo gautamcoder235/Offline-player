@@ -12,6 +12,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ListMusic,
+  Flame,
+  FileUp,
+  FileDown
 } from 'lucide-react';
 
 import { usePlayer } from '../context/PlayerContext';
@@ -38,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggle,
 }) => {
-  const { tracks, likedTrackIds, playlists, createPlaylist, deletePlaylist } = usePlayer();
+  const { tracks, likedTrackIds, playlists, createPlaylist, deletePlaylist, topTracks, importPlaylistM3U, exportPlaylistM3U } = usePlayer();
   const { status: updateStatus } = useUpdate();
   const hasUpdateNotification = updateStatus === 'update-available' || updateStatus === 'completed';
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
@@ -175,6 +178,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Liked Songs',
       icon: Heart,
       badge: likedTrackIds.size,
+    },
+    {
+      id: 'top_tracks' as ViewMode,
+      label: 'Top Tracks',
+      icon: Flame,
+      badge: topTracks.length > 0 ? topTracks.length : undefined,
     },
     {
       id: 'download' as ViewMode,
@@ -427,6 +436,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Random
               </button>
               <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.m3u,.m3u8';
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) await importPlaylistM3U(file);
+                  };
+                  input.click();
+                }}
+                className="group p-1 rounded-lg text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] transition-all duration-200 active:scale-95 cursor-pointer"
+                title="Import Playlist (.m3u)"
+                aria-label="Import Playlist"
+              >
+                <FileUp className="w-3.5 h-3.5 transition-transform duration-200 group-hover:-translate-y-0.5" strokeWidth={1.5} />
+              </button>
+              <button
                 onClick={() => setIsCreatingPlaylist(!isCreatingPlaylist)}
                 className="group p-1 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#16151C] transition-all duration-200 active:scale-95 cursor-pointer"
                 title="Create Playlist"
@@ -488,19 +514,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {renderPlaylistCover(pl, false)}
                       <span className="truncate">{pl.name}</span>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deletePlaylist(pl.id);
-                        if (selectedPlaylistId === pl.id) {
-                          onViewChange('songs');
-                        }
-                      }}
-                      className="p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer shrink-0 ml-1"
-                      aria-label="Delete playlist"
-                    >
-                      <Trash2 className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
-                    </button>
+                    <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportPlaylistM3U(pl.id);
+                        }}
+                        className="p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                        aria-label="Export playlist (.m3u8)"
+                        title="Export (.m3u8)"
+                      >
+                        <FileDown className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePlaylist(pl.id);
+                          if (selectedPlaylistId === pl.id) {
+                            onViewChange('songs');
+                          }
+                        }}
+                        className="p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                        aria-label="Delete playlist"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
