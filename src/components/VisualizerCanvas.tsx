@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Radio, X, Activity, BarChart2, Disc3 } from 'lucide-react';
 import { audioEngine } from '../services/audioEngine';
 import { usePlayer } from '../context/PlayerContext';
@@ -137,7 +138,7 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md select-none transition-opacity duration-200"
       onClick={onClose}
@@ -211,4 +212,6 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ isOpen, onCl
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2, AlertTriangle, X, Music, HardDrive, Library } from 'lucide-react';
 import { Track } from '../types';
 
@@ -28,7 +29,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
 
   if (!isOpen || !track) return null;
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none"
       onClick={onClose}
@@ -162,4 +163,6 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

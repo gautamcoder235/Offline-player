@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ListMusic,
   Plus,
@@ -11,6 +12,7 @@ import {
   FileUp,
   FileDown,
   Pencil,
+  ArrowLeft,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackList } from './TrackList';
@@ -141,60 +143,57 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             </div>
 
             <div className="space-y-1.5 min-w-0 flex-1 pb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
-                Playlist
-              </span>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate">
-                {selectedPlaylist.name}
-              </h1>
-              <p className="text-xs text-[#777381]">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectPlaylist(null)}
+                  className="group inline-flex items-center gap-1 text-[11px] font-medium text-[#777381] hover:text-[#19E6A0] transition-colors cursor-pointer"
+                  title="Back to all playlists"
+                >
+                  <ArrowLeft className="w-3 h-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
+                  <span>Playlists</span>
+                </button>
+                <span className="text-[#353342] text-xs">/</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
+                  Playlist
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 group/title min-w-0">
+                <h1
+                  onClick={() => setPlaylistToEdit(selectedPlaylist)}
+                  className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate cursor-pointer hover:text-[#19E6A0] transition-colors"
+                  title="Click to edit playlist details"
+                >
+                  {selectedPlaylist.name}
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setPlaylistToEdit(selectedPlaylist)}
+                  className="p-1 rounded-lg text-[#777381] hover:text-[#19E6A0] hover:bg-[#19E6A0]/10 transition-colors cursor-pointer shrink-0 opacity-70 group-hover/title:opacity-100"
+                  title="Edit playlist details"
+                  aria-label="Edit playlist details"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-[#777381] truncate">
                 {selectedPlaylist.description || `${playlistTracks.length} tracks in this collection`}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center shrink-0">
             {playlistTracks.length > 0 && (
               <button
                 onClick={() => playTrack(playlistTracks[0], playlistTracks, selectedPlaylist.id)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95 shrink-0 whitespace-nowrap"
               >
                 <Play className="w-3.5 h-3.5 fill-black" />
                 <span>Play All</span>
               </button>
             )}
-            <button
-              onClick={() => setPlaylistToEdit(selectedPlaylist)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#19E6A0] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
-              title="Edit playlist name, description, and cover"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              <span>Edit</span>
-            </button>
-            {playlistTracks.length > 0 && (
-              <button
-                onClick={() => exportPlaylistM3U(selectedPlaylist.id)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#19E6A0] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
-                title="Export playlist as .m3u8"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                <span>Export (.m3u8)</span>
-              </button>
-            )}
-            <button
-              onClick={() => setPlaylistToDelete(selectedPlaylist)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#FF667A] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
-              title="Delete playlist"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete</span>
-            </button>
-            <button
-              onClick={() => onSelectPlaylist(null)}
-              className="px-3.5 py-2 rounded-xl bg-[#1D1C23] hover:bg-[#211F26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 active:scale-95 cursor-pointer"
-            >
-              Back
-            </button>
           </div>
         </div>
 
@@ -219,6 +218,15 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           onClose={() => setPlaylistToEdit(null)}
           onSave={(id, updates) => {
             updatePlaylist(id, updates);
+          }}
+          onExport={(id) => {
+            exportPlaylistM3U(id);
+          }}
+          onDelete={(pl) => {
+            setPlaylistToDelete(pl);
+          }}
+          onBackToPlaylists={() => {
+            onSelectPlaylist(null);
           }}
         />
       </div>
@@ -272,88 +280,95 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
       </div>
 
       {/* Creation Modal */}
-      {isCreating && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <form
-            onSubmit={handleCreate}
-            className="p-5 rounded-2xl bg-[#16151C] border border-[#292731] w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+      {isCreating &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none"
+            onClick={() => setIsCreating(false)}
           >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#F4F2F7]">Create New Playlist</h3>
-              <button
-                type="button"
-                onClick={() => setIsCreating(false)}
-                className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1C1B22] p-1 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                Title
-              </label>
-              <input
-                type="text"
-                placeholder="My Awesome Playlist"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-                className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                Description (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Chill tracks for coding..."
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                Accent Color
-              </label>
-              <div className="flex items-center gap-2 pt-1">
-                {PRESET_COLORS.map((col) => (
-                  <button
-                    key={col}
-                    type="button"
-                    onClick={() => setSelectedColor(col)}
-                    className={`w-6 h-6 rounded-full transition-transform duration-200 cursor-pointer active:scale-90 ${
-                      selectedColor === col ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: col }}
-                  />
-                ))}
+            <form
+              onSubmit={handleCreate}
+              onClick={(e) => e.stopPropagation()}
+              className="p-5 rounded-2xl bg-[#16151C] border border-[#292731] w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#F4F2F7]">Create New Playlist</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsCreating(false)}
+                  className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1C1B22] p-1 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCreating(false)}
-                className="px-3.5 py-2 text-xs font-medium text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B22] transition-all duration-200 active:scale-95 rounded-xl cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!name.trim()}
-                className="px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
-              >
-                Create
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="My Awesome Playlist"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                  Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Chill tracks for coding..."
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                  Accent Color
+                </label>
+                <div className="flex items-center gap-2 pt-1">
+                  {PRESET_COLORS.map((col) => (
+                    <button
+                      key={col}
+                      type="button"
+                      onClick={() => setSelectedColor(col)}
+                      className={`w-6 h-6 rounded-full transition-transform duration-200 cursor-pointer active:scale-90 ${
+                        selectedColor === col ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: col }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreating(false)}
+                  className="px-3.5 py-2 text-xs font-medium text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B22] transition-all duration-200 active:scale-95 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!name.trim()}
+                  className="px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>,
+          document.body
+        )}
 
       {/* Main Grid: Liked Songs Hero Card + Custom Playlists */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
@@ -567,6 +582,12 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         onClose={() => setPlaylistToEdit(null)}
         onSave={(id, updates) => {
           updatePlaylist(id, updates);
+        }}
+        onExport={(id) => {
+          exportPlaylistM3U(id);
+        }}
+        onDelete={(pl) => {
+          setPlaylistToDelete(pl);
         }}
       />
     </div>

@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Sliders, X, RotateCcw } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { EQUALIZER_PRESETS } from '../services/audioEngine';
@@ -100,7 +101,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
     setPreset('Flat');
   };
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md select-none transition-opacity duration-200 p-4"
       onClick={onClose}
@@ -387,4 +388,6 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

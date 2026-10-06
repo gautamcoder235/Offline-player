@@ -1,6 +1,6 @@
 [package]
 name = "offline-player"
-version = "0.1.3"
+version = "0.1.4"
 description = "MusicVault Desktop App"
 authors = ["Gautam"]
 edition = "2021"

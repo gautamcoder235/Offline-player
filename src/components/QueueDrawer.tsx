@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { ListOrdered, X, Trash2, Play, Disc3, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
@@ -34,7 +35,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
     return contextTracks;
   }, [currentTrack, contextTracks]);
 
-  return (
+  const drawerContent = (
     <div
       className={`fixed inset-0 z-40 flex justify-end bg-black/70 backdrop-blur-sm select-none transition-opacity duration-300 ${
         isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -275,4 +276,6 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(drawerContent, document.body) : null;
 };

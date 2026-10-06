@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload, RotateCcw, Check, Music, Camera } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Upload, RotateCcw, Check, Music, Camera, FileDown, Trash2, ArrowLeft } from 'lucide-react';
 import { Playlist, Track } from '../types';
 
 interface EditPlaylistModalProps {
@@ -16,6 +17,9 @@ interface EditPlaylistModalProps {
       cover_art?: string;
     }
   ) => void;
+  onExport?: (playlistId: string) => void;
+  onDelete?: (playlist: Playlist) => void;
+  onBackToPlaylists?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -68,6 +72,9 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
   tracks = [],
   onClose,
   onSave,
+  onExport,
+  onDelete,
+  onBackToPlaylists,
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -146,7 +153,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
     onClose();
   };
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none overflow-y-auto"
       onClick={onClose}
@@ -342,6 +349,58 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
             </div>
           </div>
 
+          {/* Playlist Management Actions: Export, Back to Playlists, Delete */}
+          {(onExport || onBackToPlaylists || onDelete) && (
+            <div className="pt-3 border-t border-[#292731]/40 space-y-2">
+              <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider block">
+                Playlist Actions
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {onExport && (
+                  <button
+                    type="button"
+                    onClick={() => onExport(playlist.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201F29] hover:bg-[#282734] text-xs font-medium text-[#AAA6B2] hover:text-[#19E6A0] border border-[#353342] transition-colors cursor-pointer active:scale-95"
+                    title="Export playlist as .m3u8"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>Export (.m3u8)</span>
+                  </button>
+                )}
+
+                {onBackToPlaylists && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onBackToPlaylists();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201F29] hover:bg-[#282734] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#353342] transition-colors cursor-pointer active:scale-95"
+                    title="Go back to all playlists"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Playlists</span>
+                  </button>
+                )}
+
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onDelete(playlist);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201F29] hover:bg-[#FF667A]/15 text-xs font-medium text-[#AAA6B2] hover:text-[#FF667A] border border-[#353342] hover:border-[#FF667A]/30 transition-colors cursor-pointer active:scale-95 sm:ml-auto"
+                    title="Delete playlist"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Playlist</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#292731]/40">
             <button
@@ -363,4 +422,6 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

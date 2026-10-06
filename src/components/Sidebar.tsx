@@ -743,6 +743,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         onSave={(id, updates) => {
           updatePlaylist(id, updates);
         }}
+        onExport={(id) => {
+          exportPlaylistM3U(id);
+        }}
+        onDelete={(pl) => {
+          setPlaylistToDelete(pl);
+        }}
       />
     </aside>
   );

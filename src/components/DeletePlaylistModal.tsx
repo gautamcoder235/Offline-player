@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2, X, Music } from 'lucide-react';
 import { Playlist, Track } from '../types';
 
@@ -37,7 +38,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
     .filter((c): c is string => Boolean(c));
   const uniqueCovers = Array.from(new Set(playlist.cover_art ? [playlist.cover_art, ...coverArts] : coverArts));
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none"
       onClick={onClose}
@@ -134,4 +135,6 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };
