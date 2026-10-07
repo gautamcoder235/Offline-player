@@ -2,12 +2,21 @@ import React, { useState } from 'react';
 import { Search, RefreshCw, X } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 
+import { ViewMode } from '../types';
+
 interface HeaderProps {
   filterType: 'all' | 'artists' | 'albums' | 'top';
   onFilterChange: (type: 'all' | 'artists' | 'albums' | 'top') => void;
+  currentView?: ViewMode;
+  onViewChange?: (view: ViewMode) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) => {
+export const Header: React.FC<HeaderProps> = ({
+  filterType,
+  onFilterChange,
+  currentView,
+  onViewChange,
+}) => {
   const { searchQuery, setSearchQuery, refreshLibrary, tracks } = usePlayer();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -27,7 +36,16 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
             id="global-search-input"
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (
+                e.target.value &&
+                currentView &&
+                ['lyrics', 'visualizer', 'settings', 'download', 'playlists', 'playlist_detail'].includes(currentView)
+              ) {
+                onViewChange?.('songs');
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 if (searchQuery) {
@@ -37,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({ filterType, onFilterChange }) =>
                 }
               }
             }}
-            placeholder="Search tracks, artists, albums..."
+            placeholder="Search tracks, artists, albums, or lyrics..."
             className="w-full pl-9 sm:pl-10 pr-14 sm:pr-16 py-2 rounded-xl text-xs bg-[#14131A] border border-[#282631]/80 text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 focus:ring-2 focus:ring-[#19E6A0]/10 transition-colors duration-150 truncate"
           />
           {searchQuery ? (

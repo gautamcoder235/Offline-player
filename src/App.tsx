@@ -17,6 +17,7 @@ import { ToastNotification } from './components/ToastNotification';
 import { AmbientGlow } from './components/AmbientGlow';
 import { MiniPlayer } from './components/MiniPlayer';
 import { ViewMode } from './types';
+import { matchTrackWithLyrics, TrackMatchResult } from './utils/lyricsSearch';
 import './App.css';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -131,32 +132,44 @@ const MainApp: React.FC = () => {
     };
   }, [createPlaylist, playlists.length, tracks]);
 
-  // Filtered tracks based on search query & category
+  // Filtered tracks based on search query & category (with lyrics matching and ranking)
   const filteredTracks = useMemo(() => {
-    let list = tracks;
+    let list = currentView === 'top_tracks' ? topTracks : tracks;
 
     if (currentView === 'liked') {
       list = list.filter((t) => likedTrackIds.has(t.id));
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.artist.toLowerCase().includes(q) ||
-          t.album.toLowerCase().includes(q)
-      );
+      const q = searchQuery.trim();
+      const matchedResults: TrackMatchResult[] = [];
+
+      for (const t of list) {
+        const result = matchTrackWithLyrics(t, q);
+        if (result.matched) {
+          matchedResults.push(result);
+        }
+      }
+
+      if (filterType === 'artists') {
+        matchedResults.sort((a, b) => a.track.artist.localeCompare(b.track.artist) || a.track.title.localeCompare(b.track.title));
+      } else if (filterType === 'albums') {
+        matchedResults.sort((a, b) => a.track.album.localeCompare(b.track.album) || a.track.title.localeCompare(b.track.title));
+      } else {
+        matchedResults.sort((a, b) => b.score - a.score || a.track.artist.localeCompare(b.track.artist) || a.track.title.localeCompare(b.track.title));
+      }
+
+      return matchedResults.map((r) => r.track);
     }
 
     if (filterType === 'artists') {
-      list = [...list].sort((a, b) => a.artist.localeCompare(b.artist));
+      list = [...list].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
     } else if (filterType === 'albums') {
-      list = [...list].sort((a, b) => a.album.localeCompare(b.album));
+      list = [...list].sort((a, b) => a.album.localeCompare(b.album) || a.title.localeCompare(b.title));
     }
 
     return list;
-  }, [tracks, currentView, likedTrackIds, searchQuery, filterType]);
+  }, [tracks, topTracks, currentView, likedTrackIds, searchQuery, filterType]);
 
   const renderMainContent = () => {
     switch (currentView) {
@@ -180,7 +193,7 @@ const MainApp: React.FC = () => {
       case 'top_tracks':
         return (
           <TrackList
-            tracks={topTracks}
+            tracks={filteredTracks}
             title="Top Played Tracks"
             subtitle="Your most listened offline songs"
             playlistId="top_tracks"
@@ -252,6 +265,8 @@ const MainApp: React.FC = () => {
                 if (currentView === 'top_tracks') setCurrentView('songs');
               }
             }} 
+            currentView={currentView}
+            onViewChange={setCurrentView}
           />
           <div className="flex-1 overflow-hidden flex flex-col">{renderMainContent()}</div>
         </main>

@@ -2,9 +2,9 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
-use lofty::tag::Accessor;
+use lofty::tag::{Accessor, ItemKey};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrackMetadata {
@@ -20,6 +20,7 @@ pub struct TrackMetadata {
     pub size_bytes: u64,
     pub cover_art: Option<String>,
     pub stream_url: String,
+    pub lyrics: Option<String>,
 }
 
 
@@ -54,6 +55,17 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         Ok(f) => f,
         Err(_) => {
             let stream_url = crate::streamer::get_stream_url(&file_path_str);
+            let lrc_path = file_path.with_extension("lrc");
+            let lyrics = if lrc_path.is_file() {
+                std::fs::read(&lrc_path).map(|b| String::from_utf8_lossy(&b).to_string()).ok()
+            } else {
+                let alt_lrc = PathBuf::from(format!("{}.lrc", file_path_str));
+                if alt_lrc.is_file() {
+                    std::fs::read(&alt_lrc).map(|b| String::from_utf8_lossy(&b).to_string()).ok()
+                } else {
+                    None
+                }
+            };
             return Some(TrackMetadata {
                 id: deterministic_id(&file_path_str),
                 file_path: file_path_str,
@@ -67,6 +79,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                 size_bytes,
                 cover_art: None,
                 stream_url,
+                lyrics,
             });
         }
     };
@@ -81,6 +94,18 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let mut album = None;
     let mut year = None;
     let mut cover_art = None;
+    let mut lyrics = None;
+
+    // Check adjacent .lrc file (preferred source)
+    let lrc_path = file_path.with_extension("lrc");
+    if lrc_path.is_file() {
+        lyrics = std::fs::read(&lrc_path).map(|b| String::from_utf8_lossy(&b).to_string()).ok();
+    } else {
+        let alt_lrc = PathBuf::from(format!("{}.lrc", file_path_str));
+        if alt_lrc.is_file() {
+            lyrics = std::fs::read(&alt_lrc).map(|b| String::from_utf8_lossy(&b).to_string()).ok();
+        }
+    }
 
     // Search across primary tag and any additional tags
     let tags_to_check: Vec<&lofty::tag::Tag> = if let Some(p) = tagged_file.primary_tag() {
@@ -130,6 +155,14 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                     None => "image/jpeg",
                 };
                 cover_art = Some(format!("data:{};base64,{}", mime, BASE64.encode(pic.data())));
+            }
+        }
+        if lyrics.is_none() {
+            if let Some(lyr) = tag.get_string(&ItemKey::Lyrics) {
+                let trimmed = lyr.trim();
+                if !trimmed.is_empty() {
+                    lyrics = Some(trimmed.to_string());
+                }
             }
         }
     }
@@ -201,6 +234,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         size_bytes,
         cover_art,
         stream_url,
+        lyrics,
     })
 }
 
@@ -225,6 +259,7 @@ mod tests {
         if dir.exists() {
             let mut total = 0;
             let mut with_art = 0;
+            let mut with_lyrics = 0;
             for entry in std::fs::read_dir(&dir).unwrap().flatten() {
                 if entry.path().extension().and_then(|s| s.to_str()) == Some("mp3") {
                     total += 1;
@@ -234,10 +269,13 @@ mod tests {
                         if m.cover_art.is_some() {
                             with_art += 1;
                         }
+                        if m.lyrics.is_some() {
+                            with_lyrics += 1;
+                        }
                     }
                 }
             }
-            println!("Total MP3s scanned: {}, With cover art: {}", total, with_art);
+            println!("Total MP3s scanned: {}, With cover art: {}, With lyrics: {}", total, with_art, with_lyrics);
             assert!(total > 0);
         }
     }

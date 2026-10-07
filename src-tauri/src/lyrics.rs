@@ -17,7 +17,8 @@ pub fn get_local_lyrics(file_path: &str) -> Option<LyricsResult> {
     // 1. Check for .lrc file alongside audio file
     let lrc_path = path.with_extension("lrc");
     if lrc_path.exists() && lrc_path.is_file() {
-        if let Ok(content) = std::fs::read_to_string(&lrc_path) {
+        if let Ok(bytes) = std::fs::read(&lrc_path) {
+            let content = String::from_utf8_lossy(&bytes).to_string();
             let is_synced = content.contains('[') && content.contains(']');
             return Some(LyricsResult {
                 synced: is_synced,
@@ -30,7 +31,8 @@ pub fn get_local_lyrics(file_path: &str) -> Option<LyricsResult> {
     // 2. Check for .mp3.lrc file alongside audio file
     let alt_lrc = PathBuf::from(format!("{}.lrc", file_path));
     if alt_lrc.exists() && alt_lrc.is_file() {
-        if let Ok(content) = std::fs::read_to_string(&alt_lrc) {
+        if let Ok(bytes) = std::fs::read(&alt_lrc) {
+            let content = String::from_utf8_lossy(&bytes).to_string();
             let is_synced = content.contains('[') && content.contains(']');
             return Some(LyricsResult {
                 synced: is_synced,

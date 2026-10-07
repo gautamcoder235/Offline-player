@@ -12,6 +12,8 @@ export interface Track {
   cover_art?: string | null;
   stream_url: string;
   playCount?: number;
+  lyrics?: string | null;
+  matchingLyricSnippet?: string | null;
 }
 
 export type RepeatMode = 'off' | 'all' | 'one';

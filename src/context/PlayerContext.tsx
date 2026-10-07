@@ -58,7 +58,10 @@ interface PlayerContextType {
   updatePlaylist: (id: string, updates: Partial<Pick<Playlist, 'name' | 'description' | 'coverColor' | 'cover_art'>>) => void;
   deletePlaylist: (id: string) => void;
   addTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  addTracksToPlaylist: (playlistId: string, trackIds: string[]) => void;
+  addTracksToQueue: (tracks: Track[]) => void;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
+  removeTracksFromPlaylist: (playlistId: string, trackIds: string[]) => void;
   setPreset: (name: string) => void;
   setCustomGain: (bandIndex: number, gain: number) => void;
   refreshLibrary: (directories?: string[]) => Promise<void>;
@@ -556,6 +559,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const parsed = parseLrcLyrics(localResult.lyrics);
         setCurrentLyrics(parsed);
         setIsLoadingLyrics(false);
+        setTracks((prev) =>
+          prev.map((t) => (t.id === track.id ? { ...t, lyrics: localResult.lyrics } : t))
+        );
         return;
       }
 
@@ -581,6 +587,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               lyricsContent: data.syncedLyrics,
             }).catch(console.warn);
           }
+          setTracks((prev) =>
+            prev.map((t) => (t.id === track.id ? { ...t, lyrics: lrcContent } : t))
+          );
           setIsLoadingLyrics(false);
           return;
         }
@@ -1070,6 +1079,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     showToast('Added to Queue', track.title, track.cover_art);
   }, [showToast]);
 
+  const addTracksToQueue = useCallback((tracksToAdd: Track[]) => {
+    if (!tracksToAdd || tracksToAdd.length === 0) return;
+    setQueue((prev) => [...prev, ...tracksToAdd]);
+    showToast(
+      'Added to Queue',
+      `${tracksToAdd.length} song${tracksToAdd.length > 1 ? 's' : ''} added to queue`
+    );
+  }, [showToast]);
+
   const removeFromQueue = useCallback((index: number) => {
     setQueue((prev) => prev.filter((_, i) => i !== index));
   }, []);
@@ -1146,6 +1164,36 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   }, []);
 
+  const addTracksToPlaylist = useCallback(
+    (playlistId: string, trackIds: string[]) => {
+      if (!trackIds || trackIds.length === 0) return;
+      const targetPl = playlists.find((p) => p.id === playlistId);
+      const plName = targetPl?.name || 'Playlist';
+      const existingSet = new Set(targetPl?.track_ids || []);
+      const toAdd = trackIds.filter((id) => !existingSet.has(id));
+
+      if (toAdd.length > 0) {
+        setPlaylists((prev) =>
+          prev.map((pl) => {
+            if (pl.id === playlistId) {
+              const curSet = new Set(pl.track_ids);
+              const trulyNew = toAdd.filter((id) => !curSet.has(id));
+              return trulyNew.length > 0 ? { ...pl, track_ids: [...pl.track_ids, ...trulyNew] } : pl;
+            }
+            return pl;
+          })
+        );
+        showToast(
+          'Added to Playlist',
+          `Added ${toAdd.length} song${toAdd.length > 1 ? 's' : ''} to ${plName}`
+        );
+      } else {
+        showToast('Already in Playlist', `Selected songs already in ${plName}`);
+      }
+    },
+    [playlists, showToast]
+  );
+
   const removeTrackFromPlaylist = useCallback((playlistId: string, trackId: string) => {
     setPlaylists((prev) =>
       prev.map((pl) => {
@@ -1156,6 +1204,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       })
     );
   }, []);
+
+  const removeTracksFromPlaylist = useCallback(
+    (playlistId: string, trackIds: string[]) => {
+      if (!trackIds || trackIds.length === 0) return;
+      const removeSet = new Set(trackIds);
+      const targetPl = playlists.find((p) => p.id === playlistId);
+      const plName = targetPl?.name || 'Playlist';
+
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId) {
+            return { ...pl, track_ids: pl.track_ids.filter((id) => !removeSet.has(id)) };
+          }
+          return pl;
+        })
+      );
+      showToast(
+        'Removed from Playlist',
+        `Removed ${trackIds.length} song${trackIds.length > 1 ? 's' : ''} from ${plName}`
+      );
+    },
+    [playlists, showToast]
+  );
 
   const deleteTrack = useCallback(
     async (track: Track, deleteFileFromDisk: boolean = false) => {
@@ -1240,6 +1311,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       await invoke('save_track_lyrics', { filePath: track.file_path, lyricsContent: lrcContent });
       const parsed = parseLrcLyrics(lrcContent);
       setCurrentLyrics(parsed);
+      setTracks((prev) =>
+        prev.map((t) => (t.id === track.id ? { ...t, lyrics: lrcContent } : t))
+      );
       showToast('Lyrics Saved', track.title);
     } catch (e) {
       console.error('Failed to save lyrics:', e);
@@ -1350,6 +1424,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         cycleRepeat,
         toggleLike,
         addToQueue,
+        addTracksToQueue,
         removeFromQueue,
         moveQueueItem,
         clearQueue,
@@ -1357,7 +1432,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updatePlaylist,
         deletePlaylist,
         addTrackToPlaylist,
+        addTracksToPlaylist,
         removeTrackFromPlaylist,
+        removeTracksFromPlaylist,
         setPreset,
         setCustomGain,
         refreshLibrary,
