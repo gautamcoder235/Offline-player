@@ -33,6 +33,15 @@ const PRESET_COLORS = [
   '#10B981', // Forest Emerald
 ];
 
+const getContrastTextColor = (hexColor: string): string => {
+  const clean = hexColor.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? '#000000' : '#FFFFFF';
+};
+
 // Compresses and scales image to a max 400x400 to prevent high-res images from bloating localStorage
 const compressImage = (dataUrl: string, maxSize = 400): Promise<string> => {
   return new Promise((resolve) => {
@@ -159,14 +168,24 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-200 text-left my-8"
+        className="w-full max-w-lg rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-200 text-left my-8 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-playlist-title"
       >
+        {/* Dynamic ambient accent glow inside the modal reflecting the selected color */}
+        <div
+          className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none blur-3xl opacity-25 transition-all duration-500 ease-out z-0"
+          style={{ backgroundColor: coverColor }}
+        />
+        <div
+          className="absolute top-0 left-0 right-0 h-1 pointer-events-none transition-colors duration-500 z-0"
+          style={{ backgroundColor: coverColor, boxShadow: `0 0 12px ${coverColor}` }}
+        />
+
         {/* Header */}
-        <div className="flex items-center justify-between pb-1 border-b border-[#292731]/40">
+        <div className="relative z-10 flex items-center justify-between pb-1 border-b border-[#292731]/40">
           <div>
             <h3 id="edit-playlist-title" className="text-base font-bold text-[#F4F2F7]">
               Edit Playlist Details
@@ -328,9 +347,14 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
 
           {/* Accent Color Palette */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider block">
-              Theme Accent Color
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider block">
+                Theme Accent Color
+              </label>
+              <span className="text-[10px] text-[#777381]">
+                Applied to banner glow & play buttons
+              </span>
+            </div>
             <div className="flex items-center gap-2.5 pt-1">
               {PRESET_COLORS.map((col) => (
                 <button
@@ -343,7 +367,12 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                   style={{ backgroundColor: col }}
                   aria-label={`Select color ${col}`}
                 >
-                  {coverColor === col && <Check className="w-3 h-3 text-black stroke-[3]" />}
+                  {coverColor === col && (
+                    <Check
+                      className="w-3 h-3 stroke-[3]"
+                      style={{ color: getContrastTextColor(col) }}
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -413,7 +442,12 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black shadow-lg shadow-[#19E6A0]/20 transition-all active:scale-95 cursor-pointer"
+              className="px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+              style={{
+                backgroundColor: coverColor,
+                color: getContrastTextColor(coverColor),
+                boxShadow: `0 4px 16px ${coverColor}40`,
+              }}
             >
               Save Changes
             </button>

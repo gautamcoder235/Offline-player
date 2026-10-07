@@ -33,7 +33,18 @@ const PRESET_COLORS = [
   '#9D4EDD', // Electric Purple
   '#E8C77A', // Champagne Gold
   '#FF7A00', // Sunset Coral
+  '#3B82F6', // Cobalt Blue
+  '#10B981', // Forest Emerald
 ];
+
+const getContrastTextColor = (hexColor: string): string => {
+  const clean = hexColor.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? '#000000' : '#FFFFFF';
+};
 
 export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
   selectedPlaylistId,
@@ -94,9 +105,34 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
       .filter((c): c is string => !!c);
     const uniqueCovers = Array.from(new Set(coverArts));
 
+    const accentColor = selectedPlaylist.coverColor || '#19E6A0';
+    const playTextColor = getContrastTextColor(accentColor);
+
     return (
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent">
-        <div className="p-6 md:p-8 flex items-end justify-between gap-6 bg-gradient-to-b from-[#181722]/80 via-[#100F14]/40 to-transparent border-b border-[#292731]/40 shrink-0 min-w-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent relative">
+        {/* Ambient Top Glow Banner derived from the playlist's chosen accent color */}
+        <div
+          className="absolute top-0 left-0 right-0 h-96 pointer-events-none transition-all duration-700 ease-out z-0"
+          style={{
+            background: `radial-gradient(ellipse 90% 120% at 20% -10%, ${accentColor}40 0%, ${accentColor}12 55%, transparent 80%)`,
+          }}
+        />
+
+        {/* Ambient Floating Glow Blob behind artwork */}
+        <div
+          className="absolute -top-12 -left-10 w-80 h-80 rounded-full pointer-events-none blur-3xl opacity-30 z-0 transition-all duration-700"
+          style={{
+            backgroundColor: accentColor,
+          }}
+        />
+
+        <div
+          className="relative z-10 p-6 md:p-8 flex items-end justify-between gap-6 border-b border-[#292731]/40 shrink-0 min-w-0"
+          style={{
+            background: `linear-gradient(to bottom, rgba(20, 19, 26, 0.45) 0%, rgba(14, 13, 19, 0.7) 100%)`,
+            backdropFilter: 'blur(8px)',
+          }}
+        >
           <div className="flex items-end gap-6 min-w-0 flex-1">
             <div
               onClick={() => setPlaylistToEdit(selectedPlaylist)}
@@ -125,12 +161,12 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 <div
                   className="w-full h-full flex items-center justify-center"
                   style={{
-                    background: `linear-gradient(135deg, ${selectedPlaylist.coverColor || '#19E6A0'}22, #14131A)`,
+                    background: `linear-gradient(135deg, ${accentColor}25, #14131A)`,
                   }}
                 >
                   <ListMusic
                     className="w-12 h-12"
-                    style={{ color: selectedPlaylist.coverColor || '#19E6A0' }}
+                    style={{ color: accentColor }}
                   />
                 </div>
               )}
@@ -162,7 +198,10 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               <div className="flex items-center gap-2 group/title min-w-0">
                 <h1
                   onClick={() => setPlaylistToEdit(selectedPlaylist)}
-                  className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate cursor-pointer hover:text-[#19E6A0] transition-colors"
+                  className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate cursor-pointer transition-colors"
+                  style={{
+                    textShadow: `0 0 35px ${accentColor}25`,
+                  }}
                   title="Click to edit playlist details"
                 >
                   {selectedPlaylist.name}
@@ -188,9 +227,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             {playlistTracks.length > 0 && (
               <button
                 onClick={() => playTrack(playlistTracks[0], playlistTracks, selectedPlaylist.id)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95 shrink-0 whitespace-nowrap"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95 shrink-0 whitespace-nowrap"
+                style={{
+                  backgroundColor: accentColor,
+                  color: playTextColor,
+                  boxShadow: `0 8px 24px ${accentColor}40`,
+                }}
               >
-                <Play className="w-3.5 h-3.5 fill-black" />
+                <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Play All</span>
               </button>
             )}
@@ -290,9 +334,19 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             <form
               onSubmit={handleCreate}
               onClick={(e) => e.stopPropagation()}
-              className="p-5 rounded-2xl bg-[#16151C] border border-[#292731] w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+              className="p-5 rounded-2xl bg-[#16151C] border border-[#282631] w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden"
             >
-              <div className="flex items-center justify-between">
+              {/* Dynamic ambient accent glow inside create form */}
+              <div
+                className="absolute -top-12 -right-12 w-36 h-36 rounded-full pointer-events-none blur-3xl opacity-20 transition-all duration-500 ease-out z-0"
+                style={{ backgroundColor: selectedColor }}
+              />
+              <div
+                className="absolute top-0 left-0 right-0 h-1 pointer-events-none transition-colors duration-500 z-0"
+                style={{ backgroundColor: selectedColor, boxShadow: `0 0 10px ${selectedColor}` }}
+              />
+
+              <div className="relative z-10 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-[#F4F2F7]">Create New Playlist</h3>
                 <button
                   type="button"
@@ -303,7 +357,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 </button>
               </div>
 
-              <div className="space-y-2">
+              <div className="relative z-10 space-y-2">
                 <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
                   Title
                 </label>
@@ -317,7 +371,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="relative z-10 space-y-2">
                 <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
                   Description (Optional)
                 </label>
@@ -330,10 +384,15 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                  Accent Color
-                </label>
+              <div className="relative z-10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                    Accent Color
+                  </label>
+                  <span className="text-[10px] text-[#777381]">
+                    Banner glow & play buttons
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 pt-1">
                   {PRESET_COLORS.map((col) => (
                     <button
@@ -341,7 +400,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       type="button"
                       onClick={() => setSelectedColor(col)}
                       className={`w-6 h-6 rounded-full transition-transform duration-200 cursor-pointer active:scale-90 ${
-                        selectedColor === col ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
+                        selectedColor === col ? 'scale-125 ring-2 ring-white shadow-md' : 'hover:scale-110 opacity-80'
                       }`}
                       style={{ backgroundColor: col }}
                     />
@@ -349,7 +408,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="relative z-10 flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
@@ -360,7 +419,12 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 <button
                   type="submit"
                   disabled={!name.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
+                  className="px-4 py-2 rounded-xl disabled:opacity-50 font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
+                  style={{
+                    backgroundColor: selectedColor,
+                    color: getContrastTextColor(selectedColor),
+                    boxShadow: `0 4px 14px ${selectedColor}40`,
+                  }}
                 >
                   Create
                 </button>
@@ -454,13 +518,31 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             .filter((c): c is string => !!c);
           const uniqueCovers = Array.from(new Set(coverArts));
           const accentColor = pl.coverColor || '#19E6A0';
+          const playTextColor = getContrastTextColor(accentColor);
 
           return (
             <div
               key={pl.id}
               onClick={() => onSelectPlaylist(pl.id)}
-              className="p-3.5 rounded-2xl bg-[#14131A] hover:bg-[#1B1A24] border border-[#282631] hover:border-[#383545] transition-all duration-200 cursor-pointer group flex flex-col gap-3 relative shadow-md hover:shadow-xl active:scale-[0.98]"
+              className="p-3.5 rounded-2xl bg-[#14131A] hover:bg-[#1B1A24] border border-[#282631] hover:border-[#383545] transition-all duration-200 cursor-pointer group flex flex-col gap-3 relative shadow-md hover:shadow-xl active:scale-[0.98] overflow-hidden"
             >
+              {/* Top Accent Indicator on Hover */}
+              <div
+                className="absolute top-0 left-0 right-0 h-[2.5px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-t-2xl"
+                style={{
+                  backgroundColor: accentColor,
+                  boxShadow: `0 0 10px ${accentColor}`,
+                }}
+              />
+
+              {/* Ambient Glow behind card on hover */}
+              <div
+                className="absolute -top-10 -right-10 w-24 h-24 rounded-full pointer-events-none blur-2xl opacity-0 group-hover:opacity-25 transition-opacity duration-500"
+                style={{
+                  backgroundColor: accentColor,
+                }}
+              />
+
               {/* Square Aspect Ratio Cover with 2x2 Collage or Artwork */}
               <div className="aspect-square w-full rounded-xl overflow-hidden shadow-md bg-[#0E0D14] relative border border-[#292731]/70 flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
                 {pl.cover_art ? (
@@ -491,10 +573,15 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       e.stopPropagation();
                       playTrack(playlistTracks[0], playlistTracks, pl.id);
                     }}
-                    className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
+                    className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.06] active:scale-95 cursor-pointer"
+                    style={{
+                      backgroundColor: accentColor,
+                      color: playTextColor,
+                      boxShadow: `0 4px 16px ${accentColor}60`,
+                    }}
                     title={`Play ${pl.name}`}
                   >
-                    <Play className="w-4 h-4 fill-black text-black ml-0.5" />
+                    <Play className="w-4 h-4 fill-current ml-0.5" />
                   </button>
                 )}
               </div>
@@ -502,7 +589,15 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               {/* Card Meta & Delete Action */}
               <div className="flex items-center justify-between min-w-0">
                 <div className="min-w-0 flex-1 pr-1">
-                  <h4 className="text-xs font-bold text-[#F4F2F7] truncate group-hover:text-[#19E6A0] transition-colors duration-200">
+                  <h4
+                    className="text-xs font-bold text-[#F4F2F7] truncate transition-colors duration-200"
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = accentColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = '';
+                    }}
+                  >
                     {pl.name}
                   </h4>
                   <span className="text-[11px] text-[#777381] font-mono mt-0.5 block">

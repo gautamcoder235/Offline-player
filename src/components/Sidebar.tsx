@@ -461,6 +461,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {playlists.map((pl) => {
                 const isPlActive = currentView === 'playlist_detail' && selectedPlaylistId === pl.id;
                 const isPlPlaying = playingPlaylistId === pl.id;
+                const plAccent = pl.coverColor || '#19E6A0';
                 return (
                   <button
                     key={pl.id}
@@ -470,32 +471,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }}
                     className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer group ${
                       isPlPlaying
-                        ? 'bg-[#19E6A0]/15 text-[#19E6A0] ring-1 ring-[#19E6A0]/50 shadow-[0_0_12px_rgba(25,230,160,0.18)]'
+                        ? 'shadow-md'
                         : isPlActive
                         ? 'bg-[#19181F] text-[#F4F2F7] shadow-sm'
                         : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
                     }`}
+                    style={
+                      isPlPlaying
+                        ? {
+                            backgroundColor: `${plAccent}22`,
+                            color: plAccent,
+                            boxShadow: `0 0 12px ${plAccent}30`,
+                          }
+                        : undefined
+                    }
                     title={isPlPlaying ? `${pl.name} (${isPlaying ? 'Playing' : 'Paused'})` : pl.name}
                     aria-label={pl.name}
                   >
                     {isPlActive && !isPlPlaying && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3.5 rounded-r-full bg-[#19E6A0] shadow-[0_0_4px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
+                      <div
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3.5 rounded-r-full shadow-[0_0_4px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200"
+                        style={{ backgroundColor: plAccent, boxShadow: `0 0 4px ${plAccent}80` }}
+                      />
                     )}
                     {renderPlaylistCover(pl, true)}
                     {isPlPlaying && (
-                      <div className="absolute -bottom-1 -right-1 bg-[#100F14] rounded-full p-1 border border-[#19E6A0]/50 flex items-center justify-center shadow-lg">
+                      <div
+                        className="absolute -bottom-1 -right-1 bg-[#100F14] rounded-full p-1 flex items-center justify-center shadow-lg"
+                        style={{ border: `1px solid ${plAccent}80` }}
+                      >
                         <div className="flex items-end gap-[1.5px] w-2.5 h-2.5">
                           <span
-                            className="w-[1.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
-                            style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                            className="w-[1.5px] h-full rounded-full origin-bottom animate-eq-bar-1"
+                            style={{
+                              backgroundColor: plAccent,
+                              animationPlayState: isPlaying ? 'running' : 'paused',
+                            }}
                           />
                           <span
-                            className="w-[1.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
-                            style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                            className="w-[1.5px] h-full rounded-full origin-bottom animate-eq-bar-2"
+                            style={{
+                              backgroundColor: plAccent,
+                              animationPlayState: isPlaying ? 'running' : 'paused',
+                            }}
                           />
                           <span
-                            className="w-[1.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
-                            style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                            className="w-[1.5px] h-full rounded-full origin-bottom animate-eq-bar-3"
+                            style={{
+                              backgroundColor: plAccent,
+                              animationPlayState: isPlaying ? 'running' : 'paused',
+                            }}
                           />
                         </div>
                       </div>
@@ -586,27 +611,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {playlists.map((pl) => {
                 const isPlActive = currentView === 'playlist_detail' && selectedPlaylistId === pl.id;
                 const isPlPlaying = playingPlaylistId === pl.id;
+                const plAccent = pl.coverColor || '#19E6A0';
                 return (
                   <div
                     key={pl.id}
                     className={`group relative flex items-center justify-between px-2.5 h-10 rounded-xl text-xs font-medium cursor-pointer transition-all duration-200 active:scale-[0.98] ${
                       isPlPlaying
-                        ? 'bg-[#19E6A0]/10 text-[#19E6A0] border border-[#19E6A0]/25 shadow-[0_0_12px_rgba(25,230,160,0.08)]'
+                        ? 'border'
                         : isPlActive
                         ? 'bg-[#19181F] text-[#F4F2F7]'
                         : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
                     }`}
+                    style={
+                      isPlPlaying
+                        ? {
+                            backgroundColor: `${plAccent}18`,
+                            color: plAccent,
+                            borderColor: `${plAccent}40`,
+                            boxShadow: `0 0 12px ${plAccent}15`,
+                          }
+                        : undefined
+                    }
                     onClick={() => {
                       onSelectPlaylist(pl.id);
                       onViewChange('playlist_detail');
                     }}
                   >
                     {isPlActive && !isPlPlaying && (
-                      <div className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-1.5 shrink-0 shadow-[0_0_4px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
+                      <div
+                        className="w-1 h-3.5 rounded-full -ml-1 mr-1.5 shrink-0 animate-in fade-in zoom-in-95 duration-200"
+                        style={{
+                          backgroundColor: plAccent,
+                          boxShadow: `0 0 4px ${plAccent}80`,
+                        }}
+                      />
                     )}
                     <div className="flex items-center gap-2.5 truncate flex-1 min-w-0">
                       {renderPlaylistCover(pl, false)}
-                      <span className={`truncate ${isPlPlaying ? 'text-[#19E6A0] font-semibold' : ''}`}>{pl.name}</span>
+                      <span className={`truncate ${isPlPlaying ? 'font-semibold' : ''}`} style={isPlPlaying ? { color: plAccent } : undefined}>{pl.name}</span>
                     </div>
 
                     {/* Spotify-style Animated Equalizer Indicator */}
@@ -617,16 +659,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         title={isPlaying ? 'Playing' : 'Paused'}
                       >
                         <span
-                          className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
-                          style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                          className="w-[2.5px] h-full rounded-full origin-bottom animate-eq-bar-1"
+                          style={{
+                            backgroundColor: plAccent,
+                            animationPlayState: isPlaying ? 'running' : 'paused',
+                          }}
                         />
                         <span
-                          className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
-                          style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                          className="w-[2.5px] h-full rounded-full origin-bottom animate-eq-bar-2"
+                          style={{
+                            backgroundColor: plAccent,
+                            animationPlayState: isPlaying ? 'running' : 'paused',
+                          }}
                         />
                         <span
-                          className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
-                          style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                          className="w-[2.5px] h-full rounded-full origin-bottom animate-eq-bar-3"
+                          style={{
+                            backgroundColor: plAccent,
+                            animationPlayState: isPlaying ? 'running' : 'paused',
+                          }}
                         />
                       </div>
                     )}
