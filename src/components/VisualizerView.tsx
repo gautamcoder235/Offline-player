@@ -2,9 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play,
   Pause,
-  SkipBack,
-  SkipForward,
-  Heart,
   BarChart2,
   Disc3,
   Waves,
@@ -13,11 +10,12 @@ import {
 import { audioEngine } from '../services/audioEngine';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
+import { AnimatedHeart, AnimatedSkip } from './icons';
 
 type VisualizerMode = 'spectrum' | 'radial' | 'waves';
 
 const MODES: { id: VisualizerMode; label: string; icon: typeof Waves; accent: string }[] = [
-  { id: 'radial', label: 'Particle Orb', icon: CircleDot, accent: '#00F2FE' },
+  { id: 'radial', label: 'Particle Orb', icon: CircleDot, accent: '#19E6A0' },
   { id: 'spectrum', label: 'Spectrum', icon: BarChart2, accent: '#19E6A0' },
   { id: 'waves', label: 'Liquid Waves', icon: Waves, accent: '#19E6A0' },
 ];
@@ -26,16 +24,15 @@ const BINS = 256;
 const ORB_POINTS = 1100;
 const SPRITES = 32;
 const SPEC_BARS = 44; // per side (mirrored from center)
-const BG = '14,13,18';
 
 const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
-// Cyan -> violet -> magenta ramp
+// Electric Mint -> Violet Aura -> Champagne Gold ramp matching MusicVault palette
 const ramp = (t: number): [number, number, number] => {
   const stops: [number, number, number][] = [
-    [0, 242, 254],
-    [138, 60, 240],
-    [255, 0, 127],
+    [25, 230, 160], // Electric Mint #19E6A0
+    [127, 90, 240], // Violet Aura #7F5AF0
+    [232, 199, 122], // Champagne Gold #E8C77A
   ];
   const p = clamp(t) * 2;
   const i = Math.min(1, Math.floor(p));
@@ -187,24 +184,14 @@ export const VisualizerView: React.FC = () => {
       s.cool--;
       s.kick *= 0.9;
 
-      // --- Frame: translucent clear for soft motion trails ---
+      // --- Frame: clear canvas completely so background is 100% transparent ---
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = `rgba(${BG},${visMode === 'spectrum' ? 0.38 : 0.24})`;
-      ctx.fillRect(0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
 
       if (visMode === 'radial') {
         const cx = w / 2;
         const cy = h / 2;
         const base = Math.min(w, h) * 0.25;
-
-        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, base * (2 + s.kick * 0.5));
-        glow.addColorStop(0, `rgba(0,242,254,${0.1 + s.kick * 0.1})`);
-        glow.addColorStop(0.5, `rgba(138,43,226,${0.05 + s.kick * 0.05})`);
-        glow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = glow;
-        ctx.fillRect(0, 0, w, h);
 
         ctx.globalCompositeOperation = 'lighter'; // additive: no depth sort needed
 
@@ -218,8 +205,8 @@ export const VisualizerView: React.FC = () => {
             continue;
           }
           ctx.globalAlpha = ring.a;
-          ctx.strokeStyle = 'rgb(0,242,254)';
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = 'rgb(25,230,160)';
+          ctx.lineWidth = 1.8;
           ctx.beginPath();
           ctx.ellipse(cx, cy, base + ring.r, (base + ring.r) * 0.38, -0.14, 0, Math.PI * 2);
           ctx.stroke();
@@ -267,6 +254,7 @@ export const VisualizerView: React.FC = () => {
         const maxH = h * 0.58;
         const gap = Math.max(2, w / 420);
         const bw = Math.max(2, (w * 0.88) / 2 / SPEC_BARS - gap);
+
         ctx.globalCompositeOperation = 'lighter';
 
         for (let i = 0; i < SPEC_BARS; i++) {
@@ -310,6 +298,7 @@ export const VisualizerView: React.FC = () => {
         // Liquid waves
         const centerY = h * 0.54;
         const pts = 64;
+
         ctx.globalCompositeOperation = 'lighter';
 
         const layers = [
@@ -376,13 +365,30 @@ export const VisualizerView: React.FC = () => {
   }, [visMode, orb]);
 
   return (
-    <div className="flex-1 flex flex-col h-full w-full overflow-hidden select-none relative bg-[#0E0D12]">
+    <div className="flex-1 flex flex-col h-full w-full overflow-hidden select-none relative bg-transparent">
+      {/* Subtle dynamic ambient glow tinted by album art */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className={`absolute -top-1/4 left-1/2 -translate-x-1/2 w-[720px] h-[720px] rounded-full blur-[140px] transition-all duration-1000 ${
+            isPlaying ? 'opacity-20 scale-105' : 'opacity-5 scale-95'
+          }`}
+          style={{ background: trackColor.glow || '#19E6A0' }}
+        />
+        <div
+          className={`absolute -bottom-1/4 right-1/4 w-[600px] h-[600px] rounded-full blur-[150px] transition-opacity duration-1000 ${
+            isPlaying ? 'opacity-15' : 'opacity-0'
+          }`}
+          style={{ background: '#7F5AF0' }}
+        />
+      </div>
+
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
 
-      <div className="relative z-10 w-full px-8 pt-6 pb-2 flex items-center justify-between shrink-0 bg-gradient-to-b from-[#0E0D12]/90 via-[#0E0D12]/40 to-transparent">
+      {/* Top Bar with gentle transparent gradient and track details */}
+      <div className="relative z-10 w-full px-8 pt-6 pb-3 flex items-center justify-between shrink-0 bg-gradient-to-b from-black/20 via-transparent to-transparent">
         {currentTrack ? (
           <div className="flex items-center gap-4">
-            <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#292731] shadow-xl bg-[#16151C] shrink-0">
+            <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#292731] shadow-2xl bg-[#14131B] shrink-0">
               {currentTrack.cover_art ? (
                 <img src={currentTrack.cover_art} alt={currentTrack.title} className="w-full h-full object-cover" />
               ) : (
@@ -409,12 +415,10 @@ export const VisualizerView: React.FC = () => {
 
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className={`p-2 rounded-full transition-colors cursor-pointer ml-1 ${
-                isLiked ? 'text-[#E8C77A]' : 'text-[#65616F] hover:text-[#E8C77A]'
-              }`}
+              className="p-2 rounded-full transition-colors cursor-pointer ml-1 text-[#8E8A99] hover:text-[#E8C77A]"
               title={isLiked ? 'Remove from Liked' : 'Save to Liked'}
             >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-[#E8C77A] text-[#E8C77A]' : ''}`} />
+              <AnimatedHeart isLiked={isLiked} className="w-4 h-4" />
             </button>
           </div>
         ) : (
@@ -428,14 +432,14 @@ export const VisualizerView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               onClick={prevTrack}
-              className="p-2 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]/80 transition-colors cursor-pointer"
+              className="p-2.5 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]/80 transition-colors cursor-pointer"
               title="Previous Track"
             >
-              <SkipBack className="w-4 h-4 fill-current" />
+              <AnimatedSkip direction="prev" className="w-4 h-4" />
             </button>
             <button
               onClick={togglePlay}
-              className="w-9 h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+              className="w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-[0_0_20px_rgba(25,230,160,0.35)] transition-transform hover:scale-105 active:scale-95 cursor-pointer"
               title="Play / Pause"
             >
               {isPlaying ? (
@@ -446,10 +450,10 @@ export const VisualizerView: React.FC = () => {
             </button>
             <button
               onClick={nextTrack}
-              className="p-2 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]/80 transition-colors cursor-pointer"
+              className="p-2.5 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]/80 transition-colors cursor-pointer"
               title="Next Track"
             >
-              <SkipForward className="w-4 h-4 fill-current" />
+              <AnimatedSkip direction="next" className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -457,9 +461,10 @@ export const VisualizerView: React.FC = () => {
 
       <div className="flex-1 min-h-0 pointer-events-none" />
 
+      {/* Bottom Mode Switcher Bar */}
       <div className="relative z-10 w-full pb-7 flex items-center justify-center shrink-0">
-        <div className="flex items-center bg-[#14131A]/90 backdrop-blur-md p-1 rounded-xl border border-[#282631]/80 text-xs shadow-2xl gap-1">
-          {MODES.map(({ id, label, icon: Icon, accent }, idx) => {
+        <div className="flex items-center bg-[#14131B]/85 backdrop-blur-xl p-1.5 rounded-2xl border border-white/[0.08] text-xs shadow-2xl gap-1">
+          {MODES.map(({ id, label, icon: Icon }, idx) => {
             const active = visMode === id;
             return (
               <button
@@ -467,14 +472,13 @@ export const VisualizerView: React.FC = () => {
                 onClick={() => setVisMode(id)}
                 aria-pressed={active}
                 title={`${label} (${idx + 1})`}
-                className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
+                className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 cursor-pointer ${
                   active
-                    ? 'bg-[#211F26] font-semibold shadow-sm'
-                    : 'text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1A1922]'
+                    ? 'bg-[#19E6A0]/15 text-[#19E6A0] font-semibold border border-[#19E6A0]/30 shadow-[0_0_15px_rgba(25,230,160,0.2)]'
+                    : 'text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-white/[0.05]'
                 }`}
-                style={active ? { color: accent } : undefined}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-4 h-4" />
                 <span>{label}</span>
               </button>
             );

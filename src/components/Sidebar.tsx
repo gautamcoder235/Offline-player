@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Music,
   Heart,
   Download,
   Mic2,
-  Settings,
   Plus,
   Radio,
-  Sliders,
-  Trash2,
-  PanelLeftClose,
-  PanelLeftOpen,
   ListMusic,
   Flame,
-  FileUp,
-  FileDown,
   Pencil,
 } from 'lucide-react';
 
 import { usePlayer } from '../context/PlayerContext';
 import { useUpdate } from '../context/UpdateContext';
 import { ViewMode, Playlist } from '../types';
+import {
+  AnimatedEqualizer,
+  AnimatedTrash,
+  AnimatedSettings,
+  AnimatedDices,
+  AnimatedFileTransfer,
+  AnimatedPanelToggle,
+} from './icons';
 import { DeletePlaylistModal } from './DeletePlaylistModal';
 import { EditPlaylistModal } from './EditPlaylistModal';
 
@@ -65,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
+  const [isRollingDice, setIsRollingDice] = useState(false);
 
   const RANDOM_PLAYLIST_NAMES = [
     'Late Night Chill',
@@ -117,6 +120,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleCreateRandomPlaylist = () => {
+    setIsRollingDice(true);
+    setTimeout(() => setIsRollingDice(false), 600);
     const randomName = getRandomPlaylistName();
     const randomColor = getRandomColor();
     const randomTrackIds = getRandomTracks(5);
@@ -236,7 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'equalizer' as ViewMode,
       label: 'Equalizer',
-      icon: Sliders,
+      icon: AnimatedEqualizer,
       onClick: onOpenEqualizer,
       isActive: false,
     },
@@ -279,11 +284,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title={isCollapsed ? 'Expand Sidebar (Ctrl+B)' : 'Collapse Sidebar (Ctrl+B)'}
           aria-label="Toggle Sidebar"
         >
-          {isCollapsed ? (
-            <PanelLeftOpen className="w-[18px] h-[18px] transition-transform duration-200 group-hover:scale-[1.05]" strokeWidth={1.5} />
-          ) : (
-            <PanelLeftClose className="w-[18px] h-[18px] transition-transform duration-200 group-hover:scale-[1.05]" strokeWidth={1.5} />
-          )}
+          <AnimatedPanelToggle
+            isCollapsed={isCollapsed}
+            className="w-[18px] h-[18px]"
+            strokeWidth={1.5}
+          />
         </button>
       </div>
 
@@ -315,18 +320,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 isPlayingThis && !isActive
                   ? 'bg-[#19E6A0]/10 text-[#19E6A0] border border-[#19E6A0]/20'
                   : isActive
-                  ? 'bg-[#19181F] text-[#F4F2F7] shadow-sm'
+                  ? 'text-[#F4F2F7]'
                   : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
               }`}
               title={isCollapsed ? item.label : undefined}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Curved pill indicator (soft rounded floating capsule, no sharp edge bar) */}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active-bg"
+                  className="absolute inset-0 rounded-[14px] bg-[#19181F] shadow-sm pointer-events-none"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+
+              <div className="relative z-10 flex items-center gap-3 min-w-0">
+                {/* Curved sliding pill indicator */}
                 {isActive && !isCollapsed && (
-                  <div className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
+                  <motion.div
+                    layoutId="sidebar-active-capsule"
+                    className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)]"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
                 )}
                 <Icon
-                  className={`w-[18px] h-[18px] shrink-0 transition-colors duration-200 ${
+                  className={`w-[18px] h-[18px] shrink-0 discord-icon ${
+                    item.id === 'liked'
+                      ? 'discord-icon-heart'
+                      : 'discord-icon-pop'
+                  } ${
                     isPlayingThis
                       ? 'text-[#19E6A0]'
                       : isActive
@@ -335,7 +356,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }`}
                   strokeWidth={1.5}
                 />
-                {!isCollapsed && <span className={`truncate ${isPlayingThis ? 'text-[#19E6A0] font-semibold' : ''}`}>{item.label}</span>}
+                {!isCollapsed && (
+                  <span className={`truncate transition-colors ${isPlayingThis ? 'text-[#19E6A0] font-semibold' : ''}`}>
+                    {item.label}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
@@ -393,21 +418,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'
                 } rounded-[14px] text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                   isActive
-                    ? 'bg-[#19181F] text-[#F4F2F7] shadow-sm'
+                    ? 'text-[#F4F2F7]'
                     : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
                 }`}
                 title={isCollapsed ? tool.label : undefined}
               >
-                {isActive && !isCollapsed && (
-                  <div className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active-bg"
+                    className="absolute inset-0 rounded-[14px] bg-[#19181F] shadow-sm pointer-events-none"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
                 )}
-                <Icon
-                  className={`w-[18px] h-[18px] shrink-0 transition-colors duration-200 ${
-                    isActive ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
-                  }`}
-                  strokeWidth={1.5}
-                />
-                {!isCollapsed && <span>{tool.label}</span>}
+                <div className="relative z-10 flex items-center gap-3 min-w-0">
+                  {isActive && !isCollapsed && (
+                    <motion.div
+                      layoutId="sidebar-active-capsule"
+                      className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)]"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                    />
+                  )}
+                  <Icon
+                    className={`w-[18px] h-[18px] shrink-0 discord-icon discord-icon-pop ${
+                      isActive ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
+                    }`}
+                    strokeWidth={1.5}
+                  />
+                  {!isCollapsed && <span className="transition-colors">{tool.label}</span>}
+                </div>
               </button>
             );
           })}
@@ -438,7 +476,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full bg-[#19E6A0] shadow-[0_0_6px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
             )}
             <ListMusic
-              className={`w-[18px] h-[18px] shrink-0 transition-colors duration-200 ${
+              className={`w-[18px] h-[18px] shrink-0 discord-icon discord-icon-pop ${
                 currentView === 'playlists' ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
               }`}
               strokeWidth={1.5}
@@ -448,11 +486,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Add Playlist Icon Button (assigns random choice to add/set in it) */}
           <button
             onClick={handleCreateRandomPlaylist}
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] transition-all duration-200 active:scale-95 cursor-pointer group"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] transition-all duration-200 active:scale-90 cursor-pointer group"
             title="Add Playlist (Random Choice)"
             aria-label="Add Playlist"
           >
-            <Plus className="w-[18px] h-[18px] transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} />
+            <AnimatedDices
+              className={`w-[18px] h-[18px] ${
+                isRollingDice ? 'text-[#19E6A0]' : ''
+              }`}
+              isRolling={isRollingDice}
+              strokeWidth={1.5}
+            />
           </button>
 
           {/* List of Custom Playlists in Collapsed Mode */}
@@ -546,10 +590,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={handleCreateRandomPlaylist}
-                className="px-1.5 py-0.5 rounded-md text-[10px] text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                className="group flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] transition-all duration-200 active:scale-95 cursor-pointer"
                 title="Quick Add (Random Choice)"
               >
-                Random
+                <AnimatedDices
+                  className={`w-3 h-3 ${
+                    isRollingDice ? 'text-[#19E6A0]' : ''
+                  }`}
+                  isRolling={isRollingDice}
+                  strokeWidth={1.5}
+                />
+                <span>Random</span>
               </button>
               <button
                 onClick={() => {
@@ -566,7 +617,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 title="Import Playlist (.m3u)"
                 aria-label="Import Playlist"
               >
-                <FileUp className="w-3.5 h-3.5 transition-transform duration-200 group-hover:-translate-y-0.5" strokeWidth={1.5} />
+                <AnimatedFileTransfer type="up" className="w-3.5 h-3.5" strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => setIsCreatingPlaylist(!isCreatingPlaylist)}
@@ -574,7 +625,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 title="Create Playlist"
                 aria-label="Create Playlist"
               >
-                <Plus className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} />
+                <Plus className="w-3.5 h-3.5 discord-icon discord-icon-pop" strokeWidth={1.5} />
               </button>
             </div>
           </div>
@@ -687,33 +738,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           e.stopPropagation();
                           setPlaylistToEdit(pl);
                         }}
-                        className="p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                        className="group/btn p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
                         aria-label="Edit playlist"
                         title="Edit"
                       >
-                        <Pencil className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
+                        <Pencil className="w-3 h-3 discord-icon discord-icon-pop" strokeWidth={1.5} />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           exportPlaylistM3U(pl.id);
                         }}
-                        className="p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                        className="group/btn p-1 text-[#777381] hover:text-[#19E6A0] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
                         aria-label="Export playlist (.m3u8)"
                         title="Export (.m3u8)"
                       >
-                        <FileDown className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
+                        <AnimatedFileTransfer type="down" className="w-3 h-3" strokeWidth={1.5} />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setPlaylistToDelete(pl);
                         }}
-                        className="p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
+                        className="group/btn p-1 text-[#777381] hover:text-[#FF667A] opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90 cursor-pointer"
                         aria-label="Delete playlist"
                         title="Delete"
                       >
-                        <Trash2 className="w-3 h-3 transition-transform duration-200 hover:scale-110" strokeWidth={1.5} />
+                        <AnimatedTrash className="w-3 h-3" strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
@@ -728,47 +779,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 min-h-[12px]" />
       </div>
 
-      {/* Pinned Bottom Footer / Settings: Compact assigned space with clean subtle divider */}
-      <div className={`${isCollapsed ? 'py-2 px-2' : 'py-2 px-5'} border-t border-[#292731]/40 shrink-0`}>
+      {/* Pinned Bottom Footer / Settings: Matches primary nav row height and centered alignment */}
+      <div className={`${isCollapsed ? 'py-2 px-2.5' : 'py-2 px-5'} border-t border-[#292731]/40 shrink-0`}>
         <button
           onClick={() => {
             onSelectPlaylist(null);
             onViewChange('settings');
           }}
-          className={`group relative w-full h-[36px] flex items-center ${
+          className={`group relative w-full h-[42px] flex items-center ${
             isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'
-          } rounded-xl text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+          } rounded-[14px] text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
             currentView === 'settings'
-              ? 'bg-[#19181F] text-[#F4F2F7] shadow-sm'
+              ? 'text-[#F4F2F7]'
               : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]'
           }`}
           title={isCollapsed ? 'Settings' : undefined}
         >
-          {currentView === 'settings' && !isCollapsed && (
-            <div className="w-1 h-3 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)] animate-in fade-in zoom-in-95 duration-200" />
-          )}
-          <div className="relative shrink-0">
-            <Settings
-              className={`w-[17px] h-[17px] transition-all duration-300 group-hover:rotate-45 ${
-                currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
-              }`}
-              strokeWidth={1.5}
+          {currentView === 'settings' && (
+            <motion.div
+              layoutId="sidebar-active-bg"
+              className="absolute inset-0 rounded-[14px] bg-[#19181F] shadow-sm pointer-events-none"
+              transition={{ type: 'spring', stiffness: 450, damping: 35 }}
             />
-            {hasUpdateNotification && isCollapsed && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#19E6A0] shadow-[0_0_6px_rgba(25,230,160,0.8)] animate-pulse" />
+          )}
+          <div className={`relative z-10 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 w-full'} min-w-0`}>
+            {currentView === 'settings' && !isCollapsed && (
+              <motion.div
+                layoutId="sidebar-active-capsule"
+                className="w-1 h-3.5 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_6px_rgba(25,230,160,0.5)]"
+                transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+              />
             )}
-          </div>
-          {!isCollapsed && (
-            <div className="flex items-center justify-between flex-1 min-w-0">
-              <span className="truncate">Settings</span>
-              {hasUpdateNotification && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 animate-pulse shrink-0">
-                  <span className="w-1 h-1 rounded-full bg-[#19E6A0]" />
-                  <span>Update</span>
-                </span>
+            <div className="relative shrink-0 flex items-center justify-center">
+              <AnimatedSettings
+                className={`w-[18px] h-[18px] ${
+                  currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#777381] group-hover:text-[#F4F2F7]'
+                }`}
+                strokeWidth={1.5}
+              />
+              {hasUpdateNotification && isCollapsed && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#19E6A0] shadow-[0_0_6px_rgba(25,230,160,0.8)] animate-pulse" />
               )}
             </div>
-          )}
+            {!isCollapsed && (
+              <div className="flex items-center justify-between flex-1 min-w-0">
+                <span className="truncate transition-colors">Settings</span>
+                {hasUpdateNotification && (
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 animate-pulse shrink-0">
+                    <span className="w-1 h-1 rounded-full bg-[#19E6A0]" />
+                    <span>Update</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </button>
       </div>
 

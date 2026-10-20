@@ -14,6 +14,8 @@ export interface Track {
   playCount?: number;
   lyrics?: string | null;
   matchingLyricSnippet?: string | null;
+  replay_gain?: number | null;
+  queueId?: string;
 }
 
 export type RepeatMode = 'off' | 'all' | 'one';

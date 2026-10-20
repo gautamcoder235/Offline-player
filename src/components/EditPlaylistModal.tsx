@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X, Upload, RotateCcw, Check, Music, Camera, FileDown, Trash2, ArrowLeft } from 'lucide-react';
 import { Playlist, Track } from '../types';
 
@@ -112,10 +113,8 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !playlist) return null;
-
   // Find tracks belonging to this playlist
-  const playlistTracks = tracks.filter((t) => playlist.track_ids.includes(t.id));
+  const playlistTracks = playlist ? tracks.filter((t) => playlist.track_ids.includes(t.id)) : [];
   const availableTrackCovers = Array.from(
     new Set(
       playlistTracks
@@ -151,7 +150,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !playlist) return;
 
     onSave(playlist.id, {
       name: name.trim(),
@@ -163,17 +162,27 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
   };
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-200 text-left my-8 relative overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-playlist-title"
-      >
+    <AnimatePresence>
+      {isOpen && playlist && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 select-none overflow-y-auto"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+            className="w-full max-w-lg rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 text-left my-8 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-playlist-title"
+          >
         {/* Dynamic ambient accent glow inside the modal reflecting the selected color */}
         <div
           className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none blur-3xl opacity-25 transition-all duration-500 ease-out z-0"
@@ -453,9 +462,11 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  );
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+);
 
-  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
+return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

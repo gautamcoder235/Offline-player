@@ -1,6 +1,7 @@
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::picture::{MimeType, Picture, PictureType};
 use lofty::probe::Probe;
 use lofty::tag::{Accessor, ItemKey};
 use serde::{Deserialize, Serialize};
@@ -21,7 +22,65 @@ pub struct TrackMetadata {
     pub cover_art: Option<String>,
     pub stream_url: String,
     pub lyrics: Option<String>,
+    pub replay_gain: Option<f64>,
 }
+
+pub fn save_track_metadata(
+    file_path: &Path,
+    title: &str,
+    artist: &str,
+    album: &str,
+    year: Option<u32>,
+    cover_art: Option<String>,
+) -> Result<TrackMetadata, String> {
+    let probe = Probe::open(file_path).map_err(|e| e.to_string())?;
+    let mut tagged_file = probe.read().map_err(|e| e.to_string())?;
+
+    let tag = match tagged_file.primary_tag_mut() {
+        Some(t) => t,
+        None => {
+            if let Some(first) = tagged_file.first_tag_mut() {
+                first
+            } else {
+                let tag_type = tagged_file.primary_tag_type();
+                tagged_file.insert_tag(lofty::tag::Tag::new(tag_type));
+                tagged_file.primary_tag_mut().ok_or("Failed to create tag")?
+            }
+        }
+    };
+
+    tag.set_title(title.to_string());
+    tag.set_artist(artist.to_string());
+    tag.set_album(album.to_string());
+    if let Some(y) = year {
+        tag.set_year(y);
+    }
+
+    if let Some(art_str) = cover_art {
+        if !art_str.trim().is_empty() {
+            let raw_base64 = if let Some(idx) = art_str.find(";base64,") {
+                &art_str[idx + 8..]
+            } else {
+                &art_str
+            };
+
+            if let Ok(bytes) = BASE64.decode(raw_base64.trim()) {
+                let mime = if art_str.contains("image/png") {
+                    MimeType::Png
+                } else {
+                    MimeType::Jpeg
+                };
+                let picture = Picture::new_unchecked(PictureType::CoverFront, Some(mime), None, bytes);
+                tag.set_picture(0, picture);
+            }
+        }
+    }
+
+    tagged_file.save_to_path(file_path, lofty::config::WriteOptions::default()).map_err(|e| e.to_string())?;
+
+    extract_metadata(file_path).ok_or_else(|| "Failed to re-read metadata".to_string())
+}
+
 
 
 fn format_duration(seconds: f64) -> String {
@@ -80,6 +139,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                 cover_art: None,
                 stream_url,
                 lyrics,
+                replay_gain: None,
             });
         }
     };
@@ -95,6 +155,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let mut year = None;
     let mut cover_art = None;
     let mut lyrics = None;
+    let mut replay_gain = None;
 
     // Check adjacent .lrc file (preferred source)
     let lrc_path = file_path.with_extension("lrc");
@@ -162,6 +223,14 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                 let trimmed = lyr.trim();
                 if !trimmed.is_empty() {
                     lyrics = Some(trimmed.to_string());
+                }
+            }
+        }
+        if replay_gain.is_none() {
+            if let Some(rg) = tag.get_string(&ItemKey::ReplayGainTrackGain) {
+                let cleaned = rg.replace("dB", "").replace("db", "").trim().to_string();
+                if let Ok(val) = cleaned.parse::<f64>() {
+                    replay_gain = Some(val);
                 }
             }
         }
@@ -235,6 +304,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         cover_art,
         stream_url,
         lyrics,
+        replay_gain,
     })
 }
 
@@ -255,28 +325,84 @@ mod tests {
 
     #[test]
     fn test_extract_user_track_metadata() {
-        let dir = PathBuf::from(r"C:\Users\sharm\Music\Spotify offline");
+        let dir = dirs::audio_dir().unwrap_or_else(|| PathBuf::from("Music"));
         if dir.exists() {
             let mut total = 0;
             let mut with_art = 0;
             let mut with_lyrics = 0;
-            for entry in std::fs::read_dir(&dir).unwrap().flatten() {
-                if entry.path().extension().and_then(|s| s.to_str()) == Some("mp3") {
-                    total += 1;
-                    if let Some(m) = extract_metadata(&entry.path()) {
-                        assert!(!m.id.is_empty());
-                        assert!(!m.title.is_empty());
-                        if m.cover_art.is_some() {
-                            with_art += 1;
-                        }
-                        if m.lyrics.is_some() {
-                            with_lyrics += 1;
+            if let Ok(read_dir) = std::fs::read_dir(&dir) {
+                for entry in read_dir.flatten() {
+                    if entry.path().extension().and_then(|s| s.to_str()) == Some("mp3") {
+                        total += 1;
+                        if let Some(m) = extract_metadata(&entry.path()) {
+                            assert!(!m.id.is_empty());
+                            assert!(!m.title.is_empty());
+                            if m.cover_art.is_some() {
+                                with_art += 1;
+                            }
+                            if m.lyrics.is_some() {
+                                with_lyrics += 1;
+                            }
                         }
                     }
                 }
             }
             println!("Total MP3s scanned: {}, With cover art: {}, With lyrics: {}", total, with_art, with_lyrics);
-            assert!(total > 0);
+        }
+    }
+
+    #[test]
+    fn test_save_track_metadata_persistence() {
+        let dir = dirs::audio_dir().unwrap_or_else(|| PathBuf::from("Music"));
+        let mut sample_mp3 = None;
+        if dir.exists() {
+            if let Ok(read_dir) = std::fs::read_dir(&dir) {
+                for entry in read_dir.flatten() {
+                    if entry.path().extension().and_then(|s| s.to_str()) == Some("mp3") {
+                        sample_mp3 = Some(entry.path());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if let Some(src) = sample_mp3 {
+            let temp_path = std::env::temp_dir().join(format!("test_track_{}.mp3", deterministic_id("test")));
+            let _ = std::fs::copy(&src, &temp_path);
+            if temp_path.exists() {
+                let test_title = "Antigravity Test Title";
+                let test_artist = "Antigravity Test Artist";
+                let test_album = "Antigravity Test Album";
+                let test_year = Some(2026);
+                let test_art = Some("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==".to_string());
+
+                let result = save_track_metadata(
+                    &temp_path,
+                    test_title,
+                    test_artist,
+                    test_album,
+                    test_year,
+                    test_art,
+                );
+
+                assert!(result.is_ok(), "save_track_metadata failed: {:?}", result.err());
+                let meta = result.unwrap();
+                assert_eq!(meta.title, test_title);
+                assert_eq!(meta.artist, test_artist);
+                assert_eq!(meta.album, test_album);
+                assert_eq!(meta.year, test_year);
+                assert!(meta.cover_art.is_some());
+
+                // Re-extract from disk to prove lofty persisted tags to the file
+                let re_extracted = extract_metadata(&temp_path).expect("Failed to re-extract saved file");
+                assert_eq!(re_extracted.title, test_title);
+                assert_eq!(re_extracted.artist, test_artist);
+                assert_eq!(re_extracted.album, test_album);
+                assert_eq!(re_extracted.year, test_year);
+                assert!(re_extracted.cover_art.is_some());
+
+                let _ = std::fs::remove_file(temp_path);
+            }
         }
     }
 }

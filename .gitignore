@@ -32,6 +32,8 @@ pnpm-debug.log*
 tauri.key*
 
 # Editor directories and files
+ALL_APP_VISUAL_DESIGNS.tsx
+*.zip
 .vscode/*
 !.vscode/extensions.json
 .idea

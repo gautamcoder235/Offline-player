@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ListMusic,
   Plus,
   Play,
-  Trash2,
   Heart,
   X,
   FolderPlus,
   Flame,
-  FileUp,
-  FileDown,
   Pencil,
   ArrowLeft,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackList } from './TrackList';
 import { ViewMode, Playlist } from '../types';
+import { AnimatedTrash, AnimatedFileTransfer } from './icons';
 import { DeletePlaylistModal } from './DeletePlaylistModal';
 import { EditPlaylistModal } from './EditPlaylistModal';
 
@@ -227,14 +226,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             {playlistTracks.length > 0 && (
               <button
                 onClick={() => playTrack(playlistTracks[0], playlistTracks, selectedPlaylist.id)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95 shrink-0 whitespace-nowrap"
+                className="group/playall flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 shadow-lg cursor-pointer hover:scale-[1.03] active:scale-95 shrink-0 whitespace-nowrap"
                 style={{
                   backgroundColor: accentColor,
                   color: playTextColor,
                   boxShadow: `0 8px 24px ${accentColor}40`,
                 }}
               >
-                <Play className="w-3.5 h-3.5 fill-current" />
+                <Play className="w-3.5 h-3.5 fill-current discord-icon discord-icon-pop" />
                 <span>Play All</span>
               </button>
             )}
@@ -306,131 +305,142 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               };
               input.click();
             }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#16151C] hover:bg-[#1E1D26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 shadow-sm active:scale-95 cursor-pointer shrink-0"
+            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#16151C] hover:bg-[#1E1D26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 shadow-sm active:scale-95 cursor-pointer shrink-0"
             title="Import .m3u or .m3u8 playlist file"
           >
-            <FileUp className="w-4 h-4 text-[#19E6A0]" />
+            <AnimatedFileTransfer type="up" className="w-4 h-4 text-[#19E6A0]" />
             <span>Import Playlist</span>
           </button>
 
           <button
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
+            className="group/newpl flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 discord-icon discord-icon-pop" />
             <span>New Playlist</span>
           </button>
         </div>
       </div>
 
       {/* Creation Modal */}
-      {isCreating &&
-        typeof document !== 'undefined' &&
+      {typeof document !== 'undefined' &&
         createPortal(
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none"
-            onClick={() => setIsCreating(false)}
-          >
-            <form
-              onSubmit={handleCreate}
-              onClick={(e) => e.stopPropagation()}
-              className="p-5 rounded-2xl bg-[#16151C] border border-[#282631] w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden"
-            >
-              {/* Dynamic ambient accent glow inside create form */}
-              <div
-                className="absolute -top-12 -right-12 w-36 h-36 rounded-full pointer-events-none blur-3xl opacity-20 transition-all duration-500 ease-out z-0"
-                style={{ backgroundColor: selectedColor }}
-              />
-              <div
-                className="absolute top-0 left-0 right-0 h-1 pointer-events-none transition-colors duration-500 z-0"
-                style={{ backgroundColor: selectedColor, boxShadow: `0 0 10px ${selectedColor}` }}
-              />
-
-              <div className="relative z-10 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[#F4F2F7]">Create New Playlist</h3>
-                <button
-                  type="button"
-                  onClick={() => setIsCreating(false)}
-                  className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1C1B22] p-1 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer"
+          <AnimatePresence>
+            {isCreating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 select-none"
+                onClick={() => setIsCreating(false)}
+              >
+                <motion.form
+                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                  transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                  onSubmit={handleCreate}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-5 rounded-2xl bg-[#16151C] border border-[#282631] w-full max-w-sm space-y-4 shadow-2xl relative overflow-hidden"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+                  {/* Dynamic ambient accent glow inside create form */}
+                  <div
+                    className="absolute -top-12 -right-12 w-36 h-36 rounded-full pointer-events-none blur-3xl opacity-20 transition-all duration-500 ease-out z-0"
+                    style={{ backgroundColor: selectedColor }}
+                  />
+                  <div
+                    className="absolute top-0 left-0 right-0 h-1 pointer-events-none transition-colors duration-500 z-0"
+                    style={{ backgroundColor: selectedColor, boxShadow: `0 0 10px ${selectedColor}` }}
+                  />
 
-              <div className="relative z-10 space-y-2">
-                <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="My Awesome Playlist"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
-                />
-              </div>
-
-              <div className="relative z-10 space-y-2">
-                <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                  Description (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Chill tracks for coding..."
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
-                />
-              </div>
-
-              <div className="relative z-10 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                    Accent Color
-                  </label>
-                  <span className="text-[10px] text-[#777381]">
-                    Banner glow & play buttons
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  {PRESET_COLORS.map((col) => (
+                  <div className="relative z-10 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[#F4F2F7]">Create New Playlist</h3>
                     <button
-                      key={col}
                       type="button"
-                      onClick={() => setSelectedColor(col)}
-                      className={`w-6 h-6 rounded-full transition-transform duration-200 cursor-pointer active:scale-90 ${
-                        selectedColor === col ? 'scale-125 ring-2 ring-white shadow-md' : 'hover:scale-110 opacity-80'
-                      }`}
-                      style={{ backgroundColor: col }}
-                    />
-                  ))}
-                </div>
-              </div>
+                      onClick={() => setIsCreating(false)}
+                      className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1C1B22] p-1 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-              <div className="relative z-10 flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreating(false)}
-                  className="px-3.5 py-2 text-xs font-medium text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B22] transition-all duration-200 active:scale-95 rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!name.trim()}
-                  className="px-4 py-2 rounded-xl disabled:opacity-50 font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
-                  style={{
-                    backgroundColor: selectedColor,
-                    color: getContrastTextColor(selectedColor),
-                    boxShadow: `0 4px 14px ${selectedColor}40`,
-                  }}
-                >
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>,
+                  <div className="relative z-10 space-y-2">
+                    <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="My Awesome Playlist"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      autoFocus
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
+                    />
+                  </div>
+
+                  <div className="relative z-10 space-y-2">
+                    <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                      Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Chill tracks for coding..."
+                      value={desc}
+                      onChange={(e) => setDesc(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
+                    />
+                  </div>
+
+                  <div className="relative z-10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                        Accent Color
+                      </label>
+                      <span className="text-[10px] text-[#777381]">
+                        Banner glow & play buttons
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      {PRESET_COLORS.map((col) => (
+                        <button
+                          key={col}
+                          type="button"
+                          onClick={() => setSelectedColor(col)}
+                          className={`w-6 h-6 rounded-full transition-transform duration-200 cursor-pointer active:scale-90 ${
+                            selectedColor === col ? 'scale-125 ring-2 ring-white shadow-md' : 'hover:scale-110 opacity-80'
+                          }`}
+                          style={{ backgroundColor: col }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreating(false)}
+                      className="px-3.5 py-2 text-xs font-medium text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B22] transition-all duration-150 active:scale-95 rounded-xl cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!name.trim()}
+                      className="px-4 py-2 rounded-xl disabled:opacity-50 font-semibold text-xs shadow-md transition-all duration-150 active:scale-95 cursor-pointer"
+                      style={{
+                        backgroundColor: selectedColor,
+                        color: getContrastTextColor(selectedColor),
+                        boxShadow: `0 4px 14px ${selectedColor}40`,
+                      }}
+                    >
+                      Create
+                    </button>
+                  </div>
+                </motion.form>
+              </motion.div>
+            )}
+          </AnimatePresence>,
           document.body
         )}
 
@@ -465,10 +475,10 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 e.stopPropagation();
                 playTrack(likedTracks[0], likedTracks, 'liked');
               }}
-              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
+              className="group/likedplay absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
               title="Play Liked Songs"
             >
-              <Play className="w-5 h-5 fill-black text-black ml-0.5" />
+              <Play className="w-5 h-5 fill-black text-black ml-0.5 discord-icon discord-icon-pop" />
             </button>
           )}
         </div>
@@ -502,10 +512,10 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 e.stopPropagation();
                 playTrack(topTracks[0], topTracks, 'top_tracks');
               }}
-              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#E8C77A] hover:bg-[#F2D795] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
+              className="group/topplay absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#E8C77A] hover:bg-[#F2D795] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
               title="Play Top Tracks"
             >
-              <Play className="w-5 h-5 fill-black text-black ml-0.5" />
+              <Play className="w-5 h-5 fill-black text-black ml-0.5 discord-icon discord-icon-pop" />
             </button>
           )}
         </div>
@@ -622,22 +632,22 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       e.stopPropagation();
                       exportPlaylistM3U(pl.id);
                     }}
-                    className="p-1.5 text-[#65616F] hover:text-[#19E6A0] rounded-lg hover:bg-[#19E6A0]/10 cursor-pointer active:scale-90"
+                    className="group/btn p-1.5 text-[#65616F] hover:text-[#19E6A0] rounded-lg hover:bg-[#19E6A0]/10 cursor-pointer active:scale-90"
                     title="Export playlist (.m3u8)"
                     aria-label="Export playlist"
                   >
-                    <FileDown className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
+                    <AnimatedFileTransfer type="down" className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setPlaylistToDelete(pl);
                     }}
-                    className="p-1.5 text-[#65616F] hover:text-[#FF667A] rounded-lg hover:bg-[#FF667A]/10 cursor-pointer active:scale-90"
+                    className="group/btn p-1.5 text-[#65616F] hover:text-[#FF667A] rounded-lg hover:bg-[#FF667A]/10 cursor-pointer active:scale-90"
                     title="Delete playlist"
                     aria-label="Delete playlist"
                   >
-                    <Trash2 className="w-3.5 h-3.5 transition-transform duration-200 hover:scale-110" />
+                    <AnimatedTrash className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

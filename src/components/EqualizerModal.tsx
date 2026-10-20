@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Sliders, X, RotateCcw } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { usePlayer } from '../context/PlayerContext';
 import { EQUALIZER_PRESETS } from '../services/audioEngine';
+import { AnimatedEqualizer, AnimatedClose, AnimatedRefresh } from './icons';
 
 interface EqualizerModalProps {
   isOpen: boolean;
@@ -10,10 +11,10 @@ interface EqualizerModalProps {
 }
 
 export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose }) => {
-  const { equalizerPreset, setPreset, customGains, setCustomGain } = usePlayer();
+  const { equalizerPreset, setPreset, customGains, setCustomGain, themeAppearance } = usePlayer();
+  const isGlass = themeAppearance === 'aura_glass';
   const draggingBandRef = useRef<number | null>(null);
-
-  if (!isOpen) return null;
+  const [isResetting, setIsResetting] = useState(false);
 
   const bandConfigs = [
     { freq: '60 Hz', label: 'Sub Bass', desc: 'Punch & Rumble', x: 50 },
@@ -98,295 +99,322 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
   };
 
   const handleReset = () => {
+    setIsResetting(true);
     setPreset('Flat');
+    setTimeout(() => setIsResetting(false), 500);
   };
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md select-none transition-opacity duration-200 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-2xl rounded-2xl bg-[#16151C] p-6 border border-[#292731] shadow-2xl flex flex-col gap-5 text-[#F4F2F7] animate-in fade-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#292731]">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#100F14] text-[#19E6A0] border border-[#292731] shadow-inner">
-              <Sliders className="w-5 h-5 text-[#19E6A0]" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-[#F4F2F7] tracking-tight">Audio Equalizer</h2>
-            </div>
-          </div>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md select-none p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+            className={`relative w-full max-w-2xl rounded-2xl ${
+              isGlass
+                ? 'bg-[#1B2127]/90 backdrop-blur-2xl border border-white/[0.1] shadow-[0_25px_60px_rgba(0,0,0,0.85)]'
+                : 'bg-[#1B2127] border border-[#2B3540] shadow-[0_25px_60px_rgba(0,0,0,0.85)]'
+            } p-6 flex flex-col gap-5 text-[#F4F2F7] overflow-hidden`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ambient Radial Top Glow Matching App Identity */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#19E6A0]/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleReset}
-              className="px-2.5 py-1.5 rounded-lg text-xs text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1D1C23] border border-[#292731] transition-colors flex items-center gap-1.5 cursor-pointer"
-              title="Reset all bands to 0 dB Flat"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1D1C23] transition-colors cursor-pointer"
-              aria-label="Close Equalizer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 1. Interactive Frequency Response Curve (SVG Graph) */}
-        <div className="w-full rounded-xl bg-[#100F14] border border-[#292731] p-3 relative overflow-hidden shadow-inner">
-          {/* Top Info Header */}
-          <div className="flex items-center justify-between text-[10px] text-[#777381] mb-1 font-mono">
-            <span>20 Hz</span>
-            <span className="text-[#E8C77A] font-semibold">ACOUSTIC FREQUENCY RESPONSE</span>
-            <span>20 kHz</span>
-          </div>
-
-          <div className="relative w-full h-32">
-            <svg
-              viewBox="0 0 500 120"
-              preserveAspectRatio="none"
-              className="w-full h-full overflow-visible"
-            >
-              <defs>
-                {/* Curve Glow Gradient */}
-                <linearGradient id="eqCurveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#19E6A0" />
-                  <stop offset="50%" stopColor="#35F0B1" />
-                  <stop offset="100%" stopColor="#E8C77A" />
-                </linearGradient>
-
-                {/* Shaded Area Fill */}
-                <linearGradient id="eqAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="rgba(25, 230, 160, 0.25)" />
-                  <stop offset="50%" stopColor="rgba(25, 230, 160, 0.08)" />
-                  <stop offset="100%" stopColor="rgba(25, 230, 160, 0)" />
-                </linearGradient>
-
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
-
-              {/* dB Horizontal Guidelines */}
-              {/* +12 dB */}
-              <line x1="0" y1="16" x2="500" y2="16" stroke="#292731" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="6" y="14" fill="#65616F" fontSize="9" fontFamily="monospace">+12dB</text>
-
-              {/* +6 dB */}
-              <line x1="0" y1="38" x2="500" y2="38" stroke="#292731" strokeDasharray="2 4" strokeWidth="1" />
-              <text x="6" y="36" fill="#65616F" fontSize="9" fontFamily="monospace">+6dB</text>
-
-              {/* 0 dB Baseline (Neutral Reference) */}
-              <line x1="0" y1="60" x2="500" y2="60" stroke="#3A3845" strokeWidth="1.5" />
-              <text x="6" y="58" fill="#9A96A5" fontSize="9" fontFamily="monospace" fontWeight="bold">0dB</text>
-
-              {/* -6 dB */}
-              <line x1="0" y1="82" x2="500" y2="82" stroke="#292731" strokeDasharray="2 4" strokeWidth="1" />
-              <text x="6" y="80" fill="#65616F" fontSize="9" fontFamily="monospace">-6dB</text>
-
-              {/* -12 dB */}
-              <line x1="0" y1="104" x2="500" y2="104" stroke="#292731" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="6" y="102" fill="#65616F" fontSize="9" fontFamily="monospace">-12dB</text>
-
-              {/* Vertical Frequency Guidelines */}
-              {bandConfigs.map((b) => (
-                <line
-                  key={b.freq}
-                  x1={b.x}
-                  y1="10"
-                  x2={b.x}
-                  y2="110"
-                  stroke="rgba(255, 255, 255, 0.04)"
-                  strokeWidth="1"
-                />
-              ))}
-
-              {/* Shaded Area Under Spline */}
-              <path d={areaPath} fill="url(#eqAreaGradient)" />
-
-              {/* Dynamic Frequency Response Spline Curve */}
-              <path
-                d={curvePath}
-                fill="none"
-                stroke="url(#eqCurveGradient)"
-                strokeWidth="2.5"
-                filter="url(#glow)"
-              />
-
-              {/* 5 Dynamic Frequency Response Control Points */}
-              {bandConfigs.map((b, idx) => {
-                const gain = customGains[idx] || 0;
-                const cy = dbToSvgY(gain);
-                const isBoosted = gain > 0;
-                const isCut = gain < 0;
-
-                return (
-                  <g key={b.freq} className="transition-transform duration-75">
-                    {/* Outer Glow Halo */}
-                    <circle
-                      cx={b.x}
-                      cy={cy}
-                      r="7"
-                      fill={isBoosted ? '#19E6A0' : isCut ? '#FF667A' : '#777381'}
-                      fillOpacity="0.25"
-                    />
-                    {/* Inner Core Point */}
-                    <circle
-                      cx={b.x}
-                      cy={cy}
-                      r="3.5"
-                      fill={isBoosted ? '#E8C77A' : '#F4F2F7'}
-                      stroke={isBoosted ? '#19E6A0' : '#292731'}
-                      strokeWidth="1.5"
-                    />
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </div>
-
-        {/* 2. Precision 5-Band Studio Faders (Zero Clipping Layout) */}
-        <div className="p-4 rounded-xl bg-[#100F14] border border-[#292731] grid grid-cols-5 gap-3">
-          {bandConfigs.map((band, idx) => {
-            const gain = customGains[idx] || 0;
-            // 0 dB is at 50% height. -12dB is 100%, +12dB is 0%
-            const thumbTopPercent = ((12 - gain) / 24) * 100;
-            const isZero = gain === 0;
-            const isBoost = gain > 0;
-
-            return (
-              <div
-                key={band.freq}
-                className="flex flex-col items-center justify-between h-56 select-none group"
-              >
-                {/* Gain Readout Badge */}
-                <div
-                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold transition-colors ${
-                    isBoost
-                      ? gain > 6
-                        ? 'text-[#E8C77A] bg-[#E8C77A]/10 border border-[#E8C77A]/20'
-                        : 'text-[#19E6A0] bg-[#19E6A0]/10 border border-[#19E6A0]/20'
-                      : isZero
-                      ? 'text-[#777381] bg-[#16151C] border border-[#292731]'
-                      : 'text-[#FF667A] bg-[#FF667A]/10 border border-[#FF667A]/20'
-                  }`}
-                >
-                  {gain > 0 ? `+${gain.toFixed(1)}` : gain.toFixed(1)} dB
+            {/* Header */}
+            <div className="relative z-10 flex items-center justify-between pb-3.5 border-b border-[#2B3540]">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-[#19E6A0]/10 text-[#19E6A0] border border-[#19E6A0]/25 shadow-[0_0_15px_rgba(25,230,160,0.2)] flex items-center justify-center">
+                  <AnimatedEqualizer size={20} className="w-5 h-5 text-[#19E6A0]" />
                 </div>
-
-                {/* Custom Vertical Fader Track */}
-                <div
-                  onPointerDown={(e) => handleFaderPointerDown(idx, e)}
-                  onPointerMove={(e) => handleFaderPointerMove(idx, e)}
-                  onPointerUp={handleFaderPointerUp}
-                  onDoubleClick={() => setCustomGain(idx, 0)}
-                  className="relative w-8 h-36 flex items-center justify-center cursor-pointer touch-none"
-                  title={`${band.label} (${band.freq}): ${gain} dB (Double click to zero)`}
-                >
-                  {/* Vertical Slot Groove */}
-                  <div className="w-2 h-full bg-[#1A1822] rounded-full relative overflow-hidden border border-[#292731]">
-                    {/* Zero Reference Notch */}
-                    <div className="absolute top-1/2 left-0 right-0 h-[1.5px] bg-[#65616F] -translate-y-1/2 z-10" />
-
-                    {/* Active Gain Fill Bar */}
-                    {isBoost ? (
-                      <div
-                        className="absolute left-0 right-0 bg-gradient-to-t from-[#19E6A0] to-[#E8C77A] rounded-t-full transition-all duration-75"
-                        style={{
-                          bottom: '50%',
-                          height: `${(gain / 12) * 50}%`,
-                        }}
-                      />
-                    ) : !isZero ? (
-                      <div
-                        className="absolute left-0 right-0 bg-[#FF667A] rounded-b-full transition-all duration-75"
-                        style={{
-                          top: '50%',
-                          height: `${(-gain / 12) * 50}%`,
-                        }}
-                      />
-                    ) : null}
-                  </div>
-
-                  {/* Hardware Fader Thumb Knob */}
-                  <div
-                    className={`absolute w-7 h-4 rounded-md shadow-lg border flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-grab active:cursor-grabbing ${
-                      isBoost
-                        ? 'bg-[#211F26] border-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.3)]'
-                        : isZero
-                        ? 'bg-[#1D1C23] border-[#3A3845]'
-                        : 'bg-[#211F26] border-[#FF667A]'
-                    }`}
-                    style={{
-                      top: `calc(${thumbTopPercent}% - 8px)`,
-                    }}
-                  >
-                    {/* Center Grip Line */}
-                    <div
-                      className={`w-3.5 h-[1.5px] rounded-full ${
-                        isBoost ? 'bg-[#19E6A0]' : isZero ? 'bg-[#777381]' : 'bg-[#FF667A]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {/* Bottom Frequency & Label */}
-                <div className="text-center">
-                  <span className="block text-xs font-bold text-[#F4F2F7] tracking-tight">
-                    {band.freq}
-                  </span>
-                  <span className="block text-[10px] font-medium text-[#777381] uppercase tracking-wider">
-                    {band.label}
-                  </span>
+                <div>
+                  <h2 className="text-base font-bold text-[#F4F2F7] tracking-tight">Audio Equalizer</h2>
+                  <p className="text-[11px] text-[#8E99A6] mt-0.5">5-Band Studio Parametric Acoustic Response</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* 3. Preset Selector Pills (Clean symmetrical layout) */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[11px] font-semibold text-[#777381] uppercase tracking-wider">
-              Acoustic Presets
-            </span>
-            <span className="text-[11px] text-[#65616F]">
-              Double-click any fader to zero
-            </span>
-          </div>
-
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-            {EQUALIZER_PRESETS.map((p) => {
-              const isActive = equalizerPreset.toLowerCase() === p.name.toLowerCase();
-              return (
+              <div className="flex items-center gap-2">
                 <button
-                  key={p.name}
-                  onClick={() => setPreset(p.name)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer text-center truncate ${
-                    isActive
-                      ? 'bg-[#19181F] text-[#19E6A0] border border-[#19E6A0]/50 shadow-sm font-semibold'
-                      : 'bg-[#100F14] text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C] border border-[#292731]'
-                  }`}
-                  title={p.name}
+                  onClick={handleReset}
+                  className="group px-3 py-1.5 rounded-lg text-xs font-medium text-[#8E99A6] hover:text-[#19E6A0] bg-[#222A32] hover:bg-[#19E6A0]/10 border border-[#2E3946] hover:border-[#19E6A0]/30 transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  title="Reset all bands to 0 dB Flat"
                 >
-                  {p.name}
+                  <AnimatedRefresh isSpinning={isResetting} className="w-3.5 h-3.5" />
+                  <span>Reset</span>
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
+                <button
+                  onClick={onClose}
+                  className="group/close p-1.5 rounded-lg text-[#8E99A6] hover:text-[#FF667A] hover:bg-[#FF667A]/10 border border-transparent hover:border-[#FF667A]/30 transition-all duration-200 active:scale-90 cursor-pointer"
+                  aria-label="Close Equalizer"
+                >
+                  <AnimatedClose className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 1. Interactive Frequency Response Curve (SVG Graph) - Unified #1B2127 */}
+            <div className={`relative z-10 w-full rounded-2xl bg-[#1B2127] border ${
+              isGlass ? 'border-white/[0.08]' : 'border-[#2B3540]'
+            } p-4 shadow-inner overflow-hidden`}>
+              {/* Header Info */}
+              <div className="flex items-center justify-between text-[10px] text-[#777381] mb-2 font-mono">
+                <span className="text-[#65616F] font-semibold">20 Hz</span>
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#9A96A5] uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#19E6A0] animate-pulse shadow-[0_0_6px_rgba(25,230,160,0.8)]" />
+                  Frequency Response Curve
+                </span>
+                <span className="text-[#65616F] font-semibold">20 kHz</span>
+              </div>
+
+              <div className="relative w-full h-32">
+                <svg
+                  viewBox="0 0 500 120"
+                  preserveAspectRatio="none"
+                  className="w-full h-full overflow-visible"
+                >
+                  <defs>
+                    {/* Curve Glow Gradient */}
+                    <linearGradient id="eqCurveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#19E6A0" />
+                      <stop offset="50%" stopColor="#35F0B1" />
+                      <stop offset="100%" stopColor="#19E6A0" />
+                    </linearGradient>
+
+                    {/* Shaded Area Fill */}
+                    <linearGradient id="eqAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="rgba(25, 230, 160, 0.28)" />
+                      <stop offset="50%" stopColor="rgba(25, 230, 160, 0.08)" />
+                      <stop offset="100%" stopColor="rgba(25, 230, 160, 0)" />
+                    </linearGradient>
+
+                    <filter id="eqGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  {/* dB Horizontal Guidelines */}
+                  <line x1="0" y1="16" x2="500" y2="16" stroke="#23212B" strokeDasharray="3 3" strokeWidth="1" />
+                  <text x="6" y="14" fill="#65616F" fontSize="9" fontFamily="monospace">+12dB</text>
+
+                  <line x1="0" y1="38" x2="500" y2="38" stroke="#23212B" strokeDasharray="2 4" strokeWidth="1" />
+                  <text x="6" y="36" fill="#65616F" fontSize="9" fontFamily="monospace">+6dB</text>
+
+                  {/* 0 dB Baseline (Neutral Reference) with subtle mint accent */}
+                  <line x1="0" y1="60" x2="500" y2="60" stroke="#3A3845" strokeWidth="1.5" />
+                  <line x1="0" y1="60" x2="500" y2="60" stroke="rgba(25, 230, 160, 0.2)" strokeWidth="1.5" />
+                  <text x="6" y="58" fill="#19E6A0" fontSize="9" fontFamily="monospace" fontWeight="bold">0dB</text>
+
+                  <line x1="0" y1="82" x2="500" y2="82" stroke="#23212B" strokeDasharray="2 4" strokeWidth="1" />
+                  <text x="6" y="80" fill="#65616F" fontSize="9" fontFamily="monospace">-6dB</text>
+
+                  <line x1="0" y1="104" x2="500" y2="104" stroke="#23212B" strokeDasharray="3 3" strokeWidth="1" />
+                  <text x="6" y="102" fill="#65616F" fontSize="9" fontFamily="monospace">-12dB</text>
+
+                  {/* Vertical Frequency Guidelines */}
+                  {bandConfigs.map((b) => (
+                    <line
+                      key={b.freq}
+                      x1={b.x}
+                      y1="10"
+                      x2={b.x}
+                      y2="110"
+                      stroke="rgba(255, 255, 255, 0.04)"
+                      strokeWidth="1"
+                    />
+                  ))}
+
+                  {/* Shaded Area Under Spline */}
+                  <path d={areaPath} fill="url(#eqAreaGradient)" />
+
+                  {/* Dynamic Frequency Response Spline Curve */}
+                  <path
+                    d={curvePath}
+                    fill="none"
+                    stroke="url(#eqCurveGradient)"
+                    strokeWidth="2.5"
+                    filter="url(#eqGlow)"
+                  />
+
+                  {/* 5 Dynamic Frequency Response Control Points */}
+                  {bandConfigs.map((b, idx) => {
+                    const gain = customGains[idx] || 0;
+                    const cy = dbToSvgY(gain);
+                    const isBoosted = gain > 0;
+                    const isCut = gain < 0;
+
+                    return (
+                      <g key={b.freq} className="transition-transform duration-75">
+                        {/* Outer Glow Halo */}
+                        <circle
+                          cx={b.x}
+                          cy={cy}
+                          r={isBoosted || isCut ? "8" : "6"}
+                          fill={isBoosted ? '#19E6A0' : isCut ? '#FF667A' : '#777381'}
+                          fillOpacity={isBoosted || isCut ? 0.35 : 0.15}
+                        />
+                        {/* Inner Core Point */}
+                        <circle
+                          cx={b.x}
+                          cy={cy}
+                          r="3.5"
+                          fill={isBoosted ? '#19E6A0' : isCut ? '#FF667A' : '#F4F2F7'}
+                          stroke={isBoosted ? '#35F0B1' : isCut ? '#FF4D6D' : '#19E6A0'}
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </div>
+
+            {/* 2. Precision 5-Band Studio Faders - Unified #1B2127 */}
+            <div className={`relative z-10 p-5 rounded-2xl bg-[#1B2127] border ${
+              isGlass ? 'border-white/[0.08]' : 'border-[#2B3540]'
+            } grid grid-cols-5 gap-3 shadow-inner`}>
+              {bandConfigs.map((band, idx) => {
+                const gain = customGains[idx] || 0;
+                const thumbTopPercent = ((12 - gain) / 24) * 100;
+                const isZero = gain === 0;
+                const isBoost = gain > 0;
+
+                return (
+                  <div
+                    key={band.freq}
+                    className="flex flex-col items-center justify-between h-56 select-none group"
+                  >
+                    {/* Gain Readout Badge */}
+                    <div
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold transition-all duration-150 ${
+                        isBoost
+                          ? 'text-[#19E6A0] bg-[#19E6A0]/15 border border-[#19E6A0]/35 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
+                          : isZero
+                          ? 'text-[#8E99A6] bg-[#222A32] border border-[#2E3946]'
+                          : 'text-[#FF667A] bg-[#FF667A]/15 border border-[#FF667A]/35 shadow-[0_0_10px_rgba(255,102,122,0.2)]'
+                      }`}
+                    >
+                      {gain > 0 ? `+${gain.toFixed(1)}` : gain.toFixed(1)} dB
+                    </div>
+
+                    {/* Custom Vertical Fader Track */}
+                    <div
+                      onPointerDown={(e) => handleFaderPointerDown(idx, e)}
+                      onPointerMove={(e) => handleFaderPointerMove(idx, e)}
+                      onPointerUp={handleFaderPointerUp}
+                      onDoubleClick={() => setCustomGain(idx, 0)}
+                      className="relative w-8 h-36 flex items-center justify-center cursor-pointer touch-none"
+                      title={`${band.label} (${band.freq}): ${gain} dB (Double-click to reset)`}
+                    >
+                      {/* Vertical Slot Groove */}
+                      <div className="w-2.5 h-full bg-[#14181D] rounded-full relative overflow-hidden border border-[#26303A] shadow-inner">
+                        {/* Zero Reference Notch */}
+                        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-[#3A4756] -translate-y-1/2 z-10" />
+
+                        {/* Active Gain Fill Bar */}
+                        {isBoost ? (
+                          <div
+                            className="absolute left-0 right-0 bg-gradient-to-t from-[#19E6A0] to-[#35F0B1] rounded-t-full shadow-[0_0_8px_rgba(25,230,160,0.5)] transition-all duration-75"
+                            style={{
+                              bottom: '50%',
+                              height: `${(gain / 12) * 50}%`,
+                            }}
+                          />
+                        ) : !isZero ? (
+                          <div
+                            className="absolute left-0 right-0 bg-gradient-to-b from-[#FF667A] to-[#FF4D6D] rounded-b-full shadow-[0_0_8px_rgba(255,102,122,0.4)] transition-all duration-75"
+                            style={{
+                              top: '50%',
+                              height: `${(-gain / 12) * 50}%`,
+                            }}
+                          />
+                        ) : null}
+                      </div>
+
+                      {/* Hardware Fader Thumb Knob with Unified #1B2127 Tone */}
+                      <div
+                        className={`absolute w-7 h-4.5 rounded-lg shadow-xl border flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-grab active:cursor-grabbing ${
+                          isBoost
+                            ? 'bg-gradient-to-b from-[#2B3540] to-[#202831] border-[#19E6A0] shadow-[0_0_12px_rgba(25,230,160,0.4)]'
+                            : isZero
+                            ? 'bg-gradient-to-b from-[#2B3540] to-[#202831] border-[#3C4A5A] hover:border-[#19E6A0]/60'
+                            : 'bg-gradient-to-b from-[#2B3540] to-[#202831] border-[#FF667A] shadow-[0_0_12px_rgba(255,102,122,0.35)]'
+                        }`}
+                        style={{
+                          top: `calc(${thumbTopPercent}% - 9px)`,
+                        }}
+                      >
+                        {/* Center Indicator Line */}
+                        <div
+                          className={`w-3.5 h-[2px] rounded-full transition-colors ${
+                            isBoost
+                              ? 'bg-[#19E6A0] shadow-[0_0_4px_rgba(25,230,160,0.8)]'
+                              : isZero
+                              ? 'bg-[#8E99A6]'
+                              : 'bg-[#FF667A] shadow-[0_0_4px_rgba(255,102,122,0.8)]'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bottom Frequency & Label */}
+                    <div className="text-center group-hover:scale-105 transition-transform duration-150">
+                      <span className="block text-xs font-bold text-[#F4F2F7] tracking-tight group-hover:text-[#19E6A0] transition-colors">
+                        {band.freq}
+                      </span>
+                      <span className="block text-[10px] font-semibold text-[#8E99A6] uppercase tracking-wider">
+                        {band.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 3. Preset Selector Pills */}
+            <div className="relative z-10 space-y-2">
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="text-[11px] font-semibold text-[#8E99A6] uppercase tracking-wider flex items-center gap-1.5">
+                  Acoustic Presets
+                </span>
+                <span className="text-[11px] text-[#6C7989] font-mono">
+                  Double-click fader to reset 0 dB
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                {EQUALIZER_PRESETS.map((p) => {
+                  const isActive = equalizerPreset.toLowerCase() === p.name.toLowerCase();
+                  return (
+                    <button
+                      key={p.name}
+                      onClick={() => setPreset(p.name)}
+                      className={`px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer text-center truncate active:scale-95 ${
+                        isActive
+                          ? 'bg-[#19E6A0] text-black font-semibold shadow-[0_0_14px_rgba(25,230,160,0.4)] border border-[#19E6A0] scale-[1.02]'
+                          : 'bg-[#222A32] text-[#8E99A6] hover:text-[#F4F2F7] hover:bg-[#2B3540] border border-[#2E3946]'
+                      }`}
+                      title={p.name}
+                    >
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 
   return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;

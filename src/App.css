@@ -235,6 +235,113 @@ html.tray-popup-mode ::-webkit-scrollbar-thumb:hover {
   animation: fadeIn 0.18s ease-out forwards;
 }
 
+/* Shimmer / Skeleton loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Breathing glow for play button while track is playing */
+@keyframes breatheGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(25, 230, 160, 0.15), 0 0 20px rgba(25, 230, 160, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(25, 230, 160, 0.35), 0 0 32px rgba(25, 230, 160, 0.12);
+  }
+}
+
+.animate-breathe-glow {
+  animation: breatheGlow 2.5s ease-in-out infinite;
+}
+
+/* Progress bar position glow */
+@keyframes progressGlow {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(25, 230, 160, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(25, 230, 160, 0.6);
+  }
+}
+
+.animate-progress-glow {
+  animation: progressGlow 2s ease-in-out infinite;
+}
+
+/* Toast slide-in animation */
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Toast progress bar shrink */
+@keyframes toastProgress {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
+}
+
+.animate-toast-enter {
+  animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-progress {
+  animation: toastProgress 3s linear forwards;
+}
+
+/* Row double-click flash */
+@keyframes rowFlash {
+  0% {
+    background-color: rgba(25, 230, 160, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-row-flash {
+  animation: rowFlash 0.4s ease-out forwards;
+}
+
+/* Spin once for reset icon */
+@keyframes spinOnce {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+.animate-spin-once {
+  animation: spinOnce 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -244,12 +351,225 @@ html.tray-popup-mode ::-webkit-scrollbar-thumb:hover {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  /* Disable framer-motion animations */
+  [data-framer-motion] {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 
 /* Premium icons */
 svg.lucide {
   stroke-width: 1.5 !important;
+}
+
+/* ==========================================================================
+   Discord-Inspired Bouncy Button Icon Hover Physics & Tactile Micro-Interactions
+   ========================================================================== */
+
+:root {
+  --ease-discord-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-discord-squish: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes discordPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+  100% { transform: scale(1.16); }
+}
+
+@keyframes discordHeartPulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.3) rotate(-8deg); }
+  70% { transform: scale(1.12) rotate(4deg); }
+  100% { transform: scale(1.22) rotate(-6deg); }
+}
+
+@keyframes discordWobble {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.16) rotate(-10deg); }
+  75% { transform: scale(1.16) rotate(10deg); }
+  100% { transform: scale(1.16) rotate(-6deg); }
+}
+
+/* Base icon spring transition */
+.discord-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s var(--ease-discord-spring),
+              color 0.15s ease,
+              fill 0.15s ease,
+              filter 0.2s ease,
+              opacity 0.15s ease;
+  will-change: transform;
+  transform-origin: center;
+}
+
+/* Tactile compress/squish on press (Discord signature active physics) */
+button:active .discord-icon,
+.group:active .discord-icon,
+.discord-icon:active {
+  transform: scale(0.88) !important;
+  transition-duration: 0.08s !important;
+  transition-timing-function: var(--ease-discord-squish) !important;
+}
+
+/* 1. Default Bouncy Pop */
+.group:hover .discord-icon-pop,
+button:hover .discord-icon-pop,
+.discord-icon-pop:hover {
+  transform: scale(1.16);
+}
+
+/* 2. Shuffle Playful Tilt */
+.group:hover .discord-icon-shuffle,
+button:hover .discord-icon-shuffle,
+.discord-icon-shuffle:hover {
+  transform: scale(1.18) rotate(-10deg);
+}
+
+/* 3. Repeat Playful Tilt */
+.group:hover .discord-icon-repeat,
+button:hover .discord-icon-repeat,
+.discord-icon-repeat:hover {
+  transform: scale(1.18) rotate(10deg);
+}
+
+/* 4. Heart / Liked Reaction */
+.group:hover .discord-icon-heart,
+button:hover .discord-icon-heart,
+.discord-icon-heart:hover {
+  transform: scale(1.24) rotate(-8deg);
+  filter: drop-shadow(0 0 6px rgba(232, 199, 122, 0.45));
+}
+
+/* 5. Settings Gear Rotation */
+.group:hover .discord-icon-gear,
+button:hover .discord-icon-gear,
+.discord-icon-gear:hover {
+  transform: scale(1.16) rotate(45deg);
+}
+
+/* 6. Trash / Delete Warning Shake/Tilt */
+.group:hover .discord-icon-trash,
+button:hover .discord-icon-trash,
+.discord-icon-trash:hover {
+  transform: scale(1.2) rotate(12deg);
+  filter: drop-shadow(0 0 5px rgba(255, 102, 122, 0.4));
+}
+
+/* 7. Close / Cancel 90deg Spin Pop */
+.group:hover .discord-icon-close,
+button:hover .discord-icon-close,
+.discord-icon-close:hover {
+  transform: scale(1.18) rotate(90deg);
+}
+
+/* 8. Volume / Acoustic Wave Tilt */
+.group:hover .discord-icon-volume,
+button:hover .discord-icon-volume,
+.discord-icon-volume:hover {
+  transform: scale(1.18) rotate(6deg);
+}
+
+/* 9. Dice Randomizer */
+.group:hover .discord-icon-dice,
+button:hover .discord-icon-dice,
+.discord-icon-dice:hover {
+  transform: scale(1.22) rotate(45deg);
+  filter: drop-shadow(0 0 6px rgba(25, 230, 160, 0.4));
+}
+
+/* 10. Equalizer / Sliders Vertical Nudge & Multi-Part Fader Physics */
+.group:hover .discord-icon-fader,
+button:hover .discord-icon-fader,
+.discord-icon-fader:hover {
+  transform: scale(1.18) translateY(-1.5px);
+}
+
+/* ==========================================================================
+   Multi-Part Deconstructed SVG Physics: Animated Equalizer
+   ========================================================================== */
+.animated-eq-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-eq-icon .eq-track {
+  opacity: 0.35;
+  transition: opacity 0.2s ease, stroke 0.2s ease;
+}
+
+.animated-eq-icon .eq-fader {
+  will-change: transform;
+  transform-origin: center;
+  transition: transform 0.28s var(--ease-discord-spring),
+              stroke 0.15s ease,
+              filter 0.2s ease;
+}
+
+/* Hover: Each fader knob physically glides up/down at staggered spring timings */
+.group\/eq:hover .animated-eq-icon .eq-fader-1,
+.group:hover .animated-eq-icon .eq-fader-1,
+button:hover .animated-eq-icon .eq-fader-1,
+.animated-eq-icon:hover .eq-fader-1 {
+  transform: translateY(-6px);
+  transition-delay: 0s;
+}
+
+.group\/eq:hover .animated-eq-icon .eq-fader-2,
+.group:hover .animated-eq-icon .eq-fader-2,
+button:hover .animated-eq-icon .eq-fader-2,
+.animated-eq-icon:hover .eq-fader-2 {
+  transform: translateY(7px);
+  transition-delay: 0.04s;
+}
+
+.group\/eq:hover .animated-eq-icon .eq-fader-3,
+.group:hover .animated-eq-icon .eq-fader-3,
+button:hover .animated-eq-icon .eq-fader-3,
+.animated-eq-icon:hover .eq-fader-3 {
+  transform: translateY(-6px);
+  transition-delay: 0.08s;
+}
+
+/* Subtle glow and track illumination on hover */
+.group\/eq:hover .animated-eq-icon .eq-track,
+.group:hover .animated-eq-icon .eq-track,
+button:hover .animated-eq-icon .eq-track,
+.animated-eq-icon:hover .eq-track {
+  opacity: 0.6;
+}
+
+/* 11. Rescan / Refresh Half-Spin */
+.group:hover .discord-icon-spin-half,
+button:hover .discord-icon-spin-half,
+.discord-icon-spin-half:hover {
+  transform: scale(1.18) rotate(180deg);
+}
+
+/* 12. Skip Back / Prev Directional Nudge */
+.group:hover .discord-icon-prev,
+button:hover .discord-icon-prev,
+.discord-icon-prev:hover {
+  transform: scale(1.18) translateX(-2px);
+}
+
+/* 13. Skip Forward / Next Directional Nudge */
+.group:hover .discord-icon-next,
+button:hover .discord-icon-next,
+.discord-icon-next:hover {
+  transform: scale(1.18) translateX(2px);
+}
+
+/* Mint Luminance Glow */
+.group:hover .discord-glow-mint,
+button:hover .discord-glow-mint,
+.discord-glow-mint:hover {
+  filter: drop-shadow(0 0 6px rgba(25, 230, 160, 0.5));
 }
 
 /* Animated Equalizer Bars for Track Row */
@@ -308,5 +628,17 @@ svg.lucide {
 
 .animate-eq-bar-3 {
   animation: eqBar3 0.78s ease-in-out infinite;
+}
+
+/* Modular Multi-Part Animated Icon Stylesheets */
+@import "./styles/animated-icons-player.css";
+@import "./styles/animated-icons-sidebar.css";
+@import "./styles/animated-icons-header.css";
+
+/* Suppress unwanted horizontal scrollbars */
+*::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0px !important;
+  width: 0px !important;
 }
 

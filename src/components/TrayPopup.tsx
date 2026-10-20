@@ -109,10 +109,10 @@ export const TrayPopup: React.FC = () => {
       <div className="flex items-center justify-between pb-2 border-b border-[#1A1A1E] shrink-0">
         <div
           onClick={handleOpen}
-          className="flex items-center gap-2 cursor-pointer group py-0.5 -my-0.5 px-1 -mx-1 rounded hover:bg-[#141417] transition-colors w-full"
+          className="flex items-center gap-2 cursor-pointer group py-0.5 -my-0.5 px-1 -mx-1 rounded hover:bg-[#141417] transition-all duration-150 active:scale-95 w-full"
           title="Open MusicVault"
         >
-          <img src="/app-icon.png" alt="" className="w-4 h-4 rounded-full object-contain shrink-0 group-hover:scale-105 transition-transform" />
+          <img src="/app-icon.png" alt="" className="w-4 h-4 rounded-full object-contain shrink-0 group-hover:scale-110 transition-transform duration-200" />
           <span className="text-[11.5px] font-bold tracking-tight text-white group-hover:text-[#19E6A0] transition-colors">MusicVault</span>
         </div>
       </div>
@@ -135,10 +135,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={() => handleView('songs')}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <Music className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <Music className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Library
@@ -147,10 +147,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={() => handlePlaylist('liked')}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <Heart className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <Heart className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Liked Songs
@@ -159,10 +159,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={() => handleView('download')}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <Download className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <Download className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Downloader
@@ -171,10 +171,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={() => handleView('visualizer')}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <Radio className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <Radio className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Visualizer
@@ -183,10 +183,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={() => handleView('playlists')}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <ListMusic className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <ListMusic className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Playlists
@@ -202,10 +202,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={handleNewPlaylist}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <Plus className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <Plus className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               New Playlist
@@ -214,10 +214,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={handleOpenFolder}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <FolderOpen className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <FolderOpen className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Music Folder
@@ -226,10 +226,10 @@ export const TrayPopup: React.FC = () => {
 
           <button
             onClick={() => handleView('settings')}
-            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+            className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
           >
             <div className="w-4 h-4 flex items-center justify-center shrink-0">
-              <Settings className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+              <Settings className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
             </div>
             <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
               Settings
@@ -247,10 +247,10 @@ export const TrayPopup: React.FC = () => {
               <button
                 key={pl.id}
                 onClick={() => handlePlaylist(pl.id)}
-                className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-colors cursor-pointer group"
+                className="w-full flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[#141417] text-left transition-all duration-150 active:scale-95 cursor-pointer group"
               >
                 <div className="w-4 h-4 flex items-center justify-center shrink-0">
-                  <ListMusic className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-colors" />
+                  <ListMusic className="w-3.5 h-3.5 text-[#8E8A98] group-hover:text-white transition-all duration-150 group-hover:scale-110" />
                 </div>
                 <span className="text-[11.5px] font-medium text-[#C8C6D0] group-hover:text-white truncate">
                   {pl.name}
@@ -265,17 +265,17 @@ export const TrayPopup: React.FC = () => {
       <div className="pt-1.5 border-t border-[#1A1A1E] flex items-center justify-between text-[11px] shrink-0">
         <button
           onClick={handleOpen}
-          className="flex items-center gap-1.5 text-[#8E8A98] hover:text-white transition-colors cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#141417]"
+          className="flex items-center gap-1.5 text-[#8E8A98] hover:text-white transition-all duration-150 active:scale-95 cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#141417]"
         >
-          <ExternalLink className="w-3 h-3 text-[#8E8A98] hover:text-white transition-colors" />
+          <ExternalLink className="w-3 h-3 text-[#8E8A98] group-hover:text-white transition-colors" />
           <span>Show App</span>
         </button>
 
         <button
           onClick={handleQuit}
-          className="flex items-center gap-1.5 text-[#8E8A98] hover:text-[#FF667A] transition-colors cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#FF667A]/10"
+          className="flex items-center gap-1.5 text-[#8E8A98] hover:text-[#FF667A] transition-all duration-150 active:scale-95 cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-[#FF667A]/10"
         >
-          <LogOut className="w-3 h-3 text-[#8E8A98] hover:text-[#FF667A] transition-colors" />
+          <LogOut className="w-3 h-3 text-[#8E8A98] group-hover:text-[#FF667A] transition-colors" />
           <span>Quit</span>
         </button>
       </div>

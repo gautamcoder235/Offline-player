@@ -82,6 +82,12 @@ interface PlayerContextType {
   toggleAlwaysOnTop: () => Promise<void>;
   themeAppearance: ThemeAppearance;
   setThemeAppearance: (appearance: ThemeAppearance) => void;
+  sleepTimerMinutes: number | null;
+  sleepTimerRemainingSec: number | null;
+  setSleepTimer: (minutes: number | null) => void;
+  reorderQueue: (newQueue: Track[]) => void;
+  updateTrackMetadata: (updated: Track) => void;
+  addDroppedTracks: (newTracks: Track[]) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -246,8 +252,78 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   }, [tracks]);
 
-  const [equalizerPreset, setEqualizerPreset] = useState<string>('Flat');
-  const [customGains, setCustomGains] = useState<[number, number, number, number, number]>([0, 0, 0, 0, 0]);
+  const [equalizerPreset, setEqualizerPreset] = useState<string>(() => {
+    try {
+      return localStorage.getItem('offline_player_eq_preset') || 'Flat';
+    } catch {
+      return 'Flat';
+    }
+  });
+
+  const [customGains, setCustomGains] = useState<[number, number, number, number, number]>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_custom_gains');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 5) {
+          return parsed as [number, number, number, number, number];
+        }
+      }
+      const presetName = localStorage.getItem('offline_player_eq_preset') || 'Flat';
+      const preset = EQUALIZER_PRESETS.find((p) => p.name.toLowerCase() === presetName.toLowerCase());
+      return preset ? [...preset.gains] : [0, 0, 0, 0, 0];
+    } catch {
+      return [0, 0, 0, 0, 0];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('offline_player_eq_preset', equalizerPreset);
+    } catch {}
+  }, [equalizerPreset]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('offline_player_custom_gains', JSON.stringify(customGains));
+    } catch {}
+  }, [customGains]);
+
+  useEffect(() => {
+    if (equalizerPreset === 'Custom') {
+      audioEngine.setGains(customGains);
+    } else {
+      audioEngine.setPreset(equalizerPreset);
+    }
+
+    try {
+      const savedSink = localStorage.getItem('offline_player_audio_sink_id');
+      if (savedSink) {
+        audioEngine.setSinkId(savedSink).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  // Bedtime Sleep Timer state & countdown (Task 3.4)
+  const [sleepTimerMinutes, setSleepTimerMinutes] = useState<number | null>(null);
+  const [sleepTimerRemainingSec, setSleepTimerRemainingSec] = useState<number | null>(null);
+  const sleepTimerRemainingSecRef = useRef<number | null>(null);
+  sleepTimerRemainingSecRef.current = sleepTimerRemainingSec;
+  const isSleepFadingRef = useRef(false);
+
+  const setSleepTimer = useCallback((minutes: number | null) => {
+    setSleepTimerMinutes(minutes);
+    isSleepFadingRef.current = false;
+    if (minutes === null) {
+      setSleepTimerRemainingSec(null);
+    } else if (minutes === -1) {
+      const rem = Math.max(0, Math.round(durationRef.current - currentTimeRef.current));
+      setSleepTimerRemainingSec(rem);
+    } else {
+      setSleepTimerRemainingSec(minutes * 60);
+    }
+  }, []);
+
   const [currentLyrics, setCurrentLyrics] = useState<ParsedLyrics | null>(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState<boolean>(false);
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(-1);
@@ -679,6 +755,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       showToast(trackToPlay.title, trackToPlay.artist, trackToPlay.cover_art);
       fetchLyrics(trackToPlay);
 
+      if (trackToPlay.replay_gain !== null && trackToPlay.replay_gain !== undefined) {
+        audioEngine.setPreGain(trackToPlay.replay_gain);
+      } else {
+        audioEngine.resetPreGain();
+      }
+
       try {
         await audioEngine.loadTrack(trackToPlay.stream_url);
         await audioEngine.play();
@@ -689,6 +771,43 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } catch (e) {
         console.error('Failed to play track:', e);
       }
+    },
+    [fetchLyrics, saveLastPlayed, showToast]
+  );
+
+  const transitionToTrack = useCallback(
+    async (track: Track) => {
+      let trackToPlay = track;
+      if (!track.cover_art) {
+        try {
+          const art = await invoke<string | null>('fetch_cover_art', { artist: track.artist, title: track.title });
+          if (art) {
+            trackToPlay = { ...track, cover_art: art };
+            setTracks((prev) => prev.map((t) => (t.id === track.id ? { ...t, cover_art: art } : t)));
+            saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      setCurrentTrack(trackToPlay);
+      setDuration(trackToPlay.duration || 0);
+      setCurrentTime(0);
+      hasCountedCurrentPlayRef.current = false;
+      saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
+
+      showToast(trackToPlay.title, trackToPlay.artist, trackToPlay.cover_art);
+      fetchLyrics(trackToPlay);
+
+      if (trackToPlay.replay_gain !== null && trackToPlay.replay_gain !== undefined) {
+        audioEngine.setPreGain(trackToPlay.replay_gain);
+      } else {
+        audioEngine.resetPreGain();
+      }
+
+      await audioEngine.transitionTo(trackToPlay.stream_url, crossfadeDurationRef.current);
+      setIsPlaying(true);
     },
     [fetchLyrics, saveLastPlayed, showToast]
   );
@@ -705,14 +824,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [playTrack]
   );
 
-  // Next Track Logic: User Queue first, then context playlist
-  const handleNextTrack = useCallback(() => {
+  // Next Track Logic: User Queue first, then context playlist with dual-deck crossfade support
+  const handleNextTrack = useCallback((isCrossfadeTransition: boolean = false) => {
     // 1. First priority: Play from user explicit queue
     const q = queueRef.current;
     if (q.length > 0) {
       const [nextTrack, ...remaining] = q;
       setQueue(remaining);
-      playTrack(nextTrack);
+      if (isCrossfadeTransition && crossfadeDurationRef.current > 0) {
+        transitionToTrack(nextTrack);
+      } else {
+        playTrack(nextTrack);
+      }
       return;
     }
 
@@ -726,7 +849,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       while (playlist[randIdx].id === curId && playlist.length > 1) {
         randIdx = Math.floor(Math.random() * playlist.length);
       }
-      playTrack(playlist[randIdx]);
+      if (isCrossfadeTransition && crossfadeDurationRef.current > 0) {
+        transitionToTrack(playlist[randIdx]);
+      } else {
+        playTrack(playlist[randIdx]);
+      }
       return;
     }
 
@@ -737,13 +864,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     if (currentIndex !== -1 && currentIndex + 1 < playlist.length) {
-      playTrack(playlist[currentIndex + 1]);
+      if (isCrossfadeTransition && crossfadeDurationRef.current > 0) {
+        transitionToTrack(playlist[currentIndex + 1]);
+      } else {
+        playTrack(playlist[currentIndex + 1]);
+      }
     } else if (repeatModeRef.current === 'all' && playlist.length > 0) {
-      playTrack(playlist[0]);
+      if (isCrossfadeTransition && crossfadeDurationRef.current > 0) {
+        transitionToTrack(playlist[0]);
+      } else {
+        playTrack(playlist[0]);
+      }
     } else {
       setIsPlaying(false);
     }
-  }, [playTrack]);
+  }, [playTrack, transitionToTrack]);
 
   const handlePrevTrack = useCallback(() => {
     if (currentTimeRef.current > 3) {
@@ -790,7 +925,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const realDur = dur || durationRef.current;
 
-      // Crossfade transition trigger: gently dip volume before end of track and advance
+      // Overlapping dual-deck crossfade trigger
       const xfade = crossfadeDurationRef.current;
       if (
         xfade > 0 &&
@@ -801,12 +936,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         repeatModeRef.current !== 'one'
       ) {
         isCrossfadingRef.current = true;
-        audioEngine.fadeOut(Math.min(xfade, 2)).then(() => {
-          handleNextTrack();
-          setTimeout(() => {
-            isCrossfadingRef.current = false;
-          }, 1200);
-        });
+        handleNextTrack(true);
+        setTimeout(() => {
+          isCrossfadingRef.current = false;
+        }, (xfade + 1) * 1000);
       }
 
       if (realDur > 0 && cTime >= Math.min(30, realDur * 0.5)) {
@@ -852,7 +985,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         audioEngine.seek(0);
         audioEngine.play();
       } else {
-        handleNextTrack();
+        if (!isCrossfadingRef.current) {
+          handleNextTrack(false);
+        }
       }
     };
   }, [handleNextTrack, saveLastPlayed]);
@@ -975,6 +1110,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentTime(time);
     if (currentTrackRef.current) {
       saveLastPlayed(currentTrackRef.current, time, durationRef.current);
+      invoke('update_discord_status', {
+        title: currentTrackRef.current.title,
+        artist: currentTrackRef.current.artist,
+        album: currentTrackRef.current.album || 'Unknown Album',
+        isPlaying: isPlayingRef.current,
+        duration: durationRef.current || currentTrackRef.current.duration || 0,
+        position: time,
+      }).catch(() => {});
     }
   }, [saveLastPlayed]);
 
@@ -1074,14 +1217,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   }, []);
 
+  const stampQueueTrack = (track: Track): Track => ({
+    ...track,
+    queueId: track.queueId || `${track.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  });
+
   const addToQueue = useCallback((track: Track) => {
-    setQueue((prev) => [...prev, track]);
+    const stamped = stampQueueTrack(track);
+    setQueue((prev) => [...prev, stamped]);
     showToast('Added to Queue', track.title, track.cover_art);
   }, [showToast]);
 
   const addTracksToQueue = useCallback((tracksToAdd: Track[]) => {
     if (!tracksToAdd || tracksToAdd.length === 0) return;
-    setQueue((prev) => [...prev, ...tracksToAdd]);
+    const stamped = tracksToAdd.map(stampQueueTrack);
+    setQueue((prev) => [...prev, ...stamped]);
     showToast(
       'Added to Queue',
       `${tracksToAdd.length} song${tracksToAdd.length > 1 ? 's' : ''} added to queue`
@@ -1287,6 +1437,105 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [handleNextTrack, showToast]
   );
 
+  // Sleep timer interval effect (Task 3.4)
+  useEffect(() => {
+    if (sleepTimerMinutes === null) {
+      setSleepTimerRemainingSec(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      let remSec: number;
+      if (sleepTimerMinutes === -1) {
+        remSec = Math.max(0, Math.round(durationRef.current - currentTimeRef.current));
+      } else {
+        const cur = sleepTimerRemainingSecRef.current;
+        remSec = cur !== null ? cur - 1 : 0;
+      }
+
+      if (remSec <= 30 && remSec > 0 && !isSleepFadingRef.current) {
+        isSleepFadingRef.current = true;
+        audioEngine.fadeOut(remSec).catch(() => {});
+      }
+
+      if (remSec <= 0) {
+        audioEngine.pause();
+        setIsPlaying(false);
+        setSleepTimerMinutes(null);
+        setSleepTimerRemainingSec(null);
+        audioEngine.setVolume(volumeRef.current);
+        showToast(
+          'Sleep Timer',
+          sleepTimerMinutes === -1 ? 'Playback stopped at end of track.' : 'Sleep timer completed. Goodnight!'
+        );
+      } else {
+        setSleepTimerRemainingSec(remSec);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sleepTimerMinutes, showToast]);
+
+  // Pre-buffer next track into idle deck for gapless & overlapping crossfade (Task 2.1)
+  useEffect(() => {
+    if (!currentTrack) return;
+    let nextTrack: Track | null = null;
+    if (queue.length > 0) {
+      nextTrack = queue[0];
+    } else {
+      const playlist = contextTracks.length > 0 ? contextTracks : tracks;
+      const idx = playlist.findIndex((t) => t.id === currentTrack.id);
+      if (idx !== -1 && idx + 1 < playlist.length) {
+        nextTrack = playlist[idx + 1];
+      }
+    }
+    if (nextTrack?.stream_url) {
+      audioEngine.preloadNext(nextTrack.stream_url);
+    }
+  }, [currentTrack?.id, queue, contextTracks, tracks]);
+
+  // Discord Rich Presence status update (Task 4.3)
+  useEffect(() => {
+    if (currentTrack) {
+      invoke('update_discord_status', {
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album || 'Unknown Album',
+        isPlaying,
+        duration: duration || currentTrack.duration || 0,
+        position: currentTime || 0,
+      }).catch(() => {});
+    } else {
+      invoke('clear_discord_status').catch(() => {});
+    }
+  }, [currentTrack?.id, isPlaying]);
+
+  const reorderQueue = useCallback((newQueue: Track[]) => {
+    setQueue(newQueue);
+  }, []);
+
+  const updateTrackMetadata = useCallback((updated: Track) => {
+    setTracks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setQueue((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setContextTracks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setCurrentTrack((prev) => (prev?.id === updated.id ? updated : prev));
+    showToast('Tags Updated', `${updated.title} by ${updated.artist}`);
+  }, [showToast]);
+
+  const addDroppedTracks = useCallback((dropped: Track[]) => {
+    if (!dropped || dropped.length === 0) {
+      showToast('No Audio Found', 'Dropped items contain no supported audio tracks');
+      return;
+    }
+    setTracks((prev) => {
+      const existingIds = new Set(prev.map((t) => t.id));
+      const fresh = dropped.filter((d) => !existingIds.has(d.id));
+      return [...fresh, ...prev];
+    });
+    addTracksToQueue(dropped);
+    showToast('Files Imported', `Added ${dropped.length} audio file(s) to library`);
+  }, [addTracksToQueue, showToast]);
+
   const setPreset = useCallback((name: string) => {
     setEqualizerPreset(name);
     audioEngine.setPreset(name);
@@ -1455,6 +1704,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleAlwaysOnTop,
         themeAppearance,
         setThemeAppearance,
+        sleepTimerMinutes,
+        sleepTimerRemainingSec,
+        setSleepTimer,
+        reorderQueue,
+        updateTrackMetadata,
+        addDroppedTracks,
       }}
     >
       {children}

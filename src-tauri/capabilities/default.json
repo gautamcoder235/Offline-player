@@ -6,6 +6,8 @@
   "permissions": [
     "core:default",
     "core:app:default",
+    "core:webview:default",
+    "dialog:default",
     "opener:default",
     "updater:default",
     "process:allow-restart",

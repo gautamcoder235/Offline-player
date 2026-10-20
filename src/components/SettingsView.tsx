@@ -22,10 +22,12 @@ import {
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 import { usePlayer } from '../context/PlayerContext';
 import { useUpdate } from '../context/UpdateContext';
 import { AppSettings } from '../types';
 import { formatBytes } from '../utils/helpers';
+import { audioEngine } from '../services/audioEngine';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -50,16 +52,47 @@ export const SettingsView: React.FC = () => {
     dismissUpdate,
   } = useUpdate();
   const [settings, setSettings] = useState<AppSettings>({
-    music_directories: ['C:\\Users\\sharm\\Music\\Spotify offline'],
-    download_directory: 'C:\\Users\\sharm\\Music\\Spotify offline',
+    music_directories: [],
+    download_directory: '',
     volume: 0.8,
     equalizer_preset: 'Flat',
   });
 
   const [newDirInput, setNewDirInput] = useState('');
-  const [downloadDirInput, setDownloadDirInput] = useState('C:\\Users\\sharm\\Music\\Spotify offline');
+  const [downloadDirInput, setDownloadDirInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Audio output devices
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>(
+    localStorage.getItem('offline_player_audio_sink_id') || 'default'
+  );
+
+  useEffect(() => {
+    const loadAudioDevices = async () => {
+      try {
+        if (navigator.mediaDevices?.enumerateDevices) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const audioOutputs = devices.filter((d) => d.kind === 'audiooutput');
+          setAudioDevices(audioOutputs);
+        }
+      } catch (err) {
+        console.warn('Could not enumerate audio devices:', err);
+      }
+    };
+    loadAudioDevices();
+    navigator.mediaDevices?.addEventListener?.('devicechange', loadAudioDevices);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.('devicechange', loadAudioDevices);
+    };
+  }, []);
+
+  const handleDeviceChange = async (deviceId: string) => {
+    setSelectedAudioDevice(deviceId);
+    localStorage.setItem('offline_player_audio_sink_id', deviceId);
+    await audioEngine.setSinkId(deviceId);
+  };
 
   useEffect(() => {
     invoke<AppSettings>('get_settings')
@@ -80,6 +113,28 @@ export const SettingsView: React.FC = () => {
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (e) {
       console.error('Failed to save settings:', e);
+    }
+  };
+
+  const handleBrowseMusicDir = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Music Folder',
+      });
+      if (selected && typeof selected === 'string') {
+        if (!settings.music_directories.includes(selected)) {
+          const updated = {
+            ...settings,
+            music_directories: [...settings.music_directories, selected],
+          };
+          await handleSave(updated);
+          refreshLibrary(updated.music_directories);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to open folder picker:', e);
     }
   };
 
@@ -106,6 +161,26 @@ export const SettingsView: React.FC = () => {
     refreshLibrary(updated.music_directories);
   };
 
+  const handleBrowseDownloadDir = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Download Folder',
+      });
+      if (selected && typeof selected === 'string') {
+        setDownloadDirInput(selected);
+        const updated = {
+          ...settings,
+          download_directory: selected,
+        };
+        await handleSave(updated);
+      }
+    } catch (e) {
+      console.error('Failed to open folder picker:', e);
+    }
+  };
+
   const handleSaveDownloadDir = () => {
     if (!downloadDirInput.trim()) return;
     const updated = {
@@ -115,14 +190,21 @@ export const SettingsView: React.FC = () => {
     handleSave(updated);
   };
 
-  const handleResetDownloadDir = () => {
-    const defaultDir = 'C:\\Users\\sharm\\Music\\Spotify offline';
-    setDownloadDirInput(defaultDir);
-    const updated = {
-      ...settings,
-      download_directory: defaultDir,
-    };
-    handleSave(updated);
+  const handleResetDownloadDir = async () => {
+    try {
+      const defaultSettings = await invoke<AppSettings>('get_settings');
+      const target = defaultSettings?.download_directory || settings.music_directories[0] || '';
+      setDownloadDirInput(target);
+      const updated = {
+        ...settings,
+        download_directory: target,
+      };
+      await handleSave(updated);
+    } catch {
+      const fallback = settings.music_directories[0] || '';
+      setDownloadDirInput(fallback);
+      handleSave({ ...settings, download_directory: fallback });
+    }
   };
 
   const handleRescan = async () => {
@@ -184,7 +266,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleRescan}
             disabled={isScanning}
-            className="group flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-200 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
+            className="group flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-95"
             title="Rescan music library from disk"
           >
             <RefreshCw
@@ -211,7 +293,7 @@ export const SettingsView: React.FC = () => {
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openInExplorer(dir)}
-                  className="p-1.5 text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B24] rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B24] rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
                   title="Open folder in Explorer"
                   aria-label="Open folder in Explorer"
                 >
@@ -220,7 +302,7 @@ export const SettingsView: React.FC = () => {
                 {settings.music_directories.length > 1 && (
                   <button
                     onClick={() => handleRemoveDirectory(dir)}
-                    className="p-1.5 text-[#777381] hover:text-[#FF667A] hover:bg-[#FF667A]/10 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-[#777381] hover:text-[#FF667A] hover:bg-[#FF667A]/10 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
                     title="Remove folder from library"
                     aria-label="Remove folder from library"
                   >
@@ -251,9 +333,18 @@ export const SettingsView: React.FC = () => {
             />
           </div>
           <button
+            type="button"
+            onClick={handleBrowseMusicDir}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1C1B24] hover:bg-[#282635] text-[#F4F2F7] border border-[#282631] font-medium text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            title="Browse folder via system dialog"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
+            <span>Browse...</span>
+          </button>
+          <button
             onClick={handleAddDirectory}
             disabled={!newDirInput.trim()}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-colors shrink-0 cursor-pointer active:scale-[0.98]"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Folder</span>
@@ -290,7 +381,7 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setThemeAppearance('default')}
-            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 ${
+            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 active:scale-[0.98] ${
               !isGlass
                 ? 'bg-[#19E6A0]/10 border-[#19E6A0]/50 shadow-sm'
                 : 'bg-[#0E0D14]/80 border-[#282631] hover:border-[#383545] hover:bg-[#121118]'
@@ -337,7 +428,7 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setThemeAppearance('aura_glass')}
-            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 ${
+            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 active:scale-[0.98] ${
               isGlass
                 ? 'bg-[#19E6A0]/10 border-[#19E6A0]/50 shadow-sm'
                 : 'bg-[#0E0D14]/80 border-[#282631] hover:border-[#383545] hover:bg-[#121118]'
@@ -399,7 +490,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => openInExplorer(settings.download_directory)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#282631] transition-colors cursor-pointer active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
               title="Reveal in Windows Explorer"
             >
               <FolderOpen className="w-3.5 h-3.5 text-[#AAA6B2]" />
@@ -407,7 +498,7 @@ export const SettingsView: React.FC = () => {
             </button>
             <button
               onClick={handleResetDownloadDir}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-colors cursor-pointer active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
               title="Reset to default music directory"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -433,9 +524,18 @@ export const SettingsView: React.FC = () => {
             />
           </div>
           <button
+            type="button"
+            onClick={handleBrowseDownloadDir}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1C1B24] hover:bg-[#282635] text-[#F4F2F7] border border-[#282631] font-medium text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            title="Browse folder via system dialog"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
+            <span>Browse...</span>
+          </button>
+          <button
             onClick={handleSaveDownloadDir}
             disabled={!downloadDirInput.trim() || downloadDirInput === settings.download_directory}
-            className="px-4 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-colors shrink-0 cursor-pointer active:scale-[0.98]"
+            className="px-4 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
           >
             Save Target
           </button>
@@ -468,14 +568,14 @@ export const SettingsView: React.FC = () => {
             {crossfadeDuration > 0 && (
               <button
                 onClick={() => setCrossfadeDuration(0)}
-                className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-colors cursor-pointer active:scale-[0.98]"
+                className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
               >
                 Disable
               </button>
             )}
             <button
               onClick={() => setCrossfadeDuration(crossfadeDuration === 0 ? 3 : crossfadeDuration)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 ${
                 crossfadeDuration > 0
                   ? 'bg-[#19E6A0]/15 border-[#19E6A0]/30 text-[#19E6A0]'
                   : 'bg-[#1C1B23] border-[#282631] text-[#AAA6B2] hover:text-[#F4F2F7]'
@@ -501,7 +601,11 @@ export const SettingsView: React.FC = () => {
               step="1"
               value={crossfadeDuration}
               onChange={(e) => setCrossfadeDuration(parseInt(e.target.value, 10))}
-              className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-[#201F29] accent-[#19E6A0]"
+              className="w-full h-1.5 slider-track cursor-pointer transition-all duration-200"
+              style={{
+                background: `linear-gradient(to right, #19E6A0 0%, #19E6A0 ${(crossfadeDuration / 12) * 100}%, #201F29 ${(crossfadeDuration / 12) * 100}%, #201F29 100%)`
+              }}
+              aria-label="Crossfade duration slider"
             />
           </div>
           <div className="flex justify-between text-[10px] text-[#65616F] font-mono px-0.5">
@@ -513,6 +617,45 @@ export const SettingsView: React.FC = () => {
             <span>10s</span>
             <span>12s</span>
           </div>
+        </div>
+      </div>
+
+      {/* Audio Output Device Selector */}
+      <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+              <Volume2 className="w-4 h-4 text-[#19E6A0]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-[#F4F2F7]">Audio Output Device</h3>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#19E6A0] font-semibold">
+                  {audioDevices.length > 0 ? `${audioDevices.length} Available` : 'System Default'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Route playback audio to specific headphones, speakers, or external DAC output
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-1">
+          <select
+            value={selectedAudioDevice}
+            onChange={(e) => handleDeviceChange(e.target.value)}
+            className="w-full sm:w-80 px-3.5 py-2.5 rounded-xl bg-[#0E0D14] border border-[#282631] text-xs text-[#F4F2F7] focus:outline-none focus:border-[#19E6A0]/50 transition-colors cursor-pointer"
+          >
+            <option value="default">Default Audio Device</option>
+            {audioDevices.map((dev) => (
+              <option key={dev.deviceId} value={dev.deviceId}>
+                {dev.label || `Audio Output (${dev.deviceId.slice(0, 8)})`}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -563,7 +706,7 @@ export const SettingsView: React.FC = () => {
             <button
               onClick={() => void checkForUpdates(false)}
               disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'installing'}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-200 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-95"
               title="Check GitHub for newer releases"
             >
               <RefreshCw
@@ -579,14 +722,14 @@ export const SettingsView: React.FC = () => {
               <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
                 <button
                   onClick={dismissUpdate}
-                  className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#282631] transition-all cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
                   title="Dismiss update notification"
                 >
                   Later
                 </button>
                 <button
                   onClick={() => void downloadAndInstall()}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-sm cursor-pointer active:scale-[0.98]"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95"
                 >
                   <ArrowDownCircle className="w-3.5 h-3.5" />
                   <span>Update to v{updateInfo?.version}</span>
@@ -598,7 +741,7 @@ export const SettingsView: React.FC = () => {
             {updateStatus === 'completed' && (
               <button
                 onClick={() => void restartApp()}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-sm cursor-pointer active:scale-[0.98] animate-in fade-in zoom-in-95 duration-200"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95 animate-in fade-in zoom-in-95 duration-200"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Restart to Apply</span>
@@ -663,7 +806,7 @@ export const SettingsView: React.FC = () => {
             </div>
             <button
               onClick={() => void restartApp()}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-sm cursor-pointer shrink-0 active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer shrink-0 active:scale-95"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Restart Now</span>

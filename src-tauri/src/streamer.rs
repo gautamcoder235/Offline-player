@@ -106,9 +106,12 @@ fn handle_request(request: tiny_http::Request) {
     let mime_type = match path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase().as_str() {
         "mp3" => "audio/mpeg",
         "flac" => "audio/flac",
-        "m4a" => "audio/mp4",
+        "m4a" | "alac" => "audio/mp4",
         "wav" => "audio/wav",
-        "ogg" => "audio/ogg",
+        "ogg" | "opus" => "audio/ogg",
+        "aac" => "audio/aac",
+        "webm" => "audio/webm",
+        "aiff" | "aif" => "audio/aiff",
         _ => "application/octet-stream",
     };
 

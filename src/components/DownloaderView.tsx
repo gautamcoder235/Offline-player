@@ -19,6 +19,7 @@ import { listen } from '@tauri-apps/api/event';
 import { usePlayer } from '../context/PlayerContext';
 import { Track, DownloadLogEvent } from '../types';
 import { TrackList } from './TrackList';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // Persistent singleton download state across tab / view switches
 interface DownloadSessionState {
@@ -208,7 +209,7 @@ function initGlobalListeners() {
 
 export const DownloaderView: React.FC = () => {
   const { tracks, refreshLibrary, openInExplorer, createPlaylist } = usePlayer();
-  const [downloadDir, setDownloadDir] = useState('C:\\Users\\sharm\\Music\\Spotify offline');
+  const [downloadDir, setDownloadDir] = useState('');
   const [showLogs, setShowLogs] = useState(false);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -356,7 +357,7 @@ export const DownloaderView: React.FC = () => {
 
           <button
             onClick={() => openInExplorer(downloadDir)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#292731]/60 text-xs font-medium transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#292731]/60 text-xs font-medium transition-all duration-150 active:scale-95 cursor-pointer shrink-0"
             title="Open music storage folder"
           >
             <FolderOpen className="w-3.5 h-3.5 text-[#AAA6B2]" />
@@ -384,7 +385,7 @@ export const DownloaderView: React.FC = () => {
                 type="button"
                 onClick={handlePaste}
                 disabled={isDownloading}
-                className="absolute right-2 p-1.5 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1B1A24] transition-colors cursor-pointer"
+                className="absolute right-2 p-1.5 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1B1A24] transition-all duration-150 active:scale-90 cursor-pointer"
                 title="Paste from clipboard"
                 aria-label="Paste from clipboard"
               >
@@ -396,7 +397,7 @@ export const DownloaderView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF667A]/15 hover:bg-[#FF667A]/25 text-[#FF667A] border border-[#FF667A]/30 font-medium text-xs transition-colors shrink-0 cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF667A]/15 hover:bg-[#FF667A]/25 text-[#FF667A] border border-[#FF667A]/30 font-medium text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer"
               >
                 <StopCircle className="w-3.5 h-3.5" />
                 <span>Stop</span>
@@ -405,7 +406,7 @@ export const DownloaderView: React.FC = () => {
               <button
                 type="submit"
                 disabled={!url.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-colors shrink-0 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download</span>
@@ -430,7 +431,7 @@ export const DownloaderView: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowLogs((prev) => !prev)}
-              className="flex items-center gap-1 text-[11px] text-[#777381] hover:text-[#AAA6B2] transition-colors cursor-pointer shrink-0 ml-2"
+              className="flex items-center gap-1 text-[11px] text-[#777381] hover:text-[#AAA6B2] transition-all duration-150 active:scale-95 cursor-pointer shrink-0 ml-2"
             >
               <Terminal className="w-3 h-3 text-[#19E6A0]" />
               <span>Activity Log {logs.length > 0 ? `(${logs.length})` : ''}</span>
@@ -440,85 +441,112 @@ export const DownloaderView: React.FC = () => {
         </div>
 
         {/* Live Download Status & Progress Bar */}
-        {(isDownloading || progressPercent > 0 || summary) && (
-          <div className="p-3 rounded-2xl bg-[#14131A] border border-[#282631] space-y-2 shrink-0">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                {isDownloading ? (
-                  <Loader2 className="w-4 h-4 text-[#19E6A0] animate-spin shrink-0" />
-                ) : summary ? (
-                  <CheckCircle2 className="w-4 h-4 text-[#19E6A0] shrink-0" />
-                ) : null}
+        <AnimatePresence>
+          {(isDownloading || progressPercent > 0 || summary) && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="p-3 rounded-2xl bg-[#14131A] border border-[#282631] space-y-2 shrink-0"
+            >
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-semibold text-[#F4F2F7] truncate">
-                    {currentTrackName ? currentTrackName : statusMessage}
-                  </span>
-                  {currentTrackName && statusMessage && statusMessage !== currentTrackName && (
-                    <span className="text-[11px] text-[#777381] truncate">({statusMessage})</span>
-                  )}
+                  {isDownloading ? (
+                    <Loader2 className="w-4 h-4 text-[#19E6A0] animate-spin shrink-0" />
+                  ) : summary ? (
+                    <motion.div
+                      animate={{ scale: [1, 1.25, 1] }}
+                      transition={{ duration: 0.4, ease: 'easeOut' }}
+                      className="shrink-0"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-[#19E6A0]" />
+                    </motion.div>
+                  ) : null}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-semibold text-[#F4F2F7] truncate">
+                      {currentTrackName ? currentTrackName : statusMessage}
+                    </span>
+                    {currentTrackName && statusMessage && statusMessage !== currentTrackName && (
+                      <span className="text-[11px] text-[#777381] truncate">({statusMessage})</span>
+                    )}
+                  </div>
                 </div>
+                <span className="text-xs font-mono font-semibold text-[#19E6A0] bg-[#19E6A0]/10 px-2 py-0.5 rounded-full shrink-0">
+                  {progressPercent}%
+                </span>
               </div>
-              <span className="text-xs font-mono font-semibold text-[#19E6A0] bg-[#19E6A0]/10 px-2 py-0.5 rounded-full shrink-0">
-                {progressPercent}%
-              </span>
-            </div>
 
-            <div className="w-full h-1.5 rounded-full bg-[#201F2B] overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#19E6A0] to-[#35F0B1] rounded-full transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-
-            {summary && (
-              <div className="pt-0.5 flex items-center gap-4 text-xs font-medium">
-                <span className="text-[#19E6A0]">✓ {summary.succeeded} downloaded</span>
-                {summary.failed > 0 && (
-                  <span className="text-[#FF667A]">✗ {summary.failed} failed</span>
-                )}
+              <div className="w-full h-1.5 rounded-full bg-[#201F2B] overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#19E6A0] to-[#35F0B1] rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
-            )}
-          </div>
-        )}
+
+              {summary && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="pt-0.5 flex items-center gap-4 text-xs font-medium"
+                >
+                  <span className="text-[#19E6A0]">✓ {summary.succeeded} downloaded</span>
+                  {summary.failed > 0 && (
+                    <span className="text-[#FF667A]">✗ {summary.failed} failed</span>
+                  )}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Collapsible Activity Stream */}
-        {showLogs && (
-          <div className="rounded-2xl bg-[#14131A] border border-[#282631] overflow-hidden shrink-0">
-            <div className="px-4 py-1.5 bg-[#0E0D14] flex justify-end">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  globalSession.logs = [];
-                  notifySessionListeners();
-                }}
-                className="text-[11px] text-[#65616F] hover:text-[#AAA6B2] transition-colors cursor-pointer"
-              >
-                Clear logs
-              </button>
-            </div>
-            <div className="p-3 font-mono text-[11px] text-[#9A96A5] bg-[#0E0D14] max-h-44 overflow-y-auto space-y-1">
-              {logs.length === 0 ? (
-                <div className="text-[#65616F]">Ready. Download activity will display here...</div>
-              ) : (
-                logs.map((log, i) => (
-                  <div
-                    key={i}
-                    className={`leading-relaxed break-all ${
-                      log.includes('[ERROR]') || log.includes('failed')
-                        ? 'text-[#FF667A]'
-                        : log.includes('Downloaded') || log.includes('Completed')
-                        ? 'text-[#19E6A0]'
-                        : 'text-[#777381]'
-                    }`}
-                  >
-                    {log}
-                  </div>
-                ))
-              )}
-              <div ref={logsEndRef} />
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {showLogs && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="rounded-2xl bg-[#14131A] border border-[#282631] overflow-hidden shrink-0"
+            >
+              <div className="px-4 py-1.5 bg-[#0E0D14] flex justify-end">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    globalSession.logs = [];
+                    notifySessionListeners();
+                  }}
+                  className="text-[11px] text-[#65616F] hover:text-[#AAA6B2] transition-all duration-150 active:scale-95 cursor-pointer"
+                >
+                  Clear logs
+                </button>
+              </div>
+              <div className="p-3 font-mono text-[11px] text-[#9A96A5] bg-[#0E0D14] max-h-44 overflow-y-auto space-y-1">
+                {logs.length === 0 ? (
+                  <div className="text-[#65616F]">Ready. Download activity will display here...</div>
+                ) : (
+                  logs.map((log, i) => (
+                    <div
+                      key={i}
+                      className={`leading-relaxed break-all ${
+                        log.includes('[ERROR]') || log.includes('failed')
+                          ? 'text-[#FF667A]'
+                          : log.includes('Downloaded') || log.includes('Completed')
+                          ? 'text-[#19E6A0]'
+                          : 'text-[#777381]'
+                      }`}
+                    >
+                      {log}
+                    </div>
+                  ))
+                )}
+                <div ref={logsEndRef} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Main Full-Space Stage: List songs downloaded currently during this active download process */}

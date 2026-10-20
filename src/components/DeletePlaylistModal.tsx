@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Trash2, X, Music } from 'lucide-react';
 import { Playlist, Track } from '../types';
 
@@ -29,27 +30,35 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !playlist) return null;
-
   // Resolve cover preview
-  const playlistTracks = tracks.filter((t) => playlist.track_ids.includes(t.id));
+  const playlistTracks = playlist ? tracks.filter((t) => playlist.track_ids.includes(t.id)) : [];
   const coverArts = playlistTracks
     .map((t) => t.cover_art)
     .filter((c): c is string => Boolean(c));
-  const uniqueCovers = Array.from(new Set(playlist.cover_art ? [playlist.cover_art, ...coverArts] : coverArts));
+  const uniqueCovers = playlist ? Array.from(new Set(playlist.cover_art ? [playlist.cover_art, ...coverArts] : coverArts)) : [];
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 select-none"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-200 text-left"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-playlist-title"
-      >
+    <AnimatePresence>
+      {isOpen && playlist && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 select-none"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+            className="w-full max-w-md rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 text-left"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-playlist-title"
+          >
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -132,9 +141,11 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
             <span>Delete Playlist</span>
           </button>
         </div>
-      </div>
-    </div>
-  );
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+);
 
-  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
+return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

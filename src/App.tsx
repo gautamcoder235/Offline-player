@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { listen } from '@tauri-apps/api/event';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { UpdateProvider } from './context/UpdateContext';
@@ -20,9 +21,14 @@ import { ViewMode } from './types';
 import { matchTrackWithLyrics, TrackMatchResult } from './utils/lyricsSearch';
 import './App.css';
 
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { UploadCloud } from 'lucide-react';
 import { TitleBar } from './components/TitleBar';
 import { TrayPopup } from './components/TrayPopup';
+import { AlbumsView } from './components/AlbumsView';
+import { ArtistsView } from './components/ArtistsView';
 
 const MainApp: React.FC = () => {
   const {
@@ -34,17 +40,56 @@ const MainApp: React.FC = () => {
     topTracks,
     isMiniPlayer,
     themeAppearance,
+    addDroppedTracks,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
   const [currentView, setCurrentView] = useState<ViewMode>('songs');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'artists' | 'albums' | 'top'>('all');
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('offline_player_sidebar_collapsed') === 'true';
   });
+
+  // Window-wide drag and drop listener for audio files & folders
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupDragDrop = async () => {
+      try {
+        const appWindow = getCurrentWebviewWindow();
+        unlisten = await appWindow.onDragDropEvent(async (event) => {
+          if (event.payload.type === 'enter' || event.payload.type === 'over') {
+            setIsDraggingOver(true);
+          } else if (event.payload.type === 'leave') {
+            setIsDraggingOver(false);
+          } else if (event.payload.type === 'drop') {
+            setIsDraggingOver(false);
+            const droppedPaths = event.payload.paths;
+            if (droppedPaths && droppedPaths.length > 0) {
+              try {
+                const newTracks = await invoke<any[]>('handle_dropped_paths', { paths: droppedPaths });
+                addDroppedTracks(newTracks || []);
+              } catch (err) {
+                console.error('Failed to process dropped paths:', err);
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Drag and drop listener registration skipped or failed:', err);
+      }
+    };
+
+    setupDragDrop();
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [addDroppedTracks]);
 
   useEffect(() => {
     localStorage.setItem('offline_player_sidebar_collapsed', String(isSidebarCollapsed));
@@ -181,6 +226,10 @@ const MainApp: React.FC = () => {
         return <LyricsView />;
       case 'settings':
         return <SettingsView />;
+      case 'albums':
+        return <AlbumsView tracks={filteredTracks} />;
+      case 'artists':
+        return <ArtistsView tracks={filteredTracks} />;
       case 'playlists':
       case 'playlist_detail':
         return (
@@ -210,6 +259,12 @@ const MainApp: React.FC = () => {
         );
       case 'songs':
       default:
+        if (filterType === 'albums') {
+          return <AlbumsView tracks={filteredTracks} />;
+        }
+        if (filterType === 'artists') {
+          return <ArtistsView tracks={filteredTracks} />;
+        }
         return (
           <TrackList
             tracks={filteredTracks}
@@ -231,6 +286,19 @@ const MainApp: React.FC = () => {
 
   return (
     <div className={`flex flex-col h-screen w-screen overflow-hidden ${isGlass ? 'bg-[#07060A]' : 'bg-[#0B0A0F]'} text-[#F4F2F7] relative`}>
+      {/* Window-wide Drag and Drop Overlay */}
+      {isDraggingOver && (
+        <div className="fixed inset-0 z-50 bg-[#0B0A0F]/85 backdrop-blur-md flex flex-col items-center justify-center border-2 border-dashed border-[#19E6A0] pointer-events-none animate-in fade-in duration-150 select-none">
+          <div className="p-6 rounded-2xl bg-[#16151C] border border-[#282631] flex flex-col items-center gap-3 shadow-2xl">
+            <UploadCloud className="w-12 h-12 text-[#19E6A0] animate-bounce" />
+            <div className="text-center">
+              <h3 className="text-base font-bold text-[#F4F2F7]">Drop audio files or folders here</h3>
+              <p className="text-xs text-[#777381] mt-1">Instant addition to your library</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <TitleBar />
       {/* Dynamic Ambient Glow Tinted by Album Art */}
       <AmbientGlow />
@@ -268,7 +336,20 @@ const MainApp: React.FC = () => {
             currentView={currentView}
             onViewChange={setCurrentView}
           />
-          <div className="flex-1 overflow-hidden flex flex-col">{renderMainContent()}</div>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentView === 'playlist_detail' ? `playlist_detail_${selectedPlaylistId}` : `${currentView}_${filterType}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                className="flex-1 overflow-hidden flex flex-col"
+              >
+                {renderMainContent()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
       </div>
 

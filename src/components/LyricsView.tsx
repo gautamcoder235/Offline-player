@@ -88,7 +88,7 @@ export const LyricsView: React.FC = () => {
           {isEditing ? (
             <button
               onClick={handleSaveEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold transition-colors duration-150 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold transition-all duration-150 active:scale-95 cursor-pointer shadow-md"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Save</span>
@@ -96,7 +96,7 @@ export const LyricsView: React.FC = () => {
           ) : (
             <button
               onClick={handleStartEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-colors duration-150 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-150 active:scale-95 cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span>Edit LRC</span>
@@ -144,10 +144,10 @@ export const LyricsView: React.FC = () => {
                   key={`${line.time}-${idx}`}
                   ref={isActive ? activeLineRef : null}
                   onClick={() => seekTo(line.time)}
-                  className={`cursor-pointer transition-[color,transform] duration-200 transform ${
+                  className={`cursor-pointer transition-all duration-300 transform ${
                     isActive
-                      ? 'text-2xl sm:text-3xl font-bold text-[#F4F2F7] scale-102 drop-shadow-[0_0_24px_rgba(25,230,160,0.3)]'
-                      : 'text-base sm:text-lg font-medium text-[#65616F] hover:text-[#AAA6B2]'
+                      ? 'text-2xl sm:text-3xl font-bold text-[#F4F2F7] scale-105 opacity-100 drop-shadow-[0_0_24px_rgba(25,230,160,0.45)]'
+                      : 'text-base sm:text-lg font-medium text-[#65616F] blur-[0.5px] opacity-40 hover:opacity-80 hover:blur-0'
                   }`}
                 >
                   <p className="leading-relaxed">{line.text}</p>

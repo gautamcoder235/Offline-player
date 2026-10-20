@@ -1,3 +1,4 @@
+pub mod discord_rpc;
 pub mod downloader;
 pub mod lyrics;
 pub mod metadata;
@@ -24,9 +25,16 @@ pub struct AppSettings {
 
 impl Default for AppSettings {
     fn default() -> Self {
+        let default_audio_dir = dirs::audio_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| {
+                dirs::home_dir()
+                    .map(|p| p.join("Music").to_string_lossy().to_string())
+                    .unwrap_or_else(|| "Music".to_string())
+            });
         Self {
-            music_directories: vec![r"C:\Users\sharm\Music\Spotify offline".to_string()],
-            download_directory: r"C:\Users\sharm\Music\Spotify offline".to_string(),
+            music_directories: vec![default_audio_dir.clone()],
+            download_directory: default_audio_dir,
             volume: 0.8,
             equalizer_preset: "Flat".to_string(),
         }
@@ -37,6 +45,7 @@ pub struct AppState {
     pub downloader: DownloaderState,
     pub settings: Mutex<AppSettings>,
     pub tray_playlists: Mutex<Vec<TrayPlaylist>>,
+    pub discord: discord_rpc::DiscordRpcManager,
 }
 
 fn get_settings_file_path() -> PathBuf {
@@ -77,7 +86,14 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
             if !lock.music_directories.is_empty() {
                 lock.music_directories.clone()
             } else {
-                vec![r"C:\Users\sharm\Music\Spotify offline".to_string()]
+                let default_dir = dirs::audio_dir()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|| {
+                        dirs::home_dir()
+                            .map(|p| p.join("Music").to_string_lossy().to_string())
+                            .unwrap_or_else(|| "Music".to_string())
+                    });
+                vec![default_dir]
             }
         }
     };
@@ -86,7 +102,7 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
         let mut tracks = Vec::new();
         let mut seen_paths = std::collections::HashSet::new();
 
-        let valid_extensions = ["mp3", "m4a", "flac", "wav", "ogg"];
+        let valid_extensions = ["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "webm", "alac", "aiff", "aif"];
 
         for dir_path in dirs_to_scan {
             let p = Path::new(&dir_path);
@@ -470,6 +486,106 @@ async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn save_track_tags(
+    file_path: String,
+    title: String,
+    artist: String,
+    album: String,
+    year: Option<u32>,
+    cover_art: Option<String>,
+) -> Result<TrackMetadata, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&file_path);
+        metadata::save_track_metadata(&path, &title, &artist, &album, year, cover_art)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn handle_dropped_paths(paths: Vec<String>) -> Result<Vec<TrackMetadata>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let valid_extensions = ["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "webm", "alac", "aiff", "aif"];
+        let mut results = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+
+        for p_str in paths {
+            let p = PathBuf::from(p_str);
+            if p.is_file() {
+                if let Some(ext) = p.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()) {
+                    if valid_extensions.contains(&ext.as_str()) {
+                        let path_str = p.to_string_lossy().to_string();
+                        if seen.insert(path_str) {
+                            if let Some(meta) = metadata::extract_metadata(&p) {
+                                results.push(meta);
+                            }
+                        }
+                    }
+                }
+            } else if p.is_dir() {
+                for entry in WalkDir::new(&p).follow_links(true).into_iter().filter_map(|e| e.ok()) {
+                    if entry.file_type().is_file() {
+                        let ep = entry.path();
+                        if let Some(ext) = ep.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()) {
+                            if valid_extensions.contains(&ext.as_str()) {
+                                let path_str = ep.to_string_lossy().to_string();
+                                if seen.insert(path_str) {
+                                    if let Some(meta) = metadata::extract_metadata(ep) {
+                                        results.push(meta);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(results)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn update_discord_status(
+    state: State<'_, AppState>,
+    title: String,
+    artist: String,
+    album: String,
+    is_playing: bool,
+    duration: Option<f64>,
+    position: Option<f64>,
+) -> Result<(), String> {
+    let discord = state.discord.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let dur_secs = duration.map(|d| d.round() as u64);
+        let pos_secs = position.map(|p| p.round() as u64);
+        discord.set_activity(
+            &title,
+            &artist,
+            &album,
+            is_playing,
+            dur_secs,
+            pos_secs,
+        );
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn clear_discord_status(state: State<'_, AppState>) -> Result<(), String> {
+    let discord = state.discord.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        discord.clear_activity();
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let port = streamer::start_stream_server();
@@ -480,12 +596,14 @@ pub fn run() {
         downloader: DownloaderState::default(),
         settings: Mutex::new(initial_settings),
         tray_playlists: Mutex::new(Vec::new()),
+        discord: discord_rpc::DiscordRpcManager::new(),
     };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(app_state)
         .setup(|app| {
             let _tray = TrayIconBuilder::with_id("main_tray")
@@ -636,6 +754,10 @@ pub fn run() {
             open_tray_view,
             open_tray_folder,
             quit_app,
+            save_track_tags,
+            handle_dropped_paths,
+            update_discord_status,
+            clear_discord_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

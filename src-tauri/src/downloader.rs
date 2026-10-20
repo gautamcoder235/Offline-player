@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 pub struct DownloaderState {
     pub current_process: Arc<Mutex<Option<Child>>>,
@@ -23,29 +23,52 @@ pub fn run_download(
     url: String,
     output_dir: Option<String>,
 ) -> Result<String, String> {
-    let python_candidates = [
-        PathBuf::from(r"C:\Users\sharm\.gemini\antigravity\scratch\savify\.venv\Scripts\python.exe"),
-        std::env::current_dir().unwrap_or_default().join(".venv").join("Scripts").join("python.exe"),
-    ];
+    let cur_dir = std::env::current_dir().unwrap_or_default();
+    let mut python_candidates: Vec<PathBuf> = Vec::new();
+
+    // Check virtualenv in current directory or user home
+    python_candidates.push(cur_dir.join(".venv").join("Scripts").join("python.exe"));
+    python_candidates.push(cur_dir.join(".venv").join("bin").join("python"));
+    if let Some(home) = dirs::home_dir() {
+        python_candidates.push(home.join(".musicvault").join(".venv").join("Scripts").join("python.exe"));
+        python_candidates.push(home.join(".musicvault").join(".venv").join("bin").join("python"));
+    }
 
     let python_path = python_candidates
         .into_iter()
         .find(|p| p.is_file())
         .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| r"C:\Users\sharm\.gemini\antigravity\scratch\savify\.venv\Scripts\python.exe".to_string());
+        .unwrap_or_else(|| {
+            // Check if 'python' or 'py' or 'python3' responds
+            if Command::new("python").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+                "python".to_string()
+            } else if Command::new("py").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+                "py".to_string()
+            } else {
+                "python3".to_string()
+            }
+        });
 
-    let candidate_paths = [
-        PathBuf::from(r"e:\Codes\Apps Build Files\Spotify Offline\src-tauri\scripts\savify_bridge.py"),
-        std::env::current_dir().unwrap_or_default().join("src-tauri").join("scripts").join("savify_bridge.py"),
-        std::env::current_dir().unwrap_or_default().join("scripts").join("savify_bridge.py"),
-    ];
+    let mut candidate_paths = Vec::new();
+    if let Ok(res_dir) = app.path().resource_dir() {
+        candidate_paths.push(res_dir.join("scripts").join("savify_bridge.py"));
+        candidate_paths.push(res_dir.join("savify_bridge.py"));
+    }
+    candidate_paths.push(cur_dir.join("src-tauri").join("scripts").join("savify_bridge.py"));
+    candidate_paths.push(cur_dir.join("scripts").join("savify_bridge.py"));
 
     let script_path = candidate_paths
         .into_iter()
         .find(|p| p.is_file())
         .ok_or_else(|| "savify_bridge.py script not found".to_string())?;
 
-    let default_output = r"C:\Users\sharm\Music\Spotify offline".to_string();
+    let default_output = dirs::audio_dir()
+        .map(|p| p.join("Spotify offline").to_string_lossy().to_string())
+        .unwrap_or_else(|| {
+            dirs::home_dir()
+                .map(|p| p.join("Music").join("Spotify offline").to_string_lossy().to_string())
+                .unwrap_or_else(|| "Music".to_string())
+        });
     let target_dir = output_dir.unwrap_or(default_output);
 
     let mut cmd = Command::new(&python_path);

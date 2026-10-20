@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Play,
@@ -17,12 +17,15 @@ import {
   X,
   ChevronUp,
   Minus,
+  Pencil,
 } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Track } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
 import { renderHighlightedSnippet, getMatchingLyricSnippet, isCjkText } from '../utils/lyricsSearch';
 import { DeleteTrackModal } from './DeleteTrackModal';
+import { EditTrackTagsModal } from './EditTrackTagsModal';
 
 interface TrackListProps {
   tracks: Track[];
@@ -68,6 +71,7 @@ export const TrackList: React.FC<TrackListProps> = ({
     themeAppearance,
     removeTrackFromPlaylist,
     removeTracksFromPlaylist,
+    updateTrackMetadata,
   } = usePlayer();
 
   const isGlass = themeAppearance === 'aura_glass';
@@ -86,11 +90,51 @@ export const TrackList: React.FC<TrackListProps> = ({
     isBatch?: boolean;
   } | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
+  const [trackToEditTags, setTrackToEditTags] = useState<Track | null>(null);
   const [isPlaylistDropdownOpen, setIsPlaylistDropdownOpen] = useState(false);
   const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
   const [newPlaylistColor, setNewPlaylistColor] = useState(PRESET_COLORS[0]);
+  const [flashingTrackId, setFlashingTrackId] = useState<string | null>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  useLayoutEffect(() => {
+    const updateMargin = () => {
+      if (listRef.current && scrollContainerRef.current) {
+        const listRect = listRef.current.getBoundingClientRect();
+        const containerRect = scrollContainerRef.current.getBoundingClientRect();
+        const offset = listRect.top - containerRect.top + scrollContainerRef.current.scrollTop;
+        setScrollMargin(Math.max(0, Math.round(offset)));
+      }
+    };
+    updateMargin();
+  }, [title, subtitle, coverArt, tracks.length]);
+
+  useEffect(() => {
+    const updateMargin = () => {
+      if (listRef.current && scrollContainerRef.current) {
+        const listRect = listRef.current.getBoundingClientRect();
+        const containerRect = scrollContainerRef.current.getBoundingClientRect();
+        const offset = listRect.top - containerRect.top + scrollContainerRef.current.scrollTop;
+        setScrollMargin(Math.max(0, Math.round(offset)));
+      }
+    };
+    window.addEventListener('resize', updateMargin);
+    return () => window.removeEventListener('resize', updateMargin);
+  }, []);
+
+  const rowVirtualizer = useVirtualizer({
+    count: tracks.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 48,
+    overscan: 12,
+    scrollMargin,
+    getItemKey: (index) => tracks[index]?.id ?? index,
+  });
 
   const [actionFeedback, setActionFeedback] = useState<{
     trackId: string;
@@ -489,7 +533,8 @@ export const TrackList: React.FC<TrackListProps> = ({
     <div className="flex-1 flex flex-col min-h-0 relative select-none">
       {/* Scrollable Track Content */}
       <div
-        className="flex-1 overflow-y-auto pb-24 select-none"
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden pb-24 select-none relative"
         onClick={(e) => {
           // Deselect when clicking empty space (not on rows or buttons)
           const target = e.target as HTMLElement;
@@ -587,9 +632,20 @@ export const TrackList: React.FC<TrackListProps> = ({
                 <div className="text-center"></div>
               </div>
 
-              {/* Contiguous Track Rows */}
-              <div className="pt-1.5 space-y-1">
-                {tracks.map((track, idx) => {
+              {/* Virtualized Contiguous Track Rows */}
+              <div
+                ref={listRef}
+                className="pt-1.5"
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const track = tracks[virtualRow.index];
+                  if (!track) return null;
+                  const idx = virtualRow.index;
                   const isCurrent = currentTrack?.id === track.id;
                   const isSelected = selectedTrackIds.has(track.id);
                   const isLiked = likedTrackIds.has(track.id);
@@ -604,15 +660,35 @@ export const TrackList: React.FC<TrackListProps> = ({
 
                   return (
                     <div
-                      key={track.id}
-                      data-track-row="true"
-                      onClick={(e) => handleRowClick(e, track, idx)}
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start - (rowVirtualizer.options.scrollMargin ?? 0)}px)`,
+                        zIndex: isMenuOpen ? 30 : 1,
+                      }}
+                      className="pb-1 box-border"
+                    >
+                      <div
+                        data-track-row="true"
+                        onClick={(e) => handleRowClick(e, track, idx)}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
+                        setFlashingTrackId(track.id);
+                        setTimeout(() => {
+                          setFlashingTrackId((prev) => (prev === track.id ? null : prev));
+                        }, 400);
                         playTrack(track, tracks, playlistId);
                       }}
                       onContextMenu={(e) => handleContextMenu(e, track)}
-                      className={`group grid grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px] items-center px-3 py-2 rounded-xl transition-all duration-150 cursor-pointer ${
+                      className={`group grid grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px] items-center px-3 py-1.5 h-[44px] rounded-xl transition-all duration-150 cursor-pointer ${
+                        flashingTrackId === track.id ? 'animate-row-flash' : ''
+                      } ${
                         isSelected
                           ? isCurrent
                             ? 'bg-[#19E6A0]/20 border border-[#19E6A0] shadow-[0_0_14px_rgba(25,230,160,0.14)] text-[#F4F2F7]'
@@ -718,13 +794,13 @@ export const TrackList: React.FC<TrackListProps> = ({
                                   playTrack(track, tracks, playlistId);
                                 }
                               }}
-                              className="hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[#19E6A0] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+                              className="group/rowplay hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[#19E6A0] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
                               aria-label={isCurrent && isPlaying ? 'Pause' : 'Play'}
                             >
                               {isCurrent && isPlaying ? (
-                                <Pause className="w-3 h-3 fill-current" />
+                                <Pause className="w-3 h-3 fill-current discord-icon discord-icon-pop" />
                               ) : (
-                                <Play className="w-3 h-3 fill-current ml-0.5" />
+                                <Play className="w-3 h-3 fill-current ml-0.5 discord-icon discord-icon-pop" />
                               )}
                             </button>
                           </>
@@ -738,7 +814,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                             <img
                               src={track.cover_art}
                               alt=""
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
                             <div
@@ -792,7 +868,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                             e.stopPropagation();
                             toggleLike(track.id);
                           }}
-                          className={`p-1 transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer ${
+                          className={`group/like p-1 transition-all duration-200 active:scale-90 cursor-pointer ${
                             isLiked
                               ? 'text-[#E8C77A] opacity-100'
                               : 'text-[#65616F] opacity-0 group-hover:opacity-100 hover:text-[#E8C77A]'
@@ -800,7 +876,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           aria-label={isLiked ? 'Remove from liked' : 'Add to liked'}
                         >
                           <Heart
-                            className={`w-3.5 h-3.5 ${
+                            className={`w-3.5 h-3.5 discord-icon discord-icon-heart ${
                               isLiked ? 'fill-[#E8C77A] text-[#E8C77A]' : ''
                             }`}
                           />
@@ -834,14 +910,14 @@ export const TrackList: React.FC<TrackListProps> = ({
                               setActionFeedback(null);
                             }
                           }}
-                          className={`p-1.5 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer ${
+                          className={`group/more p-1.5 rounded-lg transition-all duration-200 active:scale-90 cursor-pointer ${
                             isMenuOpen
                               ? 'opacity-100 text-[#F4F2F7] bg-[#1E1D26]'
                               : 'text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1D1C23] opacity-0 group-hover:opacity-100'
                           }`}
                           aria-label="More options"
                         >
-                          <MoreHorizontal className="w-3.5 h-3.5" />
+                          <MoreHorizontal className="w-3.5 h-3.5 discord-icon discord-icon-pop" />
                         </button>
 
                         {/* 3-Dots Dropdown Menu */}
@@ -945,6 +1021,22 @@ export const TrackList: React.FC<TrackListProps> = ({
                               </button>
                             </div>
 
+                            {/* Edit Tags & Art */}
+                            <div className="border-t border-[#25232F] my-1 pt-1">
+                              <button
+                                onClick={() => {
+                                  setActiveMenuTrackId(null);
+                                  setTrackToEditTags(track);
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group/item text-xs"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <Pencil className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                                  <span className="truncate">Edit Tags & Art...</span>
+                                </div>
+                              </button>
+                            </div>
+
                             {/* Delete Track */}
                             <div className="border-t border-[#25232F] my-1 pt-1">
                               <button
@@ -964,9 +1056,10 @@ export const TrackList: React.FC<TrackListProps> = ({
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
+            </div>
             </div>
           )}
         </div>
@@ -1423,6 +1516,24 @@ export const TrackList: React.FC<TrackListProps> = ({
                   </button>
                 </div>
 
+                {/* Edit Tags & Art */}
+                <div className="border-t border-[#25232F] my-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const track = contextMenu.track;
+                      setContextMenu(null);
+                      setTrackToEditTags(track);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Pencil className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                      <span className="truncate">Edit Tags & Art...</span>
+                    </div>
+                  </button>
+                </div>
+
                 {/* Delete Track */}
                 <div className="border-t border-[#25232F] my-1 pt-1">
                   <button
@@ -1454,6 +1565,17 @@ export const TrackList: React.FC<TrackListProps> = ({
         onConfirm={async (track, deleteFromDisk) => {
           await deleteTrack(track, deleteFromDisk);
           setTrackToDelete(null);
+        }}
+      />
+
+      {/* Edit Track Tags Modal */}
+      <EditTrackTagsModal
+        track={trackToEditTags}
+        isOpen={!!trackToEditTags}
+        onClose={() => setTrackToEditTags(null)}
+        onSave={(updated) => {
+          updateTrackMetadata(updated);
+          setTrackToEditTags(null);
         }}
       />
 

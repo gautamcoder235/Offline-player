@@ -4,10 +4,16 @@ import json
 import time
 from pathlib import Path
 
-# Add Savify project directory to sys.path
-SAVIFY_DIR = Path(r"C:\Users\sharm\.gemini\antigravity\scratch\savify")
-if str(SAVIFY_DIR) not in sys.path:
-    sys.path.insert(0, str(SAVIFY_DIR))
+# Add Savify project directory or user packages to sys.path
+script_dir = Path(__file__).resolve().parent
+for cand in [
+    script_dir / "savify",
+    script_dir.parent / "savify",
+    Path.home() / ".musicvault" / "savify",
+    Path.home() / ".gemini" / "antigravity" / "scratch" / "savify",
+]:
+    if cand.exists() and str(cand) not in sys.path:
+        sys.path.insert(0, str(cand))
 
 try:
     from savify import Savify
@@ -31,7 +37,8 @@ def main():
         emit({"type": "error", "message": "Invalid Spotify link or query provided."})
         sys.exit(1)
 
-    output_dir = sys.argv[2] if len(sys.argv) > 2 else r"C:\Users\sharm\Music\Spotify offline"
+    default_music = Path.home() / "Music" / "Spotify offline"
+    output_dir = sys.argv[2] if len(sys.argv) > 2 else str(default_music)
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 

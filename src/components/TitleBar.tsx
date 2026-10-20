@@ -1,7 +1,7 @@
 import React from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Minus, Square, X } from 'lucide-react';
+import { AnimatedMinus, AnimatedSquare, AnimatedClose } from './icons';
 import { usePlayer } from '../context/PlayerContext';
 
 export function TitleBar() {
@@ -73,11 +73,11 @@ export function TitleBar() {
       } select-none z-50 sticky top-0 cursor-default`}
     >
       {/* Left: App Brand */}
-      <div data-tauri-drag-region className="flex items-center gap-2 px-3.5 pointer-events-none shrink-0">
+      <div data-tauri-drag-region className="flex items-center gap-2 px-3.5 pointer-events-none shrink-0 group">
         <img
           src="/app-icon.png"
           alt="MusicVault"
-          className="w-7 h-7 rounded-full object-contain shrink-0 drop-shadow-md select-none"
+          className="w-7 h-7 rounded-full object-contain shrink-0 drop-shadow-md select-none discord-icon discord-icon-pop"
         />
         <span className="text-[13.5px] font-semibold text-[#F4F2F7] tracking-tight leading-none select-none">
           MusicVault
@@ -103,27 +103,27 @@ export function TitleBar() {
           aria-label="Minimize window"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleMinimize}
-          className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] transition-colors duration-150 cursor-pointer"
+          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] active:scale-90 transition-all duration-150 cursor-pointer"
         >
-          <Minus className="w-3.5 h-3.5 pointer-events-none" />
+          <AnimatedMinus className="w-3.5 h-3.5 pointer-events-none" />
         </button>
         <button
           type="button"
           aria-label="Maximize or Restore window"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleToggleMaximize}
-          className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] transition-colors duration-150 cursor-pointer"
+          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] active:scale-90 transition-all duration-150 cursor-pointer"
         >
-          <Square className="w-3 h-3 pointer-events-none" />
+          <AnimatedSquare className="w-3 h-3 pointer-events-none" />
         </button>
         <button
           type="button"
           aria-label="Close to background tray"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleClose}
-          className="flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#FF667A] hover:text-white transition-colors duration-150 cursor-pointer"
+          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#FF667A] hover:text-white active:scale-90 transition-all duration-150 cursor-pointer"
         >
-          <X className="w-3.5 h-3.5 pointer-events-none" />
+          <AnimatedClose className="w-3.5 h-3.5 pointer-events-none" />
         </button>
       </div>
     </div>
