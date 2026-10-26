@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -11,6 +11,7 @@ import {
   Flame,
   Pencil,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackList } from './TrackList';
@@ -18,6 +19,8 @@ import { ViewMode, Playlist } from '../types';
 import { AnimatedTrash, AnimatedFileTransfer } from './icons';
 import { DeletePlaylistModal } from './DeletePlaylistModal';
 import { EditPlaylistModal } from './EditPlaylistModal';
+import { groupTracksByArtist, getArtistTracks } from '../utils/artistUtils';
+import { groupTracksIntoAlbums } from '../utils/albumUtils';
 
 interface PlaylistsViewProps {
   selectedPlaylistId: string | null;
@@ -67,13 +70,53 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [autoIncludeArtistTracks, setAutoIncludeArtistTracks] = useState(true);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
+
+  // Group artists from library for quick selection
+  const libraryArtists = useMemo(() => groupTracksByArtist(tracks), [tracks]);
+  // Group albums from library for quick selection
+  const libraryAlbums = useMemo(() => groupTracksIntoAlbums(tracks), [tracks]);
+
+  // Check if current playlist name matches an album
+  const matchingAlbum = useMemo(() => {
+    if (!name.trim()) return null;
+    const lower = name.trim().toLowerCase();
+    return libraryAlbums.find((a) => a.name.toLowerCase() === lower) || null;
+  }, [libraryAlbums, name]);
+
+  // Check if current playlist name matches an artist in the library
+  const matchingArtistTracks = useMemo(() => {
+    if (!name.trim()) return [];
+    const { all } = getArtistTracks(tracks, name.trim());
+    return all;
+  }, [tracks, name]);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createPlaylist(name.trim(), desc.trim() || undefined, [], selectedColor);
+
+    let initialTrackIds: string[] = [];
+    if (autoIncludeArtistTracks) {
+      if (matchingAlbum) {
+        initialTrackIds = matchingAlbum.tracks.map((t) => t.id);
+      } else if (matchingArtistTracks.length > 0) {
+        initialTrackIds = matchingArtistTracks.map((t) => t.id);
+      }
+    }
+
+    createPlaylist(
+      name.trim(),
+      desc.trim() ||
+        (matchingAlbum
+          ? `Album by ${matchingAlbum.artist} • ${initialTrackIds.length} tracks`
+          : initialTrackIds.length > 0
+          ? `Complete collection of songs including ${name.trim()}`
+          : undefined),
+      initialTrackIds,
+      selectedColor
+    );
     setName('');
     setDesc('');
     setIsCreating(false);
@@ -366,9 +409,40 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   </div>
 
                   <div className="relative z-10 space-y-2">
-                    <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
-                      Title
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider">
+                        Title
+                      </label>
+                      {libraryArtists.length > 0 && (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setName(e.target.value);
+                            }
+                          }}
+                          className="text-[10px] text-[#777381] hover:text-[#19E6A0] bg-[#14131A] px-2 py-0.5 rounded-lg border border-[#2D2B3B] outline-none cursor-pointer"
+                        >
+                          <option value="" disabled className="text-[#777381]">
+                            Fill from artist/album...
+                          </option>
+                          <optgroup label="Artists" className="bg-[#14131A] text-[#19E6A0]">
+                            {libraryArtists.slice(0, 30).map((art) => (
+                              <option key={art.normalizedKey} value={art.name} className="text-[#F4F2F7]">
+                                {art.name} ({art.tracks.length} songs)
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Albums" className="bg-[#14131A] text-[#19E6A0]">
+                            {libraryAlbums.slice(0, 30).map((alb) => (
+                              <option key={alb.key} value={alb.name} className="text-[#F4F2F7]">
+                                {alb.name} ({alb.tracks.length} tracks)
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      )}
+                    </div>
                     <input
                       type="text"
                       placeholder="My Awesome Playlist"
@@ -377,6 +451,43 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       autoFocus
                       className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
                     />
+                    {matchingAlbum ? (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/30 text-xs text-[#19E6A0]">
+                        <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            Album detected: <strong>{matchingAlbum.tracks.length}</strong> tracks in "{matchingAlbum.name}"
+                          </span>
+                        </div>
+                        <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold select-none shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={autoIncludeArtistTracks}
+                            onChange={(e) => setAutoIncludeArtistTracks(e.target.checked)}
+                            className="rounded accent-[#19E6A0]"
+                          />
+                          <span>Auto-include</span>
+                        </label>
+                      </div>
+                    ) : matchingArtistTracks.length > 0 ? (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/30 text-xs text-[#19E6A0]">
+                        <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            Artist detected: <strong>{matchingArtistTracks.length}</strong> songs included
+                          </span>
+                        </div>
+                        <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold select-none shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={autoIncludeArtistTracks}
+                            onChange={(e) => setAutoIncludeArtistTracks(e.target.checked)}
+                            className="rounded accent-[#19E6A0]"
+                          />
+                          <span>Auto-include</span>
+                        </label>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="relative z-10 space-y-2">

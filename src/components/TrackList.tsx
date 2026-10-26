@@ -18,12 +18,16 @@ import {
   ChevronUp,
   Minus,
   Pencil,
+  Mic2,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Track } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
 import { renderHighlightedSnippet, getMatchingLyricSnippet, isCjkText } from '../utils/lyricsSearch';
+import { getArtistPlaylistTrackIds, cleanArtistName } from '../utils/artistUtils';
+import { resolveTrackAlbumName, isJunkAlbumName } from '../utils/albumUtils';
+import { formatListeningTime } from '../utils/affinityEngine';
 import { DeleteTrackModal } from './DeleteTrackModal';
 import { EditTrackTagsModal } from './EditTrackTagsModal';
 
@@ -66,6 +70,8 @@ export const TrackList: React.FC<TrackListProps> = ({
     createPlaylist,
     openInExplorer,
     getPlayCount,
+    topTracksTimeRange,
+    setTopTracksTimeRange,
     deleteTrack,
     searchQuery,
     themeAppearance,
@@ -76,6 +82,10 @@ export const TrackList: React.FC<TrackListProps> = ({
 
   const isGlass = themeAppearance === 'aura_glass';
   const isCustomPlaylist = Boolean(playlistId && playlistId !== 'all' && playlistId !== 'liked');
+  const isAlbumView = Boolean(playlistId?.startsWith('album_'));
+  const hasMultiDisc = useMemo(() => {
+    return isAlbumView && tracks.some((t) => t.disc_number && t.disc_number > 1);
+  }, [isAlbumView, tracks]);
 
   // Multi-selection state
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
@@ -130,11 +140,26 @@ export const TrackList: React.FC<TrackListProps> = ({
   const rowVirtualizer = useVirtualizer({
     count: tracks.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 48,
+    estimateSize: (index: number) => {
+      const track = tracks[index];
+      if (!track) return 48;
+      const hasSnippet =
+        track.matchingLyricSnippet !== undefined
+          ? Boolean(track.matchingLyricSnippet)
+          : (searchQuery.trim().length >= 3 || isCjkText(searchQuery))
+          ? Boolean(getMatchingLyricSnippet(track.id, track.lyrics, searchQuery)?.snippet)
+          : false;
+      return hasSnippet ? 70 : 48;
+    },
     overscan: 12,
     scrollMargin,
     getItemKey: (index) => tracks[index]?.id ?? index,
   });
+
+  // Re-measure virtual rows dynamically when search query or track list changes
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [searchQuery, tracks]);
 
   const [actionFeedback, setActionFeedback] = useState<{
     trackId: string;
@@ -568,14 +593,90 @@ export const TrackList: React.FC<TrackListProps> = ({
 
             <div className="flex flex-col gap-1.5 min-w-0 flex-1 pb-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
-                {title === 'Liked Songs' ? 'Playlist' : 'Collection'}
+                {playlistId === 'top_tracks'
+                  ? 'Personal Affinity Engine'
+                  : title === 'Liked Songs'
+                  ? 'Playlist'
+                  : 'Collection'}
               </span>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate">
-                {title}
-              </h1>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate">
+                  {title}
+                </h1>
+                {playlistId === 'top_tracks' && tracks.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rangeLabel =
+                        topTracksTimeRange === 'short_term'
+                          ? 'On Repeat'
+                          : topTracksTimeRange === 'medium_term'
+                          ? 'Past 6 Months'
+                          : 'All Time';
+                      const ids = tracks.map((t) => t.id);
+                      createPlaylist(
+                        `Top Tracks (${rangeLabel})`,
+                        `Your personal ${rangeLabel} listening affinity mix • ${ids.length} tracks`,
+                        ids,
+                        '#E8C77A'
+                      );
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E8C77A]/15 hover:bg-[#E8C77A]/25 text-[#E8C77A] border border-[#E8C77A]/30 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+                    title="Save current Top Tracks as a permanent playlist"
+                  >
+                    <ListPlus className="w-3.5 h-3.5" />
+                    <span>Save as Playlist</span>
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-[#777381]">
-                {subtitle || `${tracks.length} tracks found on this computer`}
+                {playlistId === 'top_tracks'
+                  ? topTracksTimeRange === 'short_term'
+                    ? `On Repeat • ${tracks.length} songs in heavy rotation right now`
+                    : topTracksTimeRange === 'medium_term'
+                    ? `Past 6 Months • ${tracks.length} songs you listened to most lately`
+                    : `All Time • ${tracks.length} all-time favorite songs ranked by affinity`
+                  : subtitle || `${tracks.length} tracks found on this computer`}
               </p>
+
+              {/* Spotify-style Time Range Selector Pills for Top Tracks */}
+              {playlistId === 'top_tracks' && (
+                <div className="flex items-center gap-1.5 mt-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setTopTracksTimeRange('short_term')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      topTracksTimeRange === 'short_term'
+                        ? 'bg-[#19E6A0] text-black shadow-sm'
+                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] border border-[#2B2936]'
+                    }`}
+                  >
+                    <span>🔥 On Repeat (30 Days)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTopTracksTimeRange('medium_term')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      topTracksTimeRange === 'medium_term'
+                        ? 'bg-[#19E6A0] text-black shadow-sm'
+                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] border border-[#2B2936]'
+                    }`}
+                  >
+                    <span>📅 Past 6 Months</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTopTracksTimeRange('all_time')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      topTracksTimeRange === 'all_time'
+                        ? 'bg-[#19E6A0] text-black shadow-sm'
+                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] border border-[#2B2936]'
+                    }`}
+                  >
+                    <span>🏆 All Time</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -593,7 +694,11 @@ export const TrackList: React.FC<TrackListProps> = ({
           ) : (
             <div className="w-full text-xs">
               {/* Header Row */}
-              <div className="grid grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px] items-center px-3 pb-2.5 border-b border-[#292731]/40 text-[#65616F] uppercase tracking-wider font-semibold text-[10px]">
+              <div className={`grid ${
+                hasMultiDisc
+                  ? 'grid-cols-[52px_minmax(0,1fr)_80px_40px] md:grid-cols-[52px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
+                  : 'grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
+              } items-center px-3 pb-2.5 border-b border-[#292731]/40 text-[#65616F] uppercase tracking-wider font-semibold text-[10px]`}>
                 {/* Index / Select All Checkbox Header */}
                 <div className="text-center flex items-center justify-center">
                   {selectedTrackIds.size > 0 ? (
@@ -625,7 +730,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 </div>
 
                 <div className="pl-1">Title</div>
-                <div className="hidden md:block">Album</div>
+                <div className="hidden md:block">{playlistId === 'top_tracks' ? 'Listening Stats' : 'Album'}</div>
                 <div className="text-right pr-2">
                   <Clock className="w-3 h-3 inline-block text-[#65616F]" />
                 </div>
@@ -651,6 +756,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                   const isLiked = likedTrackIds.has(track.id);
                   const isMenuOpen = activeMenuTrackId === track.id;
                   const trackColor = getTrackColor(track.title, track.artist);
+                  const isTopTracksView = playlistId === 'top_tracks';
+                  const trackNum = isAlbumView && track.track_number && track.track_number > 0 ? track.track_number : idx + 1;
+                  const showDiscBadge = isAlbumView && Boolean(track.disc_number && track.disc_number > 1);
                   const matchingSnippet =
                     track.matchingLyricSnippet !== undefined
                       ? track.matchingLyricSnippet
@@ -668,7 +776,6 @@ export const TrackList: React.FC<TrackListProps> = ({
                         top: 0,
                         left: 0,
                         width: '100%',
-                        height: `${virtualRow.size}px`,
                         transform: `translateY(${virtualRow.start - (rowVirtualizer.options.scrollMargin ?? 0)}px)`,
                         zIndex: isMenuOpen ? 30 : 1,
                       }}
@@ -686,7 +793,13 @@ export const TrackList: React.FC<TrackListProps> = ({
                         playTrack(track, tracks, playlistId);
                       }}
                       onContextMenu={(e) => handleContextMenu(e, track)}
-                      className={`group grid grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px] items-center px-3 py-1.5 h-[44px] rounded-xl transition-all duration-150 cursor-pointer ${
+                      className={`group grid ${
+                        hasMultiDisc
+                          ? 'grid-cols-[52px_minmax(0,1fr)_80px_40px] md:grid-cols-[52px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
+                          : 'grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
+                      } items-center px-3 ${
+                        matchingSnippet ? 'min-h-[66px] py-2' : 'h-[44px] py-1.5'
+                      } rounded-xl transition-all duration-150 cursor-pointer ${
                         flashingTrackId === track.id ? 'animate-row-flash' : ''
                       } ${
                         isSelected
@@ -721,25 +834,61 @@ export const TrackList: React.FC<TrackListProps> = ({
                               }`}
                             >
                               {isCurrent ? (
-                                <div
-                                  className="flex items-end justify-center gap-[2.5px] w-3.5 h-3.5 mx-auto py-0.5"
-                                  aria-label={isPlaying ? 'Playing' : 'Paused'}
-                                >
-                                  <span
-                                    className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
-                                    style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                                  />
-                                  <span
-                                    className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
-                                    style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                                  />
-                                  <span
-                                    className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
-                                    style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                                  />
+                                <div className="flex items-center justify-center gap-1 shrink-0 whitespace-nowrap">
+                                  {showDiscBadge && (
+                                    <span
+                                      className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-[#292736] text-[#A5A1B0] border border-[#3A3748] leading-none shrink-0"
+                                      title={`Disc ${track.disc_number}`}
+                                    >
+                                      D{track.disc_number}
+                                    </span>
+                                  )}
+                                  <div
+                                    className="flex items-end justify-center gap-[2.5px] w-3.5 h-3.5 py-0.5 shrink-0"
+                                    aria-label={isPlaying ? 'Playing' : 'Paused'}
+                                  >
+                                    <span
+                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
+                                      style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                                    />
+                                    <span
+                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
+                                      style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                                    />
+                                    <span
+                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
+                                      style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                                    />
+                                  </div>
                                 </div>
                               ) : (
-                                idx + 1
+                                <span className="inline-flex items-center justify-center gap-1 shrink-0 whitespace-nowrap">
+                                  {showDiscBadge && (
+                                    <span
+                                      className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-[#292736] text-[#A5A1B0] border border-[#3A3748] leading-none shrink-0"
+                                      title={`Disc ${track.disc_number}`}
+                                    >
+                                      D{track.disc_number}
+                                    </span>
+                                  )}
+                                  {isTopTracksView ? (
+                                    <span
+                                      className={`font-black text-[11px] font-mono ${
+                                        idx === 0
+                                          ? 'text-[#E8C77A]'
+                                          : idx === 1
+                                          ? 'text-[#D1D5DB]'
+                                          : idx === 2
+                                          ? 'text-[#CD7F32]'
+                                          : 'text-[#65616F]'
+                                      }`}
+                                    >
+                                      #{idx + 1}
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0">{trackNum}</span>
+                                  )}
+                                </span>
                               )}
                             </span>
                             <button
@@ -761,25 +910,61 @@ export const TrackList: React.FC<TrackListProps> = ({
                               }`}
                             >
                               {isCurrent ? (
-                                <div
-                                  className="flex items-end justify-center gap-[2.5px] w-3.5 h-3.5 mx-auto py-0.5"
-                                  aria-label={isPlaying ? 'Playing' : 'Paused'}
-                                >
-                                  <span
-                                    className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
-                                    style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                                  />
-                                  <span
-                                    className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
-                                    style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                                  />
-                                  <span
-                                    className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
-                                    style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                                  />
+                                <div className="flex items-center justify-center gap-1 shrink-0 whitespace-nowrap">
+                                  {showDiscBadge && (
+                                    <span
+                                      className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-[#292736] text-[#A5A1B0] border border-[#3A3748] leading-none shrink-0"
+                                      title={`Disc ${track.disc_number}`}
+                                    >
+                                      D{track.disc_number}
+                                    </span>
+                                  )}
+                                  <div
+                                    className="flex items-end justify-center gap-[2.5px] w-3.5 h-3.5 py-0.5 shrink-0"
+                                    aria-label={isPlaying ? 'Playing' : 'Paused'}
+                                  >
+                                    <span
+                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
+                                      style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                                    />
+                                    <span
+                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
+                                      style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                                    />
+                                    <span
+                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
+                                      style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                                    />
+                                  </div>
                                 </div>
                               ) : (
-                                idx + 1
+                                <span className="inline-flex items-center justify-center gap-1 shrink-0 whitespace-nowrap">
+                                  {showDiscBadge && (
+                                    <span
+                                      className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-[#292736] text-[#A5A1B0] border border-[#3A3748] leading-none shrink-0"
+                                      title={`Disc ${track.disc_number}`}
+                                    >
+                                      D{track.disc_number}
+                                    </span>
+                                  )}
+                                  {isTopTracksView ? (
+                                    <span
+                                      className={`font-black text-[11px] font-mono ${
+                                        idx === 0
+                                          ? 'text-[#E8C77A]'
+                                          : idx === 1
+                                          ? 'text-[#D1D5DB]'
+                                          : idx === 2
+                                          ? 'text-[#CD7F32]'
+                                          : 'text-[#65616F]'
+                                      }`}
+                                    >
+                                      #{idx + 1}
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0">{trackNum}</span>
+                                  )}
+                                </span>
                               )}
                             </span>
 
@@ -825,18 +1010,25 @@ export const TrackList: React.FC<TrackListProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span
-                            className={`font-medium truncate text-xs transition-colors duration-200 ${
-                              isCurrent
-                                ? 'text-[#19E6A0]'
-                                : isSelected
-                                ? 'text-[#F4F2F7] font-semibold'
-                                : 'text-[#F4F2F7] group-hover:text-[#19E6A0]'
-                            }`}
-                          >
-                            {track.title}
-                          </span>
+                        <div className="flex flex-col min-w-0 justify-center">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`font-medium truncate text-xs transition-colors duration-200 ${
+                                isCurrent
+                                  ? 'text-[#19E6A0]'
+                                  : isSelected
+                                  ? 'text-[#F4F2F7] font-semibold'
+                                  : 'text-[#F4F2F7] group-hover:text-[#19E6A0]'
+                              }`}
+                            >
+                              {track.title}
+                            </span>
+                            {isTopTracksView && track.stats?.isOnRepeat && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 text-[9px] font-semibold shrink-0">
+                                🔥 On Repeat
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[11px] text-[#777381] truncate">
                             {track.artist}
                           </span>
@@ -856,9 +1048,21 @@ export const TrackList: React.FC<TrackListProps> = ({
                         </div>
                       </div>
 
-                      {/* Album */}
+                      {/* Album / Listening Stats */}
                       <div className="hidden md:block text-[#777381] truncate text-[11px] pr-3">
-                        {track.album}
+                        {isTopTracksView && track.stats ? (
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-[#AAA6B2] font-semibold">
+                              {track.stats.playCount} {track.stats.playCount === 1 ? 'listen' : 'listens'}
+                            </span>
+                            <span className="text-[#555260]">•</span>
+                            <span className="text-[#777381]">
+                              {formatListeningTime(track.stats.totalListenDuration)}
+                            </span>
+                          </div>
+                        ) : (
+                          track.album
+                        )}
                       </div>
 
                       {/* Duration & Like */}
@@ -1459,6 +1663,54 @@ export const TrackList: React.FC<TrackListProps> = ({
                     <Plus className="w-3 h-3 text-[#19E6A0]" />
                     <span className="truncate">New Playlist...</span>
                   </button>
+
+                  {/* Create Playlist for Artist */}
+                  {contextMenu.track.artist && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const artistName = contextMenu.track.artist?.trim() || 'Unknown Artist';
+                        const artistTrackIds = getArtistPlaylistTrackIds(tracks, artistName);
+                        const artistColor = getTrackColor(artistName, 'Artist');
+                        createPlaylist(
+                          artistName,
+                          `Complete collection of ${artistTrackIds.length} songs including ${artistName}`,
+                          artistTrackIds,
+                          artistColor.bg
+                        );
+                        setContextMenu(null);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-medium"
+                      title={`Create playlist containing all songs including ${contextMenu.track.artist}`}
+                    >
+                      <Mic2 className="w-3 h-3 text-[#19E6A0]" />
+                      <span className="truncate">Playlist for "{cleanArtistName(contextMenu.track.artist)}"</span>
+                    </button>
+                  )}
+
+                  {/* Create Playlist for Album */}
+                  {!isJunkAlbumName(contextMenu.track.album) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const albumName = resolveTrackAlbumName(contextMenu.track);
+                        const albumTracks = tracks.filter((t) => resolveTrackAlbumName(t).toLowerCase() === albumName.toLowerCase());
+                        const albumColor = getTrackColor(albumName, contextMenu.track.artist || 'Album');
+                        createPlaylist(
+                          albumName,
+                          `Album • ${albumTracks.length} tracks`,
+                          albumTracks.map((t) => t.id),
+                          albumColor.bg
+                        );
+                        setContextMenu(null);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-medium"
+                      title={`Create playlist for album "${contextMenu.track.album}"`}
+                    >
+                      <Disc3 className="w-3 h-3 text-[#19E6A0]" />
+                      <span className="truncate">Playlist for "{contextMenu.track.album}"</span>
+                    </button>
+                  )}
 
                   {playlists.length > 0 && (
                     <div className="space-y-0.5 max-h-32 overflow-y-auto mt-0.5">

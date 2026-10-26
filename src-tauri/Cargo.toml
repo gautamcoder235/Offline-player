@@ -1,6 +1,6 @@
 [package]
 name = "offline-player"
-version = "0.1.7"
+version = "0.1.8"
 description = "MusicVault Desktop App"
 authors = ["Gautam"]
 edition = "2021"
@@ -29,6 +29,8 @@ lofty = "0.21"
 tiny_http = "0.12"
 percent-encoding = "2.3"
 sha2 = "0.11.0"
+window-vibrancy = "0.8"
+
 
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.39"

@@ -5,6 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
+const SAVIFY_BRIDGE_PY: &str = include_str!("../scripts/savify_bridge.py");
+
 pub struct DownloaderState {
     pub current_process: Arc<Mutex<Option<Child>>>,
 }
@@ -54,13 +56,34 @@ pub fn run_download(
         candidate_paths.push(res_dir.join("scripts").join("savify_bridge.py"));
         candidate_paths.push(res_dir.join("savify_bridge.py"));
     }
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            candidate_paths.push(exe_dir.join("scripts").join("savify_bridge.py"));
+            candidate_paths.push(exe_dir.join("savify_bridge.py"));
+        }
+    }
     candidate_paths.push(cur_dir.join("src-tauri").join("scripts").join("savify_bridge.py"));
     candidate_paths.push(cur_dir.join("scripts").join("savify_bridge.py"));
+    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+        candidate_paths.push(PathBuf::from(&local_appdata).join("MusicVault").join("scripts").join("savify_bridge.py"));
+    }
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        candidate_paths.push(PathBuf::from(&appdata).join("OfflinePlayer").join("scripts").join("savify_bridge.py"));
+    }
 
-    let script_path = candidate_paths
-        .into_iter()
-        .find(|p| p.is_file())
-        .ok_or_else(|| "savify_bridge.py script not found".to_string())?;
+    let script_path = if let Some(found) = candidate_paths.into_iter().find(|p| p.is_file()) {
+        found
+    } else {
+        // Fallback: automatically extract the embedded script to %APPDATA%/OfflinePlayer/scripts/savify_bridge.py
+        let fallback_dir = dirs::config_dir()
+            .map(|p| p.join("OfflinePlayer").join("scripts"))
+            .unwrap_or_else(|| cur_dir.join("scripts"));
+        let _ = std::fs::create_dir_all(&fallback_dir);
+        let fallback_file = fallback_dir.join("savify_bridge.py");
+        std::fs::write(&fallback_file, SAVIFY_BRIDGE_PY)
+            .map_err(|e| format!("Failed to extract embedded savify_bridge.py: {}", e))?;
+        fallback_file
+    };
 
     let default_output = dirs::audio_dir()
         .map(|p| p.join("Spotify offline").to_string_lossy().to_string())

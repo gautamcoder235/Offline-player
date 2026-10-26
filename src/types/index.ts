@@ -16,6 +16,10 @@ export interface Track {
   matchingLyricSnippet?: string | null;
   replay_gain?: number | null;
   queueId?: string;
+  track_number?: number | null;
+  disc_number?: number | null;
+  genre?: string | null;
+  stats?: import('../utils/affinityEngine').TrackListeningStats;
 }
 
 export type RepeatMode = 'off' | 'all' | 'one';

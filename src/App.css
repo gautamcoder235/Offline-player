@@ -26,8 +26,14 @@
     --radius-xl: 16px;
   }
 
+  html {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
   body {
-    background-color: var(--bg-primary);
+    background: transparent !important;
+    background-color: transparent !important;
     color: var(--text-primary);
     user-select: none;
     overflow: hidden;

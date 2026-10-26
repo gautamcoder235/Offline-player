@@ -23,6 +23,9 @@ pub struct TrackMetadata {
     pub stream_url: String,
     pub lyrics: Option<String>,
     pub replay_gain: Option<f64>,
+    pub track_number: Option<u32>,
+    pub disc_number: Option<u32>,
+    pub genre: Option<String>,
 }
 
 pub fn save_track_metadata(
@@ -90,6 +93,21 @@ fn format_duration(seconds: f64) -> String {
     format!("{}:{:02}", mins, secs)
 }
 
+fn parse_number_tag(tag: &lofty::tag::Tag, accessor_val: Option<u32>, key: &ItemKey) -> Option<u32> {
+    if let Some(val) = accessor_val.filter(|&n| n > 0) {
+        return Some(val);
+    }
+    if let Some(s) = tag.get_string(key) {
+        let clean = s.split('/').next().unwrap_or("").trim();
+        if let Ok(n) = clean.parse::<u32>() {
+            if n > 0 {
+                return Some(n);
+            }
+        }
+    }
+    None
+}
+
 pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let metadata = std::fs::metadata(file_path).ok()?;
     let size_bytes = metadata.len();
@@ -140,6 +158,9 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                 stream_url,
                 lyrics,
                 replay_gain: None,
+                track_number: None,
+                disc_number: None,
+                genre: None,
             });
         }
     };
@@ -156,6 +177,9 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let mut cover_art = None;
     let mut lyrics = None;
     let mut replay_gain = None;
+    let mut track_number = None;
+    let mut disc_number = None;
+    let mut genre = None;
 
     // Check adjacent .lrc file (preferred source)
     let lrc_path = file_path.with_extension("lrc");
@@ -208,6 +232,19 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         }
         if year.is_none() {
             year = tag.year();
+        }
+        if track_number.is_none() {
+            track_number = parse_number_tag(tag, tag.track(), &ItemKey::TrackNumber);
+        }
+        if disc_number.is_none() {
+            disc_number = parse_number_tag(tag, tag.disk(), &ItemKey::DiscNumber);
+        }
+        if genre.is_none() {
+            if let Some(g) = tag.genre().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()) {
+                genre = Some(g);
+            } else if let Some(g) = tag.get_string(&ItemKey::Genre).map(|s| s.trim().to_string()).filter(|s| !s.is_empty()) {
+                genre = Some(g);
+            }
         }
         if cover_art.is_none() {
             if let Some(pic) = tag.pictures().first() {
@@ -305,6 +342,9 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         stream_url,
         lyrics,
         replay_gain,
+        track_number,
+        disc_number,
+        genre,
     })
 }
 
@@ -404,6 +444,64 @@ mod tests {
                 let _ = std::fs::remove_file(temp_path);
             }
         }
+    }
+
+    #[test]
+    fn test_track_metadata_fields() {
+        let meta = TrackMetadata {
+            id: "test_id".to_string(),
+            file_path: "test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            duration: 120.0,
+            duration_str: "2:00".to_string(),
+            year: Some(2025),
+            bitrate: Some(320),
+            size_bytes: 1024,
+            cover_art: None,
+            stream_url: "http://127.0.0.1:4545/stream/test.mp3".to_string(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: Some(4),
+            disc_number: Some(2),
+            genre: Some("Rock".to_string()),
+        };
+        assert_eq!(meta.track_number, Some(4));
+        assert_eq!(meta.disc_number, Some(2));
+        assert_eq!(meta.genre, Some("Rock".to_string()));
+
+        let json = serde_json::to_string(&meta).unwrap();
+        let deserialized: TrackMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.track_number, Some(4));
+        assert_eq!(deserialized.disc_number, Some(2));
+        assert_eq!(deserialized.genre, Some("Rock".to_string()));
+    }
+
+    #[test]
+    fn test_lofty_tag_track_disc_genre() {
+        use lofty::tag::{Accessor, ItemKey, ItemValue, Tag, TagItem, TagType};
+        let mut tag = Tag::new(TagType::Id3v2);
+        tag.set_track(5);
+        tag.set_disk(2);
+        tag.set_genre("Jazz".to_string());
+
+        assert_eq!(tag.track(), Some(5));
+        assert_eq!(tag.disk(), Some(2));
+        assert_eq!(tag.genre().as_deref(), Some("Jazz"));
+
+        // Test string insertion e.g. "03/12" and "1/2"
+        let mut tag2 = Tag::new(TagType::Id3v2);
+        tag2.insert(TagItem::new(ItemKey::TrackNumber, ItemValue::Text("03/12".to_string())));
+        tag2.insert(TagItem::new(ItemKey::DiscNumber, ItemValue::Text("1/2".to_string())));
+        tag2.insert(TagItem::new(ItemKey::Genre, ItemValue::Text("Classical".to_string())));
+
+        let parsed_track = parse_number_tag(&tag2, tag2.track(), &ItemKey::TrackNumber);
+        let parsed_disk = parse_number_tag(&tag2, tag2.disk(), &ItemKey::DiscNumber);
+
+        assert_eq!(parsed_track, Some(3));
+        assert_eq!(parsed_disk, Some(1));
+        assert_eq!(tag2.genre().as_deref().or_else(|| tag2.get_string(&ItemKey::Genre)), Some("Classical"));
     }
 }
 

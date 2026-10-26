@@ -1,78 +1,133 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Disc3, Play, Pause, ArrowLeft } from 'lucide-react';
-import { Track } from '../types';
+import { Disc3, Play, Pause, ArrowLeft, ListPlus, Check } from 'lucide-react';
+import { Track, ViewMode } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackColor } from '../utils/helpers';
 import { TrackList } from './TrackList';
+import { groupTracksIntoAlbums, AlbumGroup } from '../utils/albumUtils';
 
 interface AlbumsViewProps {
   tracks: Track[];
+  onSelectPlaylist?: (id: string | null) => void;
+  onViewChange?: (view: ViewMode) => void;
 }
 
-interface AlbumGroup {
-  name: string;
-  artist: string;
-  year?: number | null;
-  coverArt?: string | null;
-  tracks: Track[];
-}
+export const AlbumsView: React.FC<AlbumsViewProps> = ({
+  tracks,
+  onSelectPlaylist,
+  onViewChange,
+}) => {
+  const { currentTrack, isPlaying, playTrack, togglePlay, createPlaylist } = usePlayer();
+  const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
+  const [createdFeedback, setCreatedFeedback] = useState(false);
 
-export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
-  const [selectedAlbum, setSelectedAlbum] = useState<AlbumGroup | null>(null);
-
-  // Group tracks by album name
+  // Intelligently group tracks into cohesive albums (soundtracks & compilations unified, junk emoji resolved)
   const albums = useMemo(() => {
-    const map = new Map<string, AlbumGroup>();
-
-    for (const track of tracks) {
-      const albumName = track.album?.trim() || 'Unknown Album';
-      const key = `${albumName.toLowerCase()}___${(track.artist || '').toLowerCase()}`;
-
-      if (!map.has(key)) {
-        map.set(key, {
-          name: albumName,
-          artist: track.artist || 'Unknown Artist',
-          year: track.year || null,
-          coverArt: track.cover_art || null,
-          tracks: [track],
-        });
-      } else {
-        const group = map.get(key)!;
-        group.tracks.push(track);
-        if (!group.coverArt && track.cover_art) {
-          group.coverArt = track.cover_art;
-        }
-        if (!group.year && track.year) {
-          group.year = track.year;
-        }
-      }
-    }
-
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return groupTracksIntoAlbums(tracks);
   }, [tracks]);
+
+  const selectedAlbum = useMemo(() => {
+    if (!selectedAlbumKey) return null;
+    return albums.find((a) => a.key === selectedAlbumKey) || null;
+  }, [albums, selectedAlbumKey]);
+
+  const handleCreatePlaylist = (album: AlbumGroup) => {
+    const albumColor = getTrackColor(album.name, album.artist);
+    const trackIds = album.tracks.map((t) => t.id);
+
+    const newPl = createPlaylist(
+      album.name,
+      `Album by ${album.artist} • ${trackIds.length} tracks`,
+      trackIds,
+      albumColor.bg
+    );
+
+    setCreatedFeedback(true);
+    setTimeout(() => setCreatedFeedback(false), 2000);
+
+    if (newPl?.id && onSelectPlaylist && onViewChange) {
+      onSelectPlaylist(newPl.id);
+      onViewChange('playlist_detail');
+    }
+  };
 
   // If viewing a drilled-down album detail
   if (selectedAlbum) {
+    const isThisAlbumPlaying =
+      currentTrack &&
+      selectedAlbum.tracks.some((t) => t.id === currentTrack.id) &&
+      isPlaying;
+
     return (
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        <div className="p-4 sm:p-6 pb-0 flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setSelectedAlbum(null)}
-            className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#16151D] hover:bg-[#201E29] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#2B2936] transition-colors cursor-pointer active:scale-95"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 discord-icon discord-icon-prev" />
-            <span>All Albums</span>
-          </button>
+        {/* Top Action Bar */}
+        <div className="p-4 sm:p-6 pb-2 flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-[#24222E]/60 bg-[#121118]/40 backdrop-blur-md z-10">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setSelectedAlbumKey(null)}
+              className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#16151D] hover:bg-[#201E29] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#2B2936] transition-colors cursor-pointer active:scale-95 shadow-sm"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 discord-icon discord-icon-prev" />
+              <span>All Albums</span>
+            </button>
+          </div>
+
+          {/* Action Buttons: Play Album & Save as Playlist */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (isThisAlbumPlaying) {
+                  togglePlay();
+                } else if (selectedAlbum.tracks.length > 0) {
+                  playTrack(selectedAlbum.tracks[0], selectedAlbum.tracks, `album_${selectedAlbum.key}`);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#16CE8F] text-black text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              {isThisAlbumPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                  <span>Pause Album</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  <span>Play Album</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleCreatePlaylist(selectedAlbum)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[#19E6A0] border border-[#2D2B3B] hover:border-[#19E6A0]/40 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Save this album into your playlists"
+            >
+              {createdFeedback ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#19E6A0]" />
+                  <span className="text-[#19E6A0]">Playlist Created!</span>
+                </>
+              ) : (
+                <>
+                  <ListPlus className="w-3.5 h-3.5 text-[#19E6A0]" />
+                  <span>Save as Playlist</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <TrackList
           tracks={selectedAlbum.tracks}
           title={selectedAlbum.name}
-          subtitle={`${selectedAlbum.artist}${selectedAlbum.year ? ` • ${selectedAlbum.year}` : ''} • ${selectedAlbum.tracks.length} tracks`}
+          subtitle={`${selectedAlbum.artist}${selectedAlbum.year ? ` • ${selectedAlbum.year}` : ''} • ${selectedAlbum.tracks.length} tracks${
+            selectedAlbum.isCompilation ? ' • Compilation' : ''
+          }`}
           coverArt={selectedAlbum.coverArt || undefined}
-          playlistId={`album_${selectedAlbum.name}`}
+          playlistId={`album_${selectedAlbum.key}`}
         />
       </div>
     );
@@ -90,7 +145,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
             Albums
           </h1>
           <p className="text-xs text-[#777381] mt-0.5">
-            {albums.length} albums • {tracks.length} total tracks
+            {albums.length} albums • {tracks.length} total tracks in your offline music library
           </p>
         </div>
       </div>
@@ -112,10 +167,10 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
 
             return (
               <motion.div
-                key={`${album.name}-${album.artist}`}
+                key={album.key}
                 whileHover={{ y: -4 }}
                 transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-                onClick={() => setSelectedAlbum(album)}
+                onClick={() => setSelectedAlbumKey(album.key)}
                 className="group relative p-3 rounded-2xl bg-[#14131A] hover:bg-[#1C1B25] border border-[#25232F] hover:border-[#333040] shadow-md transition-all duration-200 cursor-pointer flex flex-col gap-2.5"
               >
                 {/* Album Cover Art Tile */}
@@ -136,8 +191,9 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
                     </div>
                   )}
 
-                  {/* Floating Play Button on Hover */}
-                  <div className="absolute right-2.5 bottom-2.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-200">
+                  {/* Floating Action Buttons on Hover */}
+                  <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2.5 transition-opacity duration-200 backdrop-blur-[2px]">
+                    {/* Play Album Button */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -145,10 +201,10 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
                         if (isThisAlbumPlaying) {
                           togglePlay();
                         } else if (album.tracks.length > 0) {
-                          playTrack(album.tracks[0], album.tracks, `album_${album.name}`);
+                          playTrack(album.tracks[0], album.tracks, `album_${album.key}`);
                         }
                       }}
-                      className="group/albumplay w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#16CE8F] text-black shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                      className="w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#16CE8F] text-black shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                       title={isThisAlbumPlaying ? 'Pause Album' : 'Play Album'}
                       aria-label={isThisAlbumPlaying ? 'Pause Album' : 'Play Album'}
                     >
@@ -157,6 +213,20 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
                       ) : (
                         <Play className="w-4 h-4 fill-current ml-0.5 discord-icon discord-icon-pop" />
                       )}
+                    </button>
+
+                    {/* Quick Create Playlist Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreatePlaylist(album);
+                      }}
+                      className="w-9 h-9 rounded-full bg-[#1A1924] hover:bg-[#19E6A0] text-[#AAA6B2] hover:text-black border border-[#333142] hover:border-[#19E6A0] shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      title={`Save "${album.name}" as a playlist`}
+                      aria-label={`Save "${album.name}" as a playlist`}
+                    >
+                      <ListPlus className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -169,8 +239,10 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ tracks }) => {
                   <p className="text-[11px] text-[#777381] truncate mt-0.5">
                     {album.artist}
                   </p>
-                  <p className="text-[10px] text-[#555260] font-mono mt-0.5">
-                    {album.tracks.length} tracks{album.year ? ` • ${album.year}` : ''}
+                  <p className="text-[10px] text-[#555260] font-mono mt-0.5 truncate">
+                    {album.tracks.length} track{album.tracks.length === 1 ? '' : 's'}
+                    {album.year ? ` • ${album.year}` : ''}
+                    {album.isCompilation ? ' • Comp.' : ''}
                   </p>
                 </div>
               </motion.div>

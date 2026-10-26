@@ -227,9 +227,21 @@ const MainApp: React.FC = () => {
       case 'settings':
         return <SettingsView />;
       case 'albums':
-        return <AlbumsView tracks={filteredTracks} />;
+        return (
+          <AlbumsView
+            tracks={filteredTracks}
+            onSelectPlaylist={setSelectedPlaylistId}
+            onViewChange={setCurrentView}
+          />
+        );
       case 'artists':
-        return <ArtistsView tracks={filteredTracks} />;
+        return (
+          <ArtistsView
+            tracks={filteredTracks}
+            onSelectPlaylist={setSelectedPlaylistId}
+            onViewChange={setCurrentView}
+          />
+        );
       case 'playlists':
       case 'playlist_detail':
         return (
@@ -260,10 +272,22 @@ const MainApp: React.FC = () => {
       case 'songs':
       default:
         if (filterType === 'albums') {
-          return <AlbumsView tracks={filteredTracks} />;
+          return (
+            <AlbumsView
+              tracks={filteredTracks}
+              onSelectPlaylist={setSelectedPlaylistId}
+              onViewChange={setCurrentView}
+            />
+          );
         }
         if (filterType === 'artists') {
-          return <ArtistsView tracks={filteredTracks} />;
+          return (
+            <ArtistsView
+              tracks={filteredTracks}
+              onSelectPlaylist={setSelectedPlaylistId}
+              onViewChange={setCurrentView}
+            />
+          );
         }
         return (
           <TrackList
@@ -285,7 +309,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden ${isGlass ? 'bg-[#07060A]' : 'bg-[#0B0A0F]'} text-[#F4F2F7] relative`}>
+    <div className={`flex flex-col h-screen w-screen overflow-hidden ${isGlass ? 'bg-[#07060A]/85' : 'bg-[#0B0A0F]/85'} text-[#F4F2F7] relative`}>
       {/* Window-wide Drag and Drop Overlay */}
       {isDraggingOver && (
         <div className="fixed inset-0 z-50 bg-[#0B0A0F]/85 backdrop-blur-md flex flex-col items-center justify-center border-2 border-dashed border-[#19E6A0] pointer-events-none animate-in fade-in duration-150 select-none">
@@ -321,7 +345,7 @@ const MainApp: React.FC = () => {
         <main className={`flex-1 flex flex-col overflow-hidden relative min-h-0 m-1.5 rounded-2xl transition-all duration-300 ${
           isGlass
             ? 'bg-[#0F0E15]/45 backdrop-blur-2xl border border-white/[0.08] shadow-2xl'
-            : 'bg-[#100F14] border border-[#292731]/40 shadow-sm'
+            : 'bg-[#100F14]/85 backdrop-blur-md border border-[#292731]/40 shadow-sm'
         }`}>
           <Header 
             filterType={currentView === 'top_tracks' ? 'top' : filterType} 

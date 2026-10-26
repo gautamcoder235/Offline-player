@@ -2684,7 +2684,7 @@ dependencies = [
 
 [[package]]
 name = "offline-player"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "base64 0.22.1",
  "dirs 5.0.1",
@@ -2704,6 +2704,7 @@ dependencies = [
  "tiny_http",
  "walkdir",
  "webview2-com",
+ "window-vibrancy",
  "windows",
 ]
 

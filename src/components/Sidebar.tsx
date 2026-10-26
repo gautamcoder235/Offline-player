@@ -25,6 +25,8 @@ import {
 } from './icons';
 import { DeletePlaylistModal } from './DeletePlaylistModal';
 import { EditPlaylistModal } from './EditPlaylistModal';
+import { getArtistPlaylistTrackIds } from '../utils/artistUtils';
+import { resolveTrackAlbumName } from '../utils/albumUtils';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -134,10 +136,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleCreatePlaylist = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = newPlaylistName.trim() || getRandomPlaylistName();
+    const trimmed = newPlaylistName.trim();
+    const finalName = trimmed || getRandomPlaylistName();
     const randomColor = getRandomColor();
-    const randomTrackIds = newPlaylistName.trim() ? [] : getRandomTracks(5);
-    const newPl = createPlaylist(finalName, undefined, randomTrackIds, randomColor);
+
+    let randomTrackIds: string[] = [];
+    let playlistDesc: string | undefined = undefined;
+
+    if (trimmed) {
+      // Check if user entered an album name or artist name
+      const albumTracks = tracks.filter((t) => resolveTrackAlbumName(t).toLowerCase() === trimmed.toLowerCase());
+      if (albumTracks.length > 0) {
+        randomTrackIds = albumTracks.map((t) => t.id);
+        playlistDesc = `Album • ${albumTracks.length} tracks`;
+      } else {
+        const artistTrackIds = getArtistPlaylistTrackIds(tracks, trimmed);
+        if (artistTrackIds.length > 0) {
+          randomTrackIds = artistTrackIds;
+          playlistDesc = `Complete collection of songs including ${trimmed}`;
+        }
+      }
+    } else {
+      randomTrackIds = getRandomTracks(5);
+      playlistDesc = 'Curated random mix';
+    }
+
+    const newPl = createPlaylist(finalName, playlistDesc, randomTrackIds, randomColor);
     setNewPlaylistName('');
     setIsCreatingPlaylist(false);
     if (newPl?.id) {
@@ -264,7 +288,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       } transition-[width,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-[width] h-full flex flex-col ${
         isGlass
           ? 'bg-[#0E0D12]/45 backdrop-blur-2xl border-r border-white/[0.08]'
-          : 'bg-[#0E0D12] border-r border-[#292731]/40'
+          : 'bg-[#0E0D12]/85 backdrop-blur-xl border-r border-[#292731]/40'
       } select-none z-10 overflow-hidden shrink-0 no-scrollbar`}
     >
       {/* Top Header: Clean header without unnecessary border lines */}

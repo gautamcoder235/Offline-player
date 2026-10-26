@@ -370,7 +370,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     <footer className={`h-20 shrink-0 px-3 sm:px-6 flex items-center justify-between transition-colors duration-300 ${
       isGlass
         ? 'border-t border-white/[0.08] bg-[#100F14]/45 backdrop-blur-2xl'
-        : 'border-t border-[#292731]/40 bg-[#100F14]'
+        : 'border-t border-[#292731]/40 bg-[#100F14]/85 backdrop-blur-md'
     } z-20 select-none overflow-hidden`}>
       {/* LEFT: Track Info & Champagne Heart */}
       <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none sm:w-1/4 min-w-0 max-w-[200px] sm:max-w-[280px] md:max-w-[320px] shrink-0">

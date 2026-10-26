@@ -69,7 +69,7 @@ export function TitleBar() {
       className={`flex justify-between items-center w-full h-[40px] shrink-0 transition-colors duration-300 ${
         isGlass
           ? 'bg-[#0E0D12]/45 backdrop-blur-xl border-b border-white/[0.06]'
-          : 'bg-[#0E0D12]'
+          : 'bg-[#0E0D12]/85 backdrop-blur-md border-b border-white/[0.04]'
       } select-none z-50 sticky top-0 cursor-default`}
     >
       {/* Left: App Brand */}

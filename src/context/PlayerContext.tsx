@@ -8,6 +8,13 @@ import { Track, RepeatMode, Playlist, ParsedLyrics, ThemeAppearance } from '../t
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
 import { parseLrcLyrics } from '../utils/helpers';
 import { generateM3U8, parseM3U8, downloadBlob } from '../utils/m3u';
+import {
+  PlayEvent,
+  TrackListeningStats,
+  TopTracksTimeRange,
+  rankTopTracks,
+  pruneEvents,
+} from '../utils/affinityEngine';
 
 interface ToastInfo {
   id: string;
@@ -69,7 +76,10 @@ interface PlayerContextType {
   openInExplorer: (filePath: string) => Promise<void>;
   deleteTrack: (track: Track, deleteFileFromDisk?: boolean) => Promise<void>;
   getPlayCount: (trackId: string) => number;
-  topTracks: Track[];
+  topTracks: Array<Track & { stats?: TrackListeningStats }>;
+  topTracksTimeRange: TopTracksTimeRange;
+  setTopTracksTimeRange: (range: TopTracksTimeRange) => void;
+  getTrackStats: (trackId: string) => TrackListeningStats | undefined;
   playingPlaylistId: string | null;
   setPlayingPlaylistId: (id: string | null) => void;
   exportPlaylistM3U: (playlistId: string) => void;
@@ -177,6 +187,87 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
+  const [playEvents, setPlayEvents] = useState<PlayEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_play_events');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [topTracksTimeRange, setTopTracksTimeRangeState] = useState<TopTracksTimeRange>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_top_time_range');
+      if (saved === 'short_term' || saved === 'medium_term' || saved === 'all_time') {
+        return saved;
+      }
+      return 'all_time';
+    } catch {
+      return 'all_time';
+    }
+  });
+
+  const setTopTracksTimeRange = useCallback((range: TopTracksTimeRange) => {
+    setTopTracksTimeRangeState(range);
+    try {
+      localStorage.setItem('offline_player_top_time_range', range);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Real-time listening session tracking refs
+  const activeListeningSessionRef = useRef<{
+    trackId: string;
+    trackDuration: number;
+    startTime: number;
+    accumulatedSeconds: number;
+    lastTick: number;
+    wasReplay: boolean;
+  } | null>(null);
+
+  const recentReplayHistoryRef = useRef<Array<{ trackId: string; timestamp: number }>>([]);
+
+  const finalizeListeningSession = useCallback((completed: boolean = false) => {
+    const session = activeListeningSessionRef.current;
+    if (!session) return;
+    activeListeningSessionRef.current = null;
+
+    const dur = Math.round(session.accumulatedSeconds);
+    if (dur < 5) return; // Discard rapid clicks / immediate skips (< 5s)
+
+    const isFullyCompleted = completed || (session.trackDuration > 0 && dur / session.trackDuration >= 0.8);
+
+    const newEvent: PlayEvent = {
+      id: `${session.trackId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      trackId: session.trackId,
+      timestamp: Date.now(),
+      durationPlayed: dur,
+      trackDuration: session.trackDuration,
+      completed: isFullyCompleted,
+      wasReplay: session.wasReplay,
+    };
+
+    setPlayEvents((prev) => {
+      const next = pruneEvents([...prev, newEvent]);
+      try {
+        localStorage.setItem('offline_player_play_events', JSON.stringify(next));
+      } catch (e) {
+        console.warn('Failed to save play events:', e);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      finalizeListeningSession(false);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [finalizeListeningSession]);
+
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(() => {
     try {
       return localStorage.getItem('offline_player_playing_playlist') || null;
@@ -202,11 +293,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [playCounts]);
 
   const topTracks = React.useMemo(() => {
-    return [...tracks]
-      .filter(t => playCounts[t.id] > 0 || playCounts[`${t.artist} - ${t.title}`] > 0 || (t.playCount && t.playCount > 0))
-      .map(t => ({ ...t, playCount: playCounts[t.id] || playCounts[`${t.artist} - ${t.title}`] || t.playCount || 0 }))
-      .sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
-  }, [tracks, playCounts]);
+    return rankTopTracks(
+      tracks,
+      playEvents,
+      likedTrackIds,
+      playlists,
+      topTracksTimeRange,
+      playCounts
+    );
+  }, [tracks, playEvents, likedTrackIds, playlists, topTracksTimeRange, playCounts]);
+
+  const getTrackStats = useCallback(
+    (trackId: string) => {
+      const item = topTracks.find((t) => t.id === trackId);
+      return item?.stats;
+    },
+    [topTracks]
+  );
 
   const exportPlaylistM3U = useCallback((playlistId: string) => {
     const pl = playlists.find(p => p.id === playlistId);
@@ -752,6 +855,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       hasCountedCurrentPlayRef.current = false;
       saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
 
+      finalizeListeningSession(false);
+
+      const recent = recentReplayHistoryRef.current;
+      const lastPlay = recent[recent.length - 1];
+      const wasReplay = Boolean(
+        lastPlay && lastPlay.trackId === trackToPlay.id && Date.now() - lastPlay.timestamp < 15 * 60 * 1000
+      );
+      recent.push({ trackId: trackToPlay.id, timestamp: Date.now() });
+      if (recent.length > 25) recent.shift();
+
+      activeListeningSessionRef.current = {
+        trackId: trackToPlay.id,
+        trackDuration: trackToPlay.duration || 0,
+        startTime: Date.now(),
+        accumulatedSeconds: 0,
+        lastTick: Date.now(),
+        wasReplay,
+      };
+
       showToast(trackToPlay.title, trackToPlay.artist, trackToPlay.cover_art);
       fetchLyrics(trackToPlay);
 
@@ -796,6 +918,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCurrentTime(0);
       hasCountedCurrentPlayRef.current = false;
       saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
+
+      finalizeListeningSession(false);
+
+      const recent = recentReplayHistoryRef.current;
+      const lastPlay = recent[recent.length - 1];
+      const wasReplay = Boolean(
+        lastPlay && lastPlay.trackId === trackToPlay.id && Date.now() - lastPlay.timestamp < 15 * 60 * 1000
+      );
+      recent.push({ trackId: trackToPlay.id, timestamp: Date.now() });
+      if (recent.length > 25) recent.shift();
+
+      activeListeningSessionRef.current = {
+        trackId: trackToPlay.id,
+        trackDuration: trackToPlay.duration || 0,
+        startTime: Date.now(),
+        accumulatedSeconds: 0,
+        lastTick: Date.now(),
+        wasReplay,
+      };
 
       showToast(trackToPlay.title, trackToPlay.artist, trackToPlay.cover_art);
       fetchLyrics(trackToPlay);
@@ -925,6 +1066,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const realDur = dur || durationRef.current;
 
+      // Update listening session dwell time
+      const session = activeListeningSessionRef.current;
+      if (session) {
+        const timeNow = Date.now();
+        const delta = (timeNow - session.lastTick) / 1000;
+        if (delta > 0 && delta < 5) {
+          session.accumulatedSeconds += delta;
+        }
+        session.lastTick = timeNow;
+        if (realDur > 0 && !session.trackDuration) {
+          session.trackDuration = realDur;
+        }
+      }
+
       // Overlapping dual-deck crossfade trigger
       const xfade = crossfadeDurationRef.current;
       if (
@@ -957,15 +1112,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    audioEngine.onPlay = () => setIsPlaying(true);
+    audioEngine.onPlay = () => {
+      setIsPlaying(true);
+      if (activeListeningSessionRef.current) {
+        activeListeningSessionRef.current.lastTick = Date.now();
+      }
+    };
     audioEngine.onPause = () => {
       setIsPlaying(false);
+      if (activeListeningSessionRef.current) {
+        const timeNow = Date.now();
+        const delta = (timeNow - activeListeningSessionRef.current.lastTick) / 1000;
+        if (delta > 0 && delta < 5) {
+          activeListeningSessionRef.current.accumulatedSeconds += delta;
+        }
+        activeListeningSessionRef.current.lastTick = timeNow;
+      }
       if (currentTrackRef.current) {
         saveLastPlayed(currentTrackRef.current, currentTimeRef.current, durationRef.current);
       }
     };
 
     audioEngine.onEnded = () => {
+      finalizeListeningSession(true);
       if (!hasCountedCurrentPlayRef.current && currentTrackRef.current) {
         hasCountedCurrentPlayRef.current = true;
         setPlayCounts((prev) => {
@@ -1692,6 +1861,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteTrack,
         getPlayCount,
         topTracks,
+        topTracksTimeRange,
+        setTopTracksTimeRange,
+        getTrackStats,
         playingPlaylistId,
         setPlayingPlaylistId,
         exportPlaylistM3U,

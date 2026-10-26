@@ -658,14 +658,31 @@ pub fn run() {
                     if let Ok(hwnd) = window.hwnd() {
                         taskbar::init_taskbar(app.handle().clone(), hwnd);
                     }
+
+                    #[cfg(target_os = "windows")]
+                    {
+                        if window_vibrancy::apply_mica(&window, Some(true)).is_err() {
+                            let _ = window_vibrancy::apply_acrylic(&window, Some((15, 14, 21, 160)));
+                        }
+                    }
                 }
 
-                // Always disable default WebView2 browser context menus on all windows
+                // Always disable default WebView2 browser context menus on all windows and ensure webview controller transparency
                 for label in ["main", "tray_popup"] {
                     if let Some(w) = app.get_webview_window(label) {
                         let _ = w.with_webview(|wv| {
                             unsafe {
+                                use webview2_com::Microsoft::Web::WebView2::Win32::{COREWEBVIEW2_COLOR, ICoreWebView2Controller2};
+                                use windows::core::Interface;
                                 let controller = wv.controller();
+                                if let Ok(c2) = controller.cast::<ICoreWebView2Controller2>() {
+                                    let _ = c2.SetDefaultBackgroundColor(COREWEBVIEW2_COLOR {
+                                        A: 0,
+                                        R: 0,
+                                        G: 0,
+                                        B: 0,
+                                    });
+                                }
                                 if let Ok(core) = controller.CoreWebView2() {
                                     if let Ok(settings) = core.Settings() {
                                         let _ = settings.SetAreDefaultContextMenusEnabled(false);
@@ -677,6 +694,23 @@ pub fn run() {
                         });
                     }
                 }
+
+                // Clean up any legacy installation directory or shortcuts from pre-rename versions
+                std::thread::spawn(|| {
+                    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+                        let legacy_dir = std::path::PathBuf::from(&local_appdata).join("Offline player");
+                        if legacy_dir.exists() {
+                            let _ = std::fs::remove_dir_all(legacy_dir);
+                        }
+                    }
+                    if let Ok(appdata) = std::env::var("APPDATA") {
+                        let legacy_lnk = std::path::PathBuf::from(&appdata)
+                            .join("Microsoft\\Windows\\Start Menu\\Programs\\Offline player.lnk");
+                        if legacy_lnk.exists() {
+                            let _ = std::fs::remove_file(legacy_lnk);
+                        }
+                    }
+                });
             }
 
             Ok(())
