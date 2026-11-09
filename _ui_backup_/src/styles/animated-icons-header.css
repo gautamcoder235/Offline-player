@@ -1,0 +1,387 @@
+/* ==========================================================================
+   Header, Search & Window Controls Multi-Part Animated SVG Icons
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Animated Search Icon (Deconstructed Lens, Handle & Specular Glint)
+   -------------------------------------------------------------------------- */
+.animated-search-icon {
+  display: inline-block;
+  overflow: visible;
+  vertical-align: middle;
+  transform-box: view-box;
+  transform-origin: 11px 11px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease,
+              stroke 0.2s ease;
+}
+
+.animated-search-icon .search-lens {
+  transform-box: view-box;
+  transform-origin: 11px 11px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease;
+}
+
+.animated-search-icon .search-handle {
+  transform-box: view-box;
+  transform-origin: 16.5px 16.5px;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease;
+}
+
+.animated-search-icon .search-glint {
+  opacity: 0;
+  stroke: rgba(255, 255, 255, 0.95);
+  transform: translate(-10px, -10px);
+  pointer-events: none;
+}
+
+/* Hover & Focus Triggers for Search */
+.group\/search:hover .animated-search-icon .search-lens,
+.group\/search:focus-within .animated-search-icon .search-lens,
+.animated-search-icon:hover .search-lens,
+.animated-search-icon.is-focused .search-lens {
+  transform: scale(1.06);
+}
+
+.group\/search:hover .animated-search-icon .search-handle,
+.group\/search:focus-within .animated-search-icon .search-handle,
+.animated-search-icon:hover .search-handle,
+.animated-search-icon.is-focused .search-handle {
+  animation: searchHandleTilt 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/search:hover .animated-search-icon .search-glint,
+.group\/search:focus-within .animated-search-icon .search-glint,
+.animated-search-icon:hover .search-glint,
+.animated-search-icon.is-focused .search-glint {
+  animation: searchGlintSweep 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes searchHandleTilt {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(-16deg);
+  }
+  75% {
+    transform: rotate(-9deg);
+  }
+  100% {
+    transform: rotate(-12deg);
+  }
+}
+
+@keyframes searchGlintSweep {
+  0% {
+    transform: translate(-12px, -12px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 3px rgba(25, 230, 160, 0.9));
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(9px, 9px);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Animated Refresh Icon (Clockwise Semicircular Arms & Orbital Chase)
+   -------------------------------------------------------------------------- */
+.animated-refresh-icon {
+  display: inline-block;
+  overflow: visible;
+  vertical-align: middle;
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease,
+              stroke 0.2s ease;
+}
+
+.animated-refresh-icon .refresh-arm {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 180° Orbital Chase loop when hovered */
+.group:hover .animated-refresh-icon:not(.is-spinning) .refresh-arm-top,
+.animated-refresh-icon:hover:not(.is-spinning) .refresh-arm-top {
+  animation: refreshOrbitalChaseTop 0.85s cubic-bezier(0.34, 1.25, 0.64, 1) infinite;
+}
+
+.group:hover .animated-refresh-icon:not(.is-spinning) .refresh-arm-bottom,
+.animated-refresh-icon:hover:not(.is-spinning) .refresh-arm-bottom {
+  animation: refreshOrbitalChaseBottom 0.85s cubic-bezier(0.34, 1.25, 0.64, 1) infinite;
+}
+
+@keyframes refreshOrbitalChaseTop {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(202deg);
+  }
+  75% {
+    transform: rotate(174deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes refreshOrbitalChaseBottom {
+  0% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(0deg);
+  }
+  65% {
+    transform: rotate(198deg);
+  }
+  82% {
+    transform: rotate(176deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+/* Infinite spin while scanning */
+.animated-refresh-icon.is-spinning {
+  animation: refreshInfiniteSpin 0.75s linear infinite;
+  color: #19E6A0;
+  stroke: #19E6A0;
+  filter: drop-shadow(0 0 6px rgba(25, 230, 160, 0.6));
+}
+
+@keyframes refreshInfiniteSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Animated Close Icon (Scissor-Twist Cross with 90° Snap & Danger Red Flash)
+   -------------------------------------------------------------------------- */
+.animated-close-icon {
+  display: inline-block;
+  overflow: visible;
+  vertical-align: middle;
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease,
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+.animated-close-icon .close-blade {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease;
+}
+
+/* Hover triggers: Header search clear button or Window close button */
+.group\/clear:hover .animated-close-icon,
+.group:hover .animated-close-icon,
+.animated-close-icon:hover {
+  animation: closeDangerRedFlash 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.group\/clear:hover .animated-close-icon .close-blade-1,
+.group:hover .animated-close-icon .close-blade-1,
+.animated-close-icon:hover .close-blade-1 {
+  animation: closeScissorBlade1 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/clear:hover .animated-close-icon .close-blade-2,
+.group:hover .animated-close-icon .close-blade-2,
+.animated-close-icon:hover .close-blade-2 {
+  animation: closeScissorBlade2 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes closeScissorBlade1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(45deg) scale(0.92);
+  }
+  70% {
+    transform: rotate(98deg) scale(1.06);
+  }
+  85% {
+    transform: rotate(88deg) scale(0.98);
+  }
+  100% {
+    transform: rotate(90deg) scale(1);
+  }
+}
+
+@keyframes closeScissorBlade2 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-45deg) scale(0.92);
+  }
+  70% {
+    transform: rotate(82deg) scale(1.06);
+  }
+  85% {
+    transform: rotate(92deg) scale(0.98);
+  }
+  100% {
+    transform: rotate(90deg) scale(1);
+  }
+}
+
+@keyframes closeDangerRedFlash {
+  0% {
+    stroke: currentColor;
+    color: inherit;
+    filter: drop-shadow(0 0 0 rgba(255, 77, 109, 0));
+  }
+  35% {
+    stroke: #FF4D6D;
+    color: #FF4D6D;
+    filter: drop-shadow(0 0 8px rgba(255, 77, 109, 0.8));
+  }
+  100% {
+    stroke: #FF4D6D;
+    color: #FF4D6D;
+    filter: drop-shadow(0 0 4px rgba(255, 77, 109, 0.5));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. TitleBar Window Controls (Minus & Square)
+   -------------------------------------------------------------------------- */
+/* Minus / Minimize Control */
+.animated-minus-icon {
+  display: inline-block;
+  overflow: visible;
+  vertical-align: middle;
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease,
+              stroke 0.2s ease;
+}
+
+.animated-minus-icon .minus-segment {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.group:hover .animated-minus-icon .minus-segment-left,
+.animated-minus-icon:hover .minus-segment-left {
+  animation: minusRetractLeft 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group:hover .animated-minus-icon .minus-segment-right,
+.animated-minus-icon:hover .minus-segment-right {
+  animation: minusRetractRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes minusRetractLeft {
+  0% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(2px) scaleX(0.85);
+  }
+  75% {
+    transform: translateX(-1px) scaleX(1.1);
+  }
+  100% {
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+@keyframes minusRetractRight {
+  0% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-2px) scaleX(0.85);
+  }
+  75% {
+    transform: translateX(1px) scaleX(1.1);
+  }
+  100% {
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+/* Square / Maximize Control */
+.animated-square-icon {
+  display: inline-block;
+  overflow: visible;
+  vertical-align: middle;
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease,
+              stroke 0.2s ease;
+}
+
+.animated-square-icon .square-corner {
+  transform-box: view-box;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.group:hover .animated-square-icon .square-corner-tl,
+.animated-square-icon:hover .square-corner-tl {
+  animation: squareCornerExpandTL 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group:hover .animated-square-icon .square-corner-br,
+.animated-square-icon:hover .square-corner-br {
+  animation: squareCornerExpandBR 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes squareCornerExpandTL {
+  0% {
+    transform: translate(0, 0);
+  }
+  45% {
+    transform: translate(-1.8px, -1.8px);
+  }
+  75% {
+    transform: translate(0.3px, 0.3px);
+  }
+  100% {
+    transform: translate(-1px, -1px);
+  }
+}
+
+@keyframes squareCornerExpandBR {
+  0% {
+    transform: translate(0, 0);
+  }
+  45% {
+    transform: translate(1.8px, 1.8px);
+  }
+  75% {
+    transform: translate(-0.3px, -0.3px);
+  }
+  100% {
+    transform: translate(1px, 1px);
+  }
+}

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AnimatedSearch, AnimatedRefresh, AnimatedClose } from './icons';
 import { usePlayer } from '../context/PlayerContext';
+import { Globe } from 'lucide-react';
 
 import { ViewMode } from '../types';
 
 interface HeaderProps {
-  filterType: 'all' | 'artists' | 'albums' | 'top';
-  onFilterChange: (type: 'all' | 'artists' | 'albums' | 'top') => void;
+  filterType: 'all' | 'artists' | 'albums' | 'top' | 'online';
+  onFilterChange: (type: 'all' | 'artists' | 'albums' | 'top' | 'online') => void;
   currentView?: ViewMode;
   onViewChange?: (view: ViewMode) => void;
 }
@@ -29,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="h-14 px-4 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 bg-transparent select-none shrink-0 min-w-0 overflow-hidden">
-      {/* Left: Search Bar & Filter Category Tabs (Grouped for responsive placement) */}
+      {/* Left: Search Bar & Filter Category Tabs */}
       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-xl">
         <div className="group/search relative flex-1 min-w-[90px] sm:min-w-[140px] max-w-sm focus-within:max-w-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
           <AnimatedSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777381] pointer-events-none group-hover/search:text-[#19E6A0] group-focus-within/search:text-[#19E6A0]" />
@@ -54,6 +55,9 @@ export const Header: React.FC<HeaderProps> = ({
                 } else {
                   (e.target as HTMLInputElement).blur();
                 }
+              } else if (e.key === 'Enter' && searchQuery.trim() && currentView === 'online_search') {
+                // If on online search, trigger search
+                e.currentTarget.blur();
               }
             }}
             placeholder="Search tracks, artists, albums, or lyrics..."
@@ -89,13 +93,13 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Filter Category Tabs with sliding pill transition */}
         <div className="flex items-center gap-0.5 sm:gap-1 bg-[#14131A] p-0.5 rounded-xl border border-[#282631]/80 shrink-0 relative">
-          {(['all', 'artists', 'albums', 'top'] as const).map((type) => {
+          {(['all', 'artists', 'albums', 'top', 'online'] as const).map((type) => {
             const isActive = filterType === type;
             return (
               <button
                 key={type}
                 onClick={() => onFilterChange(type)}
-                className={`relative px-2.5 sm:px-3 py-1 rounded-lg text-[11px] font-medium capitalize transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.96] ${
+                className={`relative px-2.5 sm:px-3 py-1 rounded-lg text-[11px] font-medium capitalize transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.96] flex items-center gap-1.5 ${
                   isActive ? 'text-[#F4F2F7]' : 'text-[#9A96A5] hover:text-[#F4F2F7]'
                 }`}
               >
@@ -106,7 +110,12 @@ export const Header: React.FC<HeaderProps> = ({
                     transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                   />
                 )}
-                <span className="relative z-10">{type === 'top' ? 'Top Tracks' : type}</span>
+                {type === 'online' && (
+                  <Globe className={`w-3 h-3 relative z-10 ${isActive ? 'text-[#19E6A0]' : 'text-[#777381]'}`} />
+                )}
+                <span className="relative z-10">
+                  {type === 'top' ? 'Top Tracks' : type === 'online' ? 'Online' : type}
+                </span>
               </button>
             );
           })}

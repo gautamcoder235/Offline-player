@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
 import { TrackList } from './components/TrackList';
 import { DownloaderView } from './components/DownloaderView';
+import { OnlineSearchView } from './components/OnlineSearchView';
 import { LyricsView } from './components/LyricsView';
 import { SettingsView } from './components/SettingsView';
 import { PlaylistsView } from './components/PlaylistsView';
@@ -114,7 +115,7 @@ const MainApp: React.FC = () => {
   // Listen for global focus-search shortcut (Ctrl+K)
   useEffect(() => {
     const handleFocusSearch = () => {
-      if (['settings', 'visualizer', 'download', 'lyrics'].includes(currentView)) {
+      if (['settings', 'visualizer', 'download', 'lyrics', 'online_search'].includes(currentView)) {
         setCurrentView('songs');
       }
       setTimeout(() => {
@@ -222,6 +223,13 @@ const MainApp: React.FC = () => {
         return <VisualizerView />;
       case 'download':
         return <DownloaderView />;
+      case 'online_search':
+        return (
+          <OnlineSearchView
+            initialQuery={searchQuery}
+            onNavigateToDownloader={() => setCurrentView('download')}
+          />
+        );
       case 'lyrics':
         return <LyricsView />;
       case 'settings':
@@ -348,13 +356,15 @@ const MainApp: React.FC = () => {
             : 'bg-[#100F14]/85 backdrop-blur-md border border-[#292731]/40 shadow-sm'
         }`}>
           <Header 
-            filterType={currentView === 'top_tracks' ? 'top' : filterType} 
+            filterType={currentView === 'online_search' ? 'online' : currentView === 'top_tracks' ? 'top' : filterType} 
             onFilterChange={(type) => {
-              if (type === 'top') {
+              if (type === 'online') {
+                setCurrentView('online_search');
+              } else if (type === 'top') {
                 setCurrentView('top_tracks');
               } else {
                 setFilterType(type as any);
-                if (currentView === 'top_tracks') setCurrentView('songs');
+                if (currentView === 'top_tracks' || currentView === 'online_search') setCurrentView('songs');
               }
             }} 
             currentView={currentView}

@@ -1,0 +1,313 @@
+/* ==========================================================================
+   Sidebar, Queue & Library Multi-Part Animated SVG Icons
+   Physics-driven multi-part micro-animations:
+   - AnimatedTrash: Hinged lid opening at -28° with coral glow
+   - AnimatedSettings: Inertial 90° gear rotation around static axle
+   - AnimatedDices: 45° multi-cube tumble with mint glow
+   - AnimatedFileTransfer: Smooth vertical arrow gliding
+   - AnimatedPanelToggle: Smooth divider door track slide
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. AnimatedTrash: Hinged Lid & Grounded Bin Body
+   -------------------------------------------------------------------------- */
+.animated-trash-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-trash-icon .trash-lid {
+  transform-origin: 4px 6px;
+  will-change: transform;
+  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+.animated-trash-icon .trash-body {
+  transition: opacity 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+}
+
+.animated-trash-icon .trash-rib {
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
+/* Hover & Active triggers: Lid lifts and tilts open at -28° with coral glow */
+.group:hover .animated-trash-icon .trash-lid,
+.group\/btn:hover .animated-trash-icon .trash-lid,
+.group\/clear:hover .animated-trash-icon .trash-lid,
+.group\/del:hover .animated-trash-icon .trash-lid,
+button:hover .animated-trash-icon .trash-lid,
+.animated-trash-icon:hover .trash-lid,
+.animated-trash-icon.is-open .trash-lid {
+  transform: translateY(-3.5px) rotate(-28deg);
+  stroke: #FF667A;
+  filter: drop-shadow(0 0 4px rgba(255, 102, 122, 0.55));
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+.group:hover .animated-trash-icon .trash-body,
+.group\/btn:hover .animated-trash-icon .trash-body,
+.group\/clear:hover .animated-trash-icon .trash-body,
+.group\/del:hover .animated-trash-icon .trash-body,
+button:hover .animated-trash-icon .trash-body,
+.animated-trash-icon:hover .trash-body,
+.animated-trash-icon.is-open .trash-body {
+  stroke: #FF667A;
+  filter: drop-shadow(0 0 3px rgba(255, 102, 122, 0.4));
+}
+
+.group:hover .animated-trash-icon .trash-rib,
+.group\/btn:hover .animated-trash-icon .trash-rib,
+.group\/clear:hover .animated-trash-icon .trash-rib,
+.group\/del:hover .animated-trash-icon .trash-rib,
+button:hover .animated-trash-icon .trash-rib,
+.animated-trash-icon:hover .trash-rib,
+.animated-trash-icon.is-open .trash-rib {
+  opacity: 0.9;
+}
+
+/* --------------------------------------------------------------------------
+   2. AnimatedSettings: Inertial Gear Rotation around Static Axle
+   -------------------------------------------------------------------------- */
+.animated-settings-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-settings-icon .settings-cog {
+  transform-origin: 12px 12px;
+  will-change: transform;
+  transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+.animated-settings-icon .settings-axle-group {
+  transform-origin: 12px 12px;
+  transition: transform 0.25s ease, stroke 0.2s ease, filter 0.2s ease;
+}
+
+/* Hover: Cog teeth spin 90° with momentum while center axle remains stable */
+.group:hover .animated-settings-icon .settings-cog,
+.group\/btn:hover .animated-settings-icon .settings-cog,
+button:hover .animated-settings-icon .settings-cog,
+.animated-settings-icon:hover .settings-cog,
+.animated-settings-icon.is-spinning .settings-cog {
+  transform: rotate(90deg);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 0 4px rgba(25, 230, 160, 0.45));
+}
+
+.group:hover .animated-settings-icon .settings-axle-group,
+.group\/btn:hover .animated-settings-icon .settings-axle-group,
+button:hover .animated-settings-icon .settings-axle-group,
+.animated-settings-icon:hover .settings-axle-group,
+.animated-settings-icon.is-spinning .settings-axle-group {
+  transform: scale(1.06);
+  stroke: #19E6A0;
+}
+
+/* --------------------------------------------------------------------------
+   3. AnimatedDices: 45° Multi-Cube Tumble & Bump with Mint Glow
+   -------------------------------------------------------------------------- */
+.animated-dices-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-dices-icon .dice-front {
+  transform-origin: 8px 16px;
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.25s ease;
+}
+
+.animated-dices-icon .dice-back {
+  transform-origin: 16px 8px;
+  will-change: transform;
+  transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.25s ease;
+}
+
+.animated-dices-icon .dice-pip {
+  transition: opacity 0.2s ease, stroke 0.2s ease;
+}
+
+/* Hover: Back cube tumbles 45° with mint glow, bumping into front die */
+.group:hover .animated-dices-icon .dice-front,
+.group\/btn:hover .animated-dices-icon .dice-front,
+button:hover .animated-dices-icon .dice-front,
+.animated-dices-icon:hover .dice-front {
+  transform: translate(-1.5px, 1.5px) rotate(-16deg);
+  stroke: #19E6A0;
+}
+
+.group:hover .animated-dices-icon .dice-back,
+.group\/btn:hover .animated-dices-icon .dice-back,
+button:hover .animated-dices-icon .dice-back,
+.animated-dices-icon:hover .dice-back {
+  transform: translate(-1px, 2px) rotate(45deg);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 0 5px rgba(25, 230, 160, 0.55));
+}
+
+.group:hover .animated-dices-icon,
+.group\/btn:hover .animated-dices-icon,
+button:hover .animated-dices-icon,
+.animated-dices-icon:hover {
+  filter: drop-shadow(0 0 4px rgba(25, 230, 160, 0.4));
+}
+
+/* Full Rolling Spin Keyframes (e.g. random playlist generation click) */
+@keyframes diceTumbleRollFront {
+  0% { transform: rotate(0deg) translate(0, 0); }
+  50% { transform: rotate(180deg) translate(-2px, 2px) scale(1.1); }
+  100% { transform: rotate(360deg) translate(0, 0) scale(1); }
+}
+
+@keyframes diceTumbleRollBack {
+  0% { transform: rotate(0deg) translate(0, 0); }
+  50% { transform: rotate(-180deg) translate(2px, -2px) scale(1.15); }
+  100% { transform: rotate(-360deg) translate(0, 0) scale(1); }
+}
+
+.animated-dices-icon.is-rolling .dice-front {
+  animation: diceTumbleRollFront 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  stroke: #19E6A0;
+}
+
+.animated-dices-icon.is-rolling .dice-back {
+  animation: diceTumbleRollBack 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 0 6px rgba(25, 230, 160, 0.7));
+}
+
+/* --------------------------------------------------------------------------
+   4. AnimatedFileTransfer: Smooth Vertical Arrow Gliding
+   -------------------------------------------------------------------------- */
+.animated-file-transfer-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-file-transfer-icon .file-sheet {
+  transition: opacity 0.2s ease, stroke 0.2s ease;
+}
+
+.animated-file-transfer-icon .file-arrow {
+  will-change: transform;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+/* Hover: Up arrow floats upward out of file sheet */
+.group:hover .animated-file-transfer-icon.file-transfer-up .file-arrow-up,
+.group\/btn:hover .animated-file-transfer-icon.file-transfer-up .file-arrow-up,
+button:hover .animated-file-transfer-icon.file-transfer-up .file-arrow-up,
+.animated-file-transfer-icon.file-transfer-up:hover .file-arrow-up {
+  transform: translateY(-3.5px);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 -1px 3.5px rgba(25, 230, 160, 0.5));
+}
+
+/* Hover: Down arrow slides downward into file sheet slot */
+.group:hover .animated-file-transfer-icon.file-transfer-down .file-arrow-down,
+.group\/btn:hover .animated-file-transfer-icon.file-transfer-down .file-arrow-down,
+button:hover .animated-file-transfer-icon.file-transfer-down .file-arrow-down,
+.animated-file-transfer-icon.file-transfer-down:hover .file-arrow-down {
+  transform: translateY(3.5px);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 1px 3.5px rgba(25, 230, 160, 0.5));
+}
+
+.group:hover .animated-file-transfer-icon .file-sheet,
+.group\/btn:hover .animated-file-transfer-icon .file-sheet,
+button:hover .animated-file-transfer-icon .file-sheet,
+.animated-file-transfer-icon:hover .file-sheet {
+  opacity: 0.95;
+}
+
+/* --------------------------------------------------------------------------
+   5. AnimatedPanelToggle: Smooth Divider Door Track Slide
+   -------------------------------------------------------------------------- */
+.animated-panel-toggle-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-panel-toggle-icon .panel-frame {
+  transition: opacity 0.2s ease, stroke 0.2s ease;
+}
+
+.animated-panel-toggle-icon .panel-divider {
+  will-change: transform;
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+.animated-panel-toggle-icon .panel-chevron {
+  will-change: transform;
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              stroke 0.2s ease,
+              filter 0.2s ease;
+}
+
+/* Hover: Collapsed sidebar -> click opens -> sliding door slides right */
+.group:hover .animated-panel-toggle-icon.is-collapsed .panel-divider,
+button:hover .animated-panel-toggle-icon.is-collapsed .panel-divider,
+.animated-panel-toggle-icon.is-collapsed:hover .panel-divider,
+.group:hover .animated-panel-toggle-icon.is-collapsed .panel-chevron-open,
+button:hover .animated-panel-toggle-icon.is-collapsed .panel-chevron-open,
+.animated-panel-toggle-icon.is-collapsed:hover .panel-chevron-open {
+  transform: translateX(2.5px);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 0 3px rgba(25, 230, 160, 0.45));
+}
+
+/* Hover: Expanded sidebar -> click collapses -> sliding door slides left */
+.group:hover .animated-panel-toggle-icon.is-expanded .panel-divider,
+button:hover .animated-panel-toggle-icon.is-expanded .panel-divider,
+.animated-panel-toggle-icon.is-expanded:hover .panel-divider,
+.group:hover .animated-panel-toggle-icon.is-expanded .panel-chevron-close,
+button:hover .animated-panel-toggle-icon.is-expanded .panel-chevron-close,
+.animated-panel-toggle-icon.is-expanded:hover .panel-chevron-close {
+  transform: translateX(-2.5px);
+  stroke: #19E6A0;
+  filter: drop-shadow(0 0 3px rgba(25, 230, 160, 0.45));
+}
+
+.group:hover .animated-panel-toggle-icon .panel-frame,
+button:hover .animated-panel-toggle-icon .panel-frame,
+.animated-panel-toggle-icon:hover .panel-frame {
+  opacity: 0.95;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced Motion Accessibility
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .animated-trash-icon .trash-lid,
+  .animated-settings-icon .settings-cog,
+  .animated-dices-icon .dice-front,
+  .animated-dices-icon .dice-back,
+  .animated-file-transfer-icon .file-arrow,
+  .animated-panel-toggle-icon .panel-divider,
+  .animated-panel-toggle-icon .panel-chevron {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}

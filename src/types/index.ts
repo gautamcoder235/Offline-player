@@ -37,7 +37,18 @@ export type ViewMode =
   | 'download'
   | 'lyrics'
   | 'visualizer'
-  | 'settings';
+  | 'settings'
+  | 'online_search';
+
+export interface OnlineSearchResult {
+  track_name: string;
+  artist_name: string;
+  album_name: string;
+  preview_url: string | null;
+  artwork_url: string | null;
+  duration_ms: number;
+  track_url: string | null;
+}
 
 export interface M3UTrackEntry {
   duration: number;

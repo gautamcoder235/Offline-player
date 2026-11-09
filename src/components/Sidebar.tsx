@@ -10,6 +10,7 @@ import {
   ListMusic,
   Flame,
   Pencil,
+  Globe,
 } from 'lucide-react';
 
 import { usePlayer } from '../context/PlayerContext';
@@ -230,6 +231,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Library',
       icon: Music,
       badge: tracks.length,
+    },
+    {
+      id: 'online_search' as ViewMode,
+      label: 'Search Online',
+      icon: Globe,
     },
     {
       id: 'liked' as ViewMode,

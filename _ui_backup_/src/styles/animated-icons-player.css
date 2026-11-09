@@ -1,0 +1,421 @@
+/* ==========================================================================
+   PlayerBar & MiniPlayer Multi-Part Animated SVG Icons
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Volume Multi-Part Physics (Subwoofer Bass Kick + Radiating Waves)
+   -------------------------------------------------------------------------- */
+.animated-volume-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-volume-icon .volume-cone {
+  transform-origin: 6px 12px;
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-volume-icon .volume-wave {
+  transform-origin: 11px 12px;
+  will-change: transform, opacity;
+  transition: transform 0.25s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+              opacity 0.2s ease;
+}
+
+.animated-volume-icon .volume-cross {
+  transform-origin: 19px 12px;
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+@keyframes volumeBassKick {
+  0% { transform: scale(1) translateX(0); }
+  25% { transform: scale(1.18) translateX(1.5px); }
+  55% { transform: scale(0.92) translateX(-0.5px); }
+  80% { transform: scale(1.08) translateX(0.8px); }
+  100% { transform: scale(1.04) translateX(0.5px); }
+}
+
+@keyframes volumeWaveRadiate1 {
+  0% { opacity: 0.35; transform: scale(0.85) translateX(-1px); }
+  45% { opacity: 1; transform: scale(1.18) translateX(2px); }
+  75% { opacity: 0.9; transform: scale(1.02) translateX(0.5px); }
+  100% { opacity: 1; transform: scale(1.08) translateX(1px); }
+}
+
+@keyframes volumeWaveRadiate2 {
+  0% { opacity: 0.25; transform: scale(0.8) translateX(-1.5px); }
+  45% { opacity: 1; transform: scale(1.22) translateX(3px); }
+  75% { opacity: 0.9; transform: scale(1.04) translateX(1px); }
+  100% { opacity: 1; transform: scale(1.12) translateX(1.8px); }
+}
+
+@keyframes volumeScissorCross1 {
+  0% { transform: rotate(0deg) scale(0.8); }
+  50% { transform: rotate(18deg) scale(1.2); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes volumeScissorCross2 {
+  0% { transform: rotate(0deg) scale(0.8); }
+  50% { transform: rotate(-18deg) scale(1.2); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+/* Volume Hover / Trigger States */
+.group\/vol:hover .animated-volume-icon .volume-cone,
+.group\/mute:hover .animated-volume-icon .volume-cone,
+button:hover .animated-volume-icon .volume-cone,
+.animated-volume-icon:hover .volume-cone {
+  animation: volumeBassKick 0.42s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+.group\/vol:hover .animated-volume-icon .volume-wave-1,
+.group\/mute:hover .animated-volume-icon .volume-wave-1,
+button:hover .animated-volume-icon .volume-wave-1,
+.animated-volume-icon:hover .volume-wave-1 {
+  animation: volumeWaveRadiate1 0.45s ease-out 0s forwards;
+}
+
+/* Wave 2 radiating with 0.06s stagger */
+.group\/vol:hover .animated-volume-icon .volume-wave-2,
+.group\/mute:hover .animated-volume-icon .volume-wave-2,
+button:hover .animated-volume-icon .volume-wave-2,
+.animated-volume-icon:hover .volume-wave-2 {
+  animation: volumeWaveRadiate2 0.45s ease-out 0.06s forwards;
+}
+
+/* Scissor cross snap for muted state */
+.group\/vol:hover .animated-volume-icon .volume-cross-1,
+.group\/mute:hover .animated-volume-icon .volume-cross-1,
+button:hover .animated-volume-icon .volume-cross-1,
+.animated-volume-icon:hover .volume-cross-1 {
+  animation: volumeScissorCross1 0.35s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+.group\/vol:hover .animated-volume-icon .volume-cross-2,
+.group\/mute:hover .animated-volume-icon .volume-cross-2,
+button:hover .animated-volume-icon .volume-cross-2,
+.animated-volume-icon:hover .volume-cross-2 {
+  animation: volumeScissorCross2 0.35s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   2. Shuffle Multi-Part Physics (Dual Horizontal Sliding Tracks & Pulsating Arrows)
+   -------------------------------------------------------------------------- */
+.animated-shuffle-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-shuffle-icon .shuffle-track {
+  will-change: transform;
+  transition: transform 0.3s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+              opacity 0.2s ease;
+}
+
+.animated-shuffle-icon .shuffle-arrow-upper {
+  transform-origin: 20px 6px;
+  will-change: transform;
+  transition: transform 0.25s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-shuffle-icon .shuffle-arrow-lower {
+  transform-origin: 20px 18px;
+  will-change: transform;
+  transition: transform 0.25s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+@keyframes shuffleTrackSlide1 {
+  0% { transform: translateX(0); }
+  40% { transform: translateX(2.5px); }
+  75% { transform: translateX(0.5px); }
+  100% { transform: translateX(1.5px); }
+}
+
+@keyframes shuffleTrackSlide2 {
+  0% { transform: translateX(0); }
+  40% { transform: translateX(-2.5px); }
+  75% { transform: translateX(-0.5px); }
+  100% { transform: translateX(-1.5px); }
+}
+
+@keyframes shuffleArrowPulsateUpper {
+  0% { transform: scale(1) translateX(0); }
+  35% { transform: scale(1.3) translateX(2px); }
+  70% { transform: scale(0.95) translateX(0.5px); }
+  100% { transform: scale(1.15) translateX(1px); }
+}
+
+@keyframes shuffleArrowPulsateLower {
+  0% { transform: scale(1) translateX(0); }
+  35% { transform: scale(1.3) translateX(2px); }
+  70% { transform: scale(0.95) translateX(0.5px); }
+  100% { transform: scale(1.15) translateX(1px); }
+}
+
+/* Shuffle Hover / Trigger States */
+.group\/shuffle:hover .animated-shuffle-icon .shuffle-track-1,
+button:hover .animated-shuffle-icon .shuffle-track-1,
+.animated-shuffle-icon:hover .shuffle-track-1 {
+  animation: shuffleTrackSlide1 0.4s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+.group\/shuffle:hover .animated-shuffle-icon .shuffle-track-2,
+button:hover .animated-shuffle-icon .shuffle-track-2,
+.animated-shuffle-icon:hover .shuffle-track-2 {
+  animation: shuffleTrackSlide2 0.4s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+.group\/shuffle:hover .animated-shuffle-icon .shuffle-arrow-upper,
+button:hover .animated-shuffle-icon .shuffle-arrow-upper,
+.animated-shuffle-icon:hover .shuffle-arrow-upper {
+  animation: shuffleArrowPulsateUpper 0.38s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) 0s forwards;
+}
+
+.group\/shuffle:hover .animated-shuffle-icon .shuffle-arrow-lower,
+button:hover .animated-shuffle-icon .shuffle-arrow-lower,
+.animated-shuffle-icon:hover .shuffle-arrow-lower {
+  animation: shuffleArrowPulsateLower 0.38s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) 0.05s forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   3. Repeat Multi-Part Physics (Orbital Chase Spin Around Axis)
+   -------------------------------------------------------------------------- */
+.animated-repeat-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-repeat-icon .repeat-orbit {
+  transform-origin: 12px 12px;
+  will-change: transform;
+  transition: transform 0.35s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-repeat-icon .repeat-badge-one {
+  transform-origin: 12px 12px;
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+@keyframes repeatOrbitalChaseUpper {
+  0% { transform: rotate(0deg); }
+  60% { transform: rotate(200deg); }
+  85% { transform: rotate(175deg); }
+  100% { transform: rotate(180deg); }
+}
+
+@keyframes repeatOrbitalChaseLower {
+  0% { transform: rotate(0deg); }
+  60% { transform: rotate(200deg); }
+  85% { transform: rotate(175deg); }
+  100% { transform: rotate(180deg); }
+}
+
+@keyframes repeatBadgePop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.35); }
+  75% { transform: scale(0.95); }
+  100% { transform: scale(1.15); }
+}
+
+/* Repeat Hover / Trigger States */
+.group\/repeat:hover .animated-repeat-icon .repeat-orbit-upper,
+button:hover .animated-repeat-icon .repeat-orbit-upper,
+.animated-repeat-icon:hover .repeat-orbit-upper {
+  animation: repeatOrbitalChaseUpper 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/repeat:hover .animated-repeat-icon .repeat-orbit-lower,
+button:hover .animated-repeat-icon .repeat-orbit-lower,
+.animated-repeat-icon:hover .repeat-orbit-lower {
+  animation: repeatOrbitalChaseLower 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/repeat:hover .animated-repeat-icon .repeat-badge-one,
+button:hover .animated-repeat-icon .repeat-badge-one,
+.animated-repeat-icon:hover .repeat-badge-one {
+  animation: repeatBadgePop 0.35s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   4. Heart Multi-Part Physics (Heartbeat Pulse + 4 Radial Micro-Particles)
+   -------------------------------------------------------------------------- */
+.animated-heart-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+}
+
+.animated-heart-icon .heart-contour {
+  transform-origin: 12px 13px;
+  will-change: transform;
+  transition: transform 0.25s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+              fill 0.2s ease,
+              stroke 0.2s ease;
+}
+
+.animated-heart-icon .heart-spark {
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@keyframes heartbeatPulse {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.28) rotate(-7deg); }
+  40% { transform: scale(0.94) rotate(3deg); }
+  65% { transform: scale(1.18) rotate(-3deg); }
+  85% { transform: scale(1.02); }
+  100% { transform: scale(1.12); }
+}
+
+@keyframes sparkBurstTR {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+  35% { opacity: 1; transform: translate(2.5px, -2.5px) scale(1.4); }
+  75% { opacity: 0.6; transform: translate(4px, -4px) scale(0.9); }
+  100% { opacity: 0; transform: translate(5px, -5px) scale(0.2); }
+}
+
+@keyframes sparkBurstBR {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+  35% { opacity: 1; transform: translate(2.5px, 2.5px) scale(1.4); }
+  75% { opacity: 0.6; transform: translate(4px, 4px) scale(0.9); }
+  100% { opacity: 0; transform: translate(5px, 5px) scale(0.2); }
+}
+
+@keyframes sparkBurstBL {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+  35% { opacity: 1; transform: translate(-2.5px, 2.5px) scale(1.4); }
+  75% { opacity: 0.6; transform: translate(-4px, 4px) scale(0.9); }
+  100% { opacity: 0; transform: translate(-5px, 5px) scale(0.2); }
+}
+
+@keyframes sparkBurstTL {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+  35% { opacity: 1; transform: translate(-2.5px, -2.5px) scale(1.4); }
+  75% { opacity: 0.6; transform: translate(-4px, -4px) scale(0.9); }
+  100% { opacity: 0; transform: translate(-5px, -5px) scale(0.2); }
+}
+
+/* Heart Hover / Trigger States */
+.group\/heart:hover .animated-heart-icon .heart-contour,
+button:hover .animated-heart-icon .heart-contour,
+.animated-heart-icon:hover .heart-contour {
+  animation: heartbeatPulse 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/heart:hover .animated-heart-icon .heart-spark-tr,
+button:hover .animated-heart-icon .heart-spark-tr,
+.animated-heart-icon:hover .heart-spark-tr {
+  animation: sparkBurstTR 0.48s ease-out forwards;
+}
+
+.group\/heart:hover .animated-heart-icon .heart-spark-br,
+button:hover .animated-heart-icon .heart-spark-br,
+.animated-heart-icon:hover .heart-spark-br {
+  animation: sparkBurstBR 0.48s ease-out 0.03s forwards;
+}
+
+.group\/heart:hover .animated-heart-icon .heart-spark-bl,
+button:hover .animated-heart-icon .heart-spark-bl,
+.animated-heart-icon:hover .heart-spark-bl {
+  animation: sparkBurstBL 0.48s ease-out 0.06s forwards;
+}
+
+.group\/heart:hover .animated-heart-icon .heart-spark-tl,
+button:hover .animated-heart-icon .heart-spark-tl,
+.animated-heart-icon:hover .heart-spark-tl {
+  animation: sparkBurstTL 0.48s ease-out 0.09s forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   5. Skip Multi-Part Physics (Arrowhead Lunge & Elastic Rebound Impact)
+   -------------------------------------------------------------------------- */
+.animated-skip-icon {
+  display: inline-flex;
+  overflow: visible;
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-skip-icon .skip-arrow {
+  will-change: transform;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.animated-skip-icon .skip-bar {
+  will-change: transform;
+  transform-origin: center;
+  transition: transform 0.22s var(--ease-discord-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+/* Forward (Next) Animations */
+@keyframes skipArrowLungeNext {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(3.2px); }
+  65% { transform: translateX(1px); }
+  85% { transform: translateX(2.2px); }
+  100% { transform: translateX(1.8px); }
+}
+
+@keyframes skipBarReboundNext {
+  0% { transform: scaleX(1) translateX(0); }
+  35% { transform: scaleX(1.4) translateX(1px); }
+  65% { transform: scaleX(0.85) translateX(-0.5px); }
+  85% { transform: scaleX(1.1) translateX(0.3px); }
+  100% { transform: scaleX(1) translateX(0); }
+}
+
+/* Backward (Prev) Animations */
+@keyframes skipArrowLungePrev {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(-3.2px); }
+  65% { transform: translateX(-1px); }
+  85% { transform: translateX(-2.2px); }
+  100% { transform: translateX(-1.8px); }
+}
+
+@keyframes skipBarReboundPrev {
+  0% { transform: scaleX(1) translateX(0); }
+  35% { transform: scaleX(1.4) translateX(-1px); }
+  65% { transform: scaleX(0.85) translateX(0.5px); }
+  85% { transform: scaleX(1.1) translateX(-0.3px); }
+  100% { transform: scaleX(1) translateX(0); }
+}
+
+/* Next / Prev Hover States */
+.group\/next:hover .animated-skip-icon .skip-arrow-next,
+button:hover .animated-skip-icon .skip-arrow-next,
+.animated-skip-icon:hover .skip-arrow-next {
+  animation: skipArrowLungeNext 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/next:hover .animated-skip-icon .skip-bar-next,
+button:hover .animated-skip-icon .skip-bar-next,
+.animated-skip-icon:hover .skip-bar-next {
+  animation: skipBarReboundNext 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/prev:hover .animated-skip-icon .skip-arrow-prev,
+button:hover .animated-skip-icon .skip-arrow-prev,
+.animated-skip-icon:hover .skip-arrow-prev {
+  animation: skipArrowLungePrev 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.group\/prev:hover .animated-skip-icon .skip-bar-prev,
+button:hover .animated-skip-icon .skip-bar-prev,
+.animated-skip-icon:hover .skip-bar-prev {
+  animation: skipBarReboundPrev 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

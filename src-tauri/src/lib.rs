@@ -294,6 +294,17 @@ pub struct TrayPlaylist {
     pub name: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OnlineSearchResult {
+    pub track_name: String,
+    pub artist_name: String,
+    pub album_name: String,
+    pub preview_url: Option<String>,
+    pub artwork_url: Option<String>,
+    pub duration_ms: u64,
+    pub track_url: Option<String>,
+}
+
 fn build_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _playlists: &[TrayPlaylist]) -> Result<tauri::menu::Menu<R>, tauri::Error> {
     let show_i = MenuItemBuilder::with_id("show", "Show MusicVault").build(app)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
@@ -586,6 +597,72 @@ async fn clear_discord_status(state: State<'_, AppState>) -> Result<(), String> 
     Ok(())
 }
 
+#[tauri::command]
+async fn search_spotify(query: String, limit: Option<u32>) -> Result<Vec<OnlineSearchResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let limit = limit.unwrap_or(20).min(25);
+        let encoded_query = percent_encoding::utf8_percent_encode(&query, percent_encoding::NON_ALPHANUMERIC).to_string();
+        let url = format!(
+            "https://itunes.apple.com/search?term={}&media=music&limit={}",
+            encoded_query, limit
+        );
+
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(6))
+            .build()
+            .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+        let resp = client
+            .get(&url)
+            .send()
+            .map_err(|e| format!("iTunes search request failed: {}", e))?;
+
+        let json: serde_json::Value = resp
+            .json()
+            .map_err(|e| format!("Failed to parse iTunes response: {}", e))?;
+
+        let results = json
+            .get("results")
+            .and_then(|r| r.as_array())
+            .cloned()
+            .unwrap_or_default();
+
+        let tracks: Vec<OnlineSearchResult> = results
+            .iter()
+            .filter_map(|item| {
+                let track_name = item.get("trackName")?.as_str()?.to_string();
+                let artist_name = item.get("artistName")?.as_str()?.to_string();
+                let album_name = item
+                    .get("collectionName")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown Album")
+                    .to_string();
+                let preview_url = item.get("previewUrl").and_then(|v| v.as_str()).map(String::from);
+                let artwork_url = item
+                    .get("artworkUrl100")
+                    .and_then(|v| v.as_str())
+                    .map(|u| u.replace("100x100", "600x600"));
+                let duration_ms = item.get("trackTimeMillis").and_then(|v| v.as_u64()).unwrap_or(0);
+                let track_url = item.get("trackViewUrl").and_then(|v| v.as_str()).map(String::from);
+
+                Some(OnlineSearchResult {
+                    track_name,
+                    artist_name,
+                    album_name,
+                    preview_url,
+                    artwork_url,
+                    duration_ms,
+                    track_url,
+                })
+            })
+            .collect();
+
+        Ok(tracks)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let port = streamer::start_stream_server();
@@ -792,6 +869,7 @@ pub fn run() {
             handle_dropped_paths,
             update_discord_status,
             clear_discord_status,
+            search_spotify,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

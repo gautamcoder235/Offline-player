@@ -13,6 +13,9 @@ import {
   ListPlus,
   ListMusic,
   Flame,
+  CalendarDays,
+  Trophy,
+  Crown,
   Trash2,
   X,
   ChevronUp,
@@ -641,39 +644,60 @@ export const TrackList: React.FC<TrackListProps> = ({
 
               {/* Spotify-style Time Range Selector Pills for Top Tracks */}
               {playlistId === 'top_tracks' && (
-                <div className="flex items-center gap-1.5 mt-2.5 pt-1">
+                <div className="flex items-center gap-2 mt-3 pt-1">
                   <button
                     type="button"
                     onClick={() => setTopTracksTimeRange('short_term')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                       topTracksTimeRange === 'short_term'
-                        ? 'bg-[#19E6A0] text-black shadow-sm'
-                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] border border-[#2B2936]'
+                        ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
                     }`}
                   >
-                    <span>🔥 On Repeat (30 Days)</span>
+                    <Flame
+                      className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
+                        topTracksTimeRange === 'short_term'
+                          ? 'fill-black text-black'
+                          : 'text-[#FF7A00] fill-[#FF7A00]/25'
+                      }`}
+                    />
+                    <span>On Repeat (30 Days)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setTopTracksTimeRange('medium_term')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                       topTracksTimeRange === 'medium_term'
-                        ? 'bg-[#19E6A0] text-black shadow-sm'
-                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] border border-[#2B2936]'
+                        ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
                     }`}
                   >
-                    <span>📅 Past 6 Months</span>
+                    <CalendarDays
+                      className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
+                        topTracksTimeRange === 'medium_term'
+                          ? 'stroke-black stroke-[2.3]'
+                          : 'text-[#00F2FE]'
+                      }`}
+                    />
+                    <span>Past 6 Months</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setTopTracksTimeRange('all_time')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                       topTracksTimeRange === 'all_time'
-                        ? 'bg-[#19E6A0] text-black shadow-sm'
-                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] border border-[#2B2936]'
+                        ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
                     }`}
                   >
-                    <span>🏆 All Time</span>
+                    <Trophy
+                      className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
+                        topTracksTimeRange === 'all_time'
+                          ? 'fill-black text-black'
+                          : 'text-[#E8C77A] fill-[#E8C77A]/30'
+                      }`}
+                    />
+                    <span>All Time</span>
                   </button>
                 </div>
               )}
@@ -682,7 +706,7 @@ export const TrackList: React.FC<TrackListProps> = ({
         )}
 
         {/* Track Table */}
-        <div className="px-6 py-3">
+        <div className="px-6 md:px-8 py-3">
           {tracks.length === 0 ? (
             <div className="py-20 text-center text-[#65616F]">
               <Disc3 className="w-10 h-10 mx-auto mb-3 text-[#4B4854] animate-pulse" />
@@ -873,7 +897,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                   )}
                                   {isTopTracksView ? (
                                     <span
-                                      className={`font-black text-[11px] font-mono ${
+                                      className={`font-black text-[11px] font-mono inline-flex items-center justify-center gap-0.5 ${
                                         idx === 0
                                           ? 'text-[#E8C77A]'
                                           : idx === 1
@@ -883,6 +907,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                           : 'text-[#65616F]'
                                       }`}
                                     >
+                                      {idx === 0 && <Crown className="w-2.5 h-2.5 fill-[#E8C77A] text-[#E8C77A] inline-block mr-0.5" />}
                                       #{idx + 1}
                                     </span>
                                   ) : (
@@ -949,7 +974,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                   )}
                                   {isTopTracksView ? (
                                     <span
-                                      className={`font-black text-[11px] font-mono ${
+                                      className={`font-black text-[11px] font-mono inline-flex items-center justify-center gap-0.5 ${
                                         idx === 0
                                           ? 'text-[#E8C77A]'
                                           : idx === 1
@@ -959,6 +984,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                           : 'text-[#65616F]'
                                       }`}
                                     >
+                                      {idx === 0 && <Crown className="w-2.5 h-2.5 fill-[#E8C77A] text-[#E8C77A] inline-block mr-0.5" />}
                                       #{idx + 1}
                                     </span>
                                   ) : (
@@ -1024,8 +1050,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                               {track.title}
                             </span>
                             {isTopTracksView && track.stats?.isOnRepeat && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 text-[9px] font-semibold shrink-0">
-                                🔥 On Repeat
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 text-[9px] font-semibold shrink-0 shadow-sm">
+                                <Flame className="w-2.5 h-2.5 fill-[#19E6A0] text-[#19E6A0]" />
+                                <span>On Repeat</span>
                               </span>
                             )}
                           </div>
@@ -1038,7 +1065,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                               title={`Lyrics match: "${matchingSnippet}"`}
                             >
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#19E6A0]/10 border border-[#19E6A0]/25 text-[#19E6A0] text-[10px] font-medium shrink-0 shadow-sm">
-                                💬 Lyrics match:
+                                <Mic2 className="w-2.5 h-2.5 text-[#19E6A0]" />
+                                <span>Lyrics match:</span>
                               </span>
                               <span className="truncate min-w-0 italic text-[#B5B1BF] text-[10.5px]">
                                 "{renderHighlightedSnippet(matchingSnippet, searchQuery)}"
