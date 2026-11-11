@@ -1079,13 +1079,16 @@ export const OnlineSearchView: React.FC<OnlineSearchViewProps> = ({
           r.track_name.trim().toLowerCase() === targetTitle &&
           (!targetArtist || r.artist_name.trim().toLowerCase() === targetArtist)
       );
+
       if (idx !== -1) {
-        const el = document.getElementById(`online-track-row-${idx}`) || document.getElementById(`online-quick-row-${idx}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.classList.add('animate-row-flash');
-          setTimeout(() => el.classList.remove('animate-row-flash'), 1500);
-        }
+        setTimeout(() => {
+          const el = document.getElementById(`online-track-row-${idx}`) || document.getElementById(`online-quick-row-${idx}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('animate-row-flash');
+            setTimeout(() => el.classList.remove('animate-row-flash'), 1500);
+          }
+        }, 50);
       }
     };
 

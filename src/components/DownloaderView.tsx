@@ -253,9 +253,13 @@ export const DownloaderView: React.FC = () => {
   useEffect(() => {
     initGlobalListeners();
     const handleUpdate = () => setTick((t) => t + 1);
+    const handleLocate = () => setActiveTab('all');
+
     sessionListeners.add(handleUpdate);
+    window.addEventListener('locate-current-track', handleLocate);
     return () => {
       sessionListeners.delete(handleUpdate);
+      window.removeEventListener('locate-current-track', handleLocate);
     };
   }, []);
 

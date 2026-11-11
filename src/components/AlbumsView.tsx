@@ -18,14 +18,38 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
   onSelectPlaylist,
   onViewChange,
 }) => {
-  const { currentTrack, isPlaying, playTrack, togglePlay, createPlaylist } = usePlayer();
-  const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
+  const { currentTrack, isPlaying, playTrack, togglePlay, createPlaylist, playingPlaylistId } = usePlayer();
+  const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(() => {
+    if (playingPlaylistId && playingPlaylistId.startsWith('album_')) {
+      return playingPlaylistId.replace('album_', '');
+    }
+    return null;
+  });
   const [createdFeedback, setCreatedFeedback] = useState(false);
 
   // Intelligently group tracks into cohesive albums (soundtracks & compilations unified, junk emoji resolved)
   const albums = useMemo(() => {
     return groupTracksIntoAlbums(tracks);
   }, [tracks]);
+
+  // Synchronize when locate-current-track is triggered
+  React.useEffect(() => {
+    const handleLocate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ track: Track }>;
+      const track = customEvent.detail?.track || currentTrack;
+      if (!track) return;
+      if (playingPlaylistId && playingPlaylistId.startsWith('album_')) {
+        setSelectedAlbumKey(playingPlaylistId.replace('album_', ''));
+      } else if (track.album) {
+        const found = albums.find(
+          (a) => a.tracks.some((t) => t.id === track.id) || a.name.toLowerCase() === track.album.toLowerCase()
+        );
+        if (found) setSelectedAlbumKey(found.key);
+      }
+    };
+    window.addEventListener('locate-current-track', handleLocate);
+    return () => window.removeEventListener('locate-current-track', handleLocate);
+  }, [albums, currentTrack, playingPlaylistId]);
 
   const selectedAlbum = useMemo(() => {
     if (!selectedAlbumKey) return null;

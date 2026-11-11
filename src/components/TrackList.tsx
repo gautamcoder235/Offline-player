@@ -80,6 +80,7 @@ export const TrackList: React.FC<TrackListProps> = ({
     setTopTracksTimeRange,
     deleteTrack,
     searchQuery,
+    setSearchQuery,
     themeAppearance,
     removeTrackFromPlaylist,
     removeTracksFromPlaylist,
@@ -284,13 +285,19 @@ export const TrackList: React.FC<TrackListProps> = ({
       const targetArtist = customEvent.detail?.artist?.trim().toLowerCase();
       if (!targetId && !targetTitle) return;
 
-      const idx = displayTracks.findIndex(
+      let idx = displayTracks.findIndex(
         (t) =>
           (targetId && t.id === targetId) ||
           (targetTitle &&
             t.title?.trim().toLowerCase() === targetTitle &&
             (!targetArtist || t.artist?.trim().toLowerCase() === targetArtist))
       );
+
+      // If user had a search filter hiding the track, clear it so the full list is shown
+      if (idx === -1 && searchQuery.trim()) {
+        setSearchQuery('');
+        return;
+      }
 
       if (idx !== -1) {
         rowVirtualizer.scrollToIndex(idx, { align: 'center', behavior: 'smooth' });

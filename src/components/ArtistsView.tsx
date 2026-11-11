@@ -18,8 +18,13 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
   onSelectPlaylist,
   onViewChange,
 }) => {
-  const { currentTrack, isPlaying, playTrack, togglePlay, createPlaylist } = usePlayer();
-  const [selectedArtistKey, setSelectedArtistKey] = useState<string | null>(null);
+  const { currentTrack, isPlaying, playTrack, togglePlay, createPlaylist, playingPlaylistId } = usePlayer();
+  const [selectedArtistKey, setSelectedArtistKey] = useState<string | null>(() => {
+    if (playingPlaylistId && playingPlaylistId.startsWith('artist_')) {
+      return playingPlaylistId.replace('artist_', '');
+    }
+    return null;
+  });
   const [filterTab, setFilterTab] = useState<'all' | 'lead' | 'collab'>('all');
   const [createdFeedback, setCreatedFeedback] = useState(false);
 
@@ -27,6 +32,28 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
   const artists = useMemo(() => {
     return groupTracksByArtist(tracks);
   }, [tracks]);
+
+  // Synchronize when locate-current-track is triggered
+  React.useEffect(() => {
+    const handleLocate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ track: Track }>;
+      const track = customEvent.detail?.track || currentTrack;
+      if (!track) return;
+      if (playingPlaylistId && playingPlaylistId.startsWith('artist_')) {
+        setSelectedArtistKey(playingPlaylistId.replace('artist_', ''));
+      } else if (track.artist) {
+        const found = artists.find(
+          (a) =>
+            a.tracks.some((t) => t.id === track.id) ||
+            a.name.toLowerCase() === track.artist.toLowerCase() ||
+            a.normalizedKey === track.artist.toLowerCase()
+        );
+        if (found) setSelectedArtistKey(found.normalizedKey);
+      }
+    };
+    window.addEventListener('locate-current-track', handleLocate);
+    return () => window.removeEventListener('locate-current-track', handleLocate);
+  }, [artists, currentTrack, playingPlaylistId]);
 
   // Reactive lookup for the currently selected artist
   const selectedArtist: ArtistGroup | null = useMemo(() => {
