@@ -458,7 +458,7 @@ export const MiniPlayer: React.FC = () => {
 
           <button
             onClick={prevTrack}
-            className="group/prev p-1.5 text-[#AAA6B2] hover:text-white transition-all duration-150 active:scale-90 cursor-pointer"
+            className="group/prev w-7 h-7 aspect-square rounded-full flex items-center justify-center text-[#AAA6B2] hover:text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-90 cursor-pointer shrink-0"
             title="Previous Track"
             aria-label="Previous Track"
           >
@@ -467,7 +467,7 @@ export const MiniPlayer: React.FC = () => {
 
           <button
             onClick={togglePlay}
-            className={`group/play w-9 h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shrink-0 ${
+            className={`group/play w-9 h-9 aspect-square rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shrink-0 ${
               isPlaying ? 'animate-breathe-glow' : ''
             }`}
             title="Play / Pause"
@@ -482,7 +482,7 @@ export const MiniPlayer: React.FC = () => {
 
           <button
             onClick={nextTrack}
-            className="group/next p-1.5 text-[#AAA6B2] hover:text-white transition-all duration-150 active:scale-90 cursor-pointer"
+            className="group/next w-7 h-7 aspect-square rounded-full flex items-center justify-center text-[#AAA6B2] hover:text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-90 cursor-pointer shrink-0"
             title="Next Track"
             aria-label="Next Track"
           >
@@ -491,8 +491,8 @@ export const MiniPlayer: React.FC = () => {
 
           <button
             onClick={cycleRepeat}
-            className={`group/repeat p-1.5 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer ${
-              repeatMode !== 'off' ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#65616F] hover:text-[#AAA6B2]'
+            className={`group/repeat w-7 h-7 aspect-square rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shrink-0 ${
+              repeatMode !== 'off' ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#65616F] hover:text-[#AAA6B2] hover:bg-white/[0.08]'
             }`}
             title={`Repeat: ${repeatMode}`}
             aria-label="Cycle Repeat Mode"

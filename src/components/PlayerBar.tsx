@@ -442,10 +442,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             {/* Animated Heart Button with pop micro-interaction */}
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className={`group/heart relative p-2 rounded-full transition-all duration-200 active:scale-75 hover:scale-110 cursor-pointer shrink-0 ${
+              className={`group/heart relative w-8 h-8 aspect-square rounded-full flex items-center justify-center transition-all duration-200 active:scale-75 hover:scale-110 cursor-pointer shrink-0 ${
                 isLiked
-                  ? 'text-[#E8C77A] hover:bg-[#E8C77A]/10'
-                  : 'text-[#65616F] hover:text-[#E8C77A] hover:bg-white/[0.06]'
+                  ? 'text-[#E8C77A] hover:bg-[#E8C77A]/15 shadow-[0_0_12px_rgba(232,199,122,0.25)]'
+                  : 'text-[#65616F] hover:text-[#E8C77A] hover:bg-white/[0.08]'
               }`}
               title={isLiked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
               aria-label={isLiked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
@@ -781,7 +781,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2 pl-2 border-l border-white/[0.08] shrink-0 group/vol">
           <button
             onClick={toggleMute}
-            className="group/mute text-[#7E7A8A] hover:text-white p-1 rounded-full hover:bg-white/[0.06] transition-all duration-200 active:scale-90 cursor-pointer"
+            className="group/mute text-[#7E7A8A] hover:text-white w-8 h-8 aspect-square rounded-full flex items-center justify-center hover:bg-white/[0.08] transition-all duration-200 active:scale-90 cursor-pointer shrink-0"
             title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
             aria-label="Toggle Mute"
           >
