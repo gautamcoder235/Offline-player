@@ -25,6 +25,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
     isPlaying,
     themeAppearance,
     reorderQueue,
+    coverMap,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
 
@@ -55,16 +56,16 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className={`w-80 h-full ${
-              isGlass ? 'bg-[#100F14]/80 backdrop-blur-2xl border-l border-t border-white/[0.08]' : 'bg-[#100F14] border-l border-t border-[#292731]'
+              isGlass ? 'bg-[#0B0A11]/75 backdrop-blur-3xl border-l border-t border-white/[0.08]' : 'bg-[#0E0D14]/96 backdrop-blur-2xl border-l border-t border-white/[0.06]'
             } p-5 flex flex-col gap-4 shadow-2xl`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#292731]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2.5">
                 <ListOrdered className="w-4 h-4 text-[#19E6A0]" />
                 <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight">Play Queue</h2>
-                <span className="px-2 py-0.5 rounded-full bg-[#16151C] text-[10px] text-[#AAA6B2] font-mono border border-[#292731]">
+                <span className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[10px] text-[#AAA6B2] font-mono border border-white/[0.08]">
                   {queue.length}
                 </span>
               </div>
@@ -72,7 +73,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                 {queue.length > 0 && (
                   <button
                     onClick={clearQueue}
-                    className="group/clear p-1 text-[#777381] hover:text-[#FF667A] hover:bg-[#16151C] rounded transition-all duration-150 active:scale-90 cursor-pointer"
+                    className="group/clear p-1 text-[#777381] hover:text-[#FF667A] hover:bg-white/[0.08] rounded transition-all duration-150 active:scale-90 cursor-pointer"
                     title="Clear queue"
                     aria-label="Clear queue"
                   >
@@ -81,7 +82,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                 )}
                 <button
                   onClick={onClose}
-                  className="group/close p-1 text-[#777381] hover:text-[#F4F2F7] hover:bg-[#16151C] rounded transition-all duration-150 active:scale-90 cursor-pointer"
+                  className="group/close p-1 text-[#777381] hover:text-[#F4F2F7] hover:bg-white/[0.08] rounded transition-all duration-150 active:scale-90 cursor-pointer"
                   aria-label="Close queue drawer"
                 >
                   <AnimatedClose className="w-4 h-4" />
@@ -95,23 +96,26 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider">
               Now Playing
             </span>
-            <div className="p-2.5 rounded-xl bg-[#19181F] border-l-2 border-[#19E6A0] border-y border-r border-[#292731] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-[#292731] bg-[#16151C]">
-                {currentTrack.cover_art ? (
-                  <img src={currentTrack.cover_art} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  (() => {
-                    const curColor = getTrackColor(currentTrack.title, currentTrack.artist);
-                    return (
-                      <div
-                        className="w-full h-full flex items-center justify-center font-bold text-xs"
-                        style={{ background: curColor.bg, color: curColor.text }}
-                      >
-                        <Disc3 className={`w-5 h-5 ${isPlaying ? 'animate-spin' : ''}`} />
-                      </div>
-                    );
-                  })()
-                )}
+            <div className="p-2.5 rounded-xl bg-[#13111C] border-l-2 border-[#19E6A0] border-y border-r border-white/[0.07] flex items-center gap-3 shadow-md">
+              <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-white/[0.08] bg-[#07060A]">
+                {(() => {
+                  const nowCover = coverMap[currentTrack.id] || currentTrack.cover_art;
+                  return nowCover ? (
+                    <img src={nowCover} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (() => {
+                      const curColor = getTrackColor(currentTrack.title, currentTrack.artist);
+                      return (
+                        <div
+                          className="w-full h-full flex items-center justify-center font-bold text-xs"
+                          style={{ background: curColor.bg, color: curColor.text }}
+                        >
+                          <Disc3 className={`w-5 h-5 ${isPlaying ? 'animate-spin' : ''}`} />
+                        </div>
+                      );
+                    })()
+                  );
+                })()}
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-xs font-semibold text-[#F4F2F7] truncate">
@@ -151,17 +155,20 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
                         <GripVertical className="w-3.5 h-3.5 text-[#4B4854] group-hover:text-[#777381] shrink-0 discord-icon group-hover:scale-110" />
-                        <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-[#292731] bg-[#16151C] relative pointer-events-none">
-                          {track.cover_art ? (
-                            <img src={track.cover_art} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div
-                              className="w-full h-full flex items-center justify-center font-bold text-[9px]"
-                              style={{ background: trackColor.bg, color: trackColor.text }}
-                            >
-                              <Disc3 className="w-4 h-4" />
-                            </div>
-                          )}
+                        <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-white/[0.08] bg-[#07060A] relative pointer-events-none">
+                          {(() => {
+                            const qCover = coverMap[track.id] || track.cover_art;
+                            return qCover ? (
+                              <img src={qCover} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center font-bold text-[9px]"
+                                style={{ background: trackColor.bg, color: trackColor.text }}
+                              >
+                                <Disc3 className="w-4 h-4" />
+                              </div>
+                            );
+                          })()}
                           <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
                             <Play className="w-3.5 h-3.5 text-white fill-current discord-icon discord-icon-pop" />
                           </div>
@@ -186,7 +193,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                                 e.stopPropagation();
                                 moveQueueItem(idx, idx - 1);
                               }}
-                              className="group/up p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 cursor-pointer"
+                              className="group/up p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
                               title="Move track up"
                               aria-label="Move track up"
                             >
@@ -199,7 +206,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                                 e.stopPropagation();
                                 moveQueueItem(idx, idx + 1);
                               }}
-                              className="group/down p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 cursor-pointer"
+                              className="group/down p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
                               title="Move track down"
                               aria-label="Move track down"
                             >
@@ -211,7 +218,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                               e.stopPropagation();
                               removeFromQueue(idx);
                             }}
-                            className="group/del p-1 text-[#777381] hover:text-[#FF667A] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 ml-0.5 cursor-pointer"
+                            className="group/del p-1 text-[#777381] hover:text-[#FF667A] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 ml-0.5 cursor-pointer"
                             title="Remove from queue"
                             aria-label="Remove from queue"
                           >
@@ -241,17 +248,20 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                     onClick={() => playTrack(track)}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                      <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-[#292731] bg-[#16151C] relative">
-                        {track.cover_art ? (
-                          <img src={track.cover_art} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div
-                            className="w-full h-full flex items-center justify-center font-bold text-[9px]"
-                            style={{ background: trackColor.bg, color: trackColor.text }}
-                          >
-                            <Disc3 className="w-4 h-4" />
-                          </div>
-                        )}
+                      <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border border-white/[0.08] bg-[#07060A] relative">
+                        {(() => {
+                          const upCover = coverMap[track.id] || track.cover_art;
+                          return upCover ? (
+                            <img src={upCover} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div
+                              className="w-full h-full flex items-center justify-center font-bold text-[9px]"
+                              style={{ background: trackColor.bg, color: trackColor.text }}
+                            >
+                              <Disc3 className="w-4 h-4" />
+                            </div>
+                          );
+                        })()}
                         <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
                           <Play className="w-3.5 h-3.5 text-white fill-current" />
                         </div>
@@ -274,7 +284,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                           e.stopPropagation();
                           addToQueue(track);
                         }}
-                        className="group/add p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[#19E6A0] hover:bg-[#16151C] rounded transition-all duration-200 active:scale-90 cursor-pointer"
+                        className="group/add p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
                         title="Add to queue"
                         aria-label="Add to queue"
                       >

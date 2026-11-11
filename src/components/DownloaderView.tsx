@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Download,
   ArrowDownToLine,
-  FolderOpen,
   CheckCircle2,
   Terminal,
   Loader2,
@@ -12,12 +11,15 @@ import {
   ChevronDown,
   ChevronUp,
   Folder,
+  X,
+  Music2,
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { usePlayer } from '../context/PlayerContext';
-import { Track, DownloadLogEvent } from '../types';
+import { Track, DownloadLogEvent, AppSettings } from '../types';
 import { TrackList } from './TrackList';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -94,6 +96,15 @@ function initGlobalListeners() {
     if (payload.playlist_name) globalSession.detectedPlaylistName = payload.playlist_name;
     if (payload.is_collection) globalSession.isCollection = true;
 
+    // Handle error events from python/savify
+    if (payload.type === 'error') {
+      globalSession.isDownloading = false;
+      globalSession.statusMessage = payload.message || 'Download failed';
+      globalSession.logs = [...globalSession.logs, `[ERROR] ${payload.message || 'Unknown error'}`];
+      notifySessionListeners();
+      return;
+    }
+
     // Handle track completion or already exists in real-time
     const isDone =
       payload.type === 'track_done' ||
@@ -128,12 +139,24 @@ function initGlobalListeners() {
           duration_str: '--:--',
           size_bytes: 0,
           cover_art: null,
-          stream_url: filePath
-            ? `http://127.0.0.1:49152/stream?file=${encodeURIComponent(filePath)}`
-            : '',
+          stream_url: '',
         };
 
         globalSession.sessionTracks = [...globalSession.sessionTracks, newTrack];
+
+        // Resolve active audio streaming URL asynchronously so it plays without error
+        if (filePath && !newTrack.stream_url) {
+          invoke<string>('get_audio_url', { filePath })
+            .then((freshUrl) => {
+              if (freshUrl) {
+                globalSession.sessionTracks = globalSession.sessionTracks.map((t) =>
+                  t.file_path === filePath ? { ...t, stream_url: freshUrl } : t
+                );
+                notifySessionListeners();
+              }
+            })
+            .catch(() => {});
+        }
       }
 
       // Debounce library refresh to avoid freezing disk while downloading
@@ -200,8 +223,11 @@ function initGlobalListeners() {
     notifySessionListeners();
   });
 
-  listen<{ exit_code: number }>('download://complete', () => {
+  listen<{ exit_code: number }>('download://complete', (e) => {
     globalSession.isDownloading = false;
+    if (e.payload?.exit_code !== 0 && (!globalSession.summary || globalSession.summary.succeeded === 0)) {
+      globalSession.statusMessage = 'Download process stopped or encountered an error';
+    }
     scheduleRefreshLibrary(300);
     notifySessionListeners();
   });
@@ -209,7 +235,10 @@ function initGlobalListeners() {
 
 export const DownloaderView: React.FC = () => {
   const { tracks, refreshLibrary, openInExplorer, createPlaylist } = usePlayer();
-  const [downloadDir, setDownloadDir] = useState('');
+  const [downloadDir, setDownloadDir] = useState<string>(() => {
+    return localStorage.getItem('musicvault_download_dir') || '';
+  });
+  const [activeTab, setActiveTab] = useState<'session' | 'all'>('all');
   const [showLogs, setShowLogs] = useState(false);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -231,12 +260,36 @@ export const DownloaderView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    invoke<{ download_directory: string }>('get_settings')
+    invoke<AppSettings>('get_settings')
       .then((s) => {
-        if (s?.download_directory) setDownloadDir(s.download_directory);
+        if (s?.download_directory) {
+          setDownloadDir(s.download_directory);
+          localStorage.setItem('musicvault_download_dir', s.download_directory);
+        } else {
+          // Fallback if not configured
+          const fallback = 'C:\\Users\\sharm\\Music\\Spotify offline';
+          setDownloadDir(fallback);
+        }
       })
-      .catch(console.warn);
+      .catch(() => {
+        if (!downloadDir) {
+          setDownloadDir('C:\\Users\\sharm\\Music\\Spotify offline');
+        }
+      });
   }, []);
+
+  // Compute offline tracks located in the download directory
+  const downloadedTracks = useMemo(() => {
+    if (!downloadDir) {
+      return tracks.filter((t) => t.file_path && t.file_path.toLowerCase().includes('spotify offline'));
+    }
+    const normDir = downloadDir.toLowerCase().replace(/\\/g, '/').replace(/\/$/, '');
+    return tracks.filter((t) => {
+      if (!t.file_path) return false;
+      const normPath = t.file_path.toLowerCase().replace(/\\/g, '/');
+      return normPath.startsWith(normDir) || normPath.includes('spotify offline');
+    });
+  }, [tracks, downloadDir]);
 
   // Sync session tracks with library metadata when tracks updates
   useEffect(() => {
@@ -278,7 +331,8 @@ export const DownloaderView: React.FC = () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
-        globalSession.url = text.trim();
+        const clean = text.replace(/^["']|["']$/g, '').trim();
+        globalSession.url = clean;
         notifySessionListeners();
       }
     } catch (e) {
@@ -286,9 +340,37 @@ export const DownloaderView: React.FC = () => {
     }
   };
 
+  const handleClearUrl = () => {
+    globalSession.url = '';
+    notifySessionListeners();
+  };
+
+  const handleBrowseDownloadDir = async () => {
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        title: 'Select Music Download Folder',
+      });
+      if (selected && typeof selected === 'string') {
+        setDownloadDir(selected);
+        localStorage.setItem('musicvault_download_dir', selected);
+        try {
+          const cur = await invoke<AppSettings>('get_settings');
+          await invoke('save_settings', { settings: { ...cur, download_directory: selected } });
+          refreshLibrary();
+        } catch (err) {
+          console.warn('Failed to persist settings:', err);
+        }
+      }
+    } catch (e) {
+      console.warn('Folder picker error:', e);
+    }
+  };
+
   const handleStartDownload = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetUrl = globalSession.url.trim();
+    const targetUrl = globalSession.url.replace(/^["']|["']$/g, '').trim();
     if (!targetUrl || globalSession.isDownloading) return;
 
     // Reset session trackers for this active download process
@@ -302,12 +384,13 @@ export const DownloaderView: React.FC = () => {
     globalSession.currentTrackName = '';
     globalSession.summary = null;
     globalSession.logs = [`[START] Connecting to Spotify: ${targetUrl}`];
+    setActiveTab('session');
     notifySessionListeners();
 
     try {
       await invoke('start_download', {
         url: targetUrl,
-        outputDir: downloadDir,
+        outputDir: downloadDir || undefined,
       });
     } catch (err) {
       globalSession.isDownloading = false;
@@ -340,104 +423,104 @@ export const DownloaderView: React.FC = () => {
     sessionTracks,
   } = globalSession;
 
+  const currentDisplayTracks = activeTab === 'session' ? sessionTracks : downloadedTracks;
+
   return (
     <div className="flex-1 flex flex-col h-full w-full overflow-hidden select-none bg-transparent">
-      {/* Top Compact Controls & Action Header */}
-      <div className="px-6 pt-5 pb-3 flex flex-col gap-3 shrink-0">
-        {/* Title & Folder Button */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-[#F4F2F7] tracking-tight">Downloader</h2>
-            {sessionTracks.length > 0 && (
-              <span className="text-[11px] font-mono text-[#AAA6B2] bg-[#16151C] border border-[#282631] px-2.5 py-0.5 rounded-full">
-                {sessionTracks.length} tracks
-              </span>
-            )}
-          </div>
+      {/* Top Compact Controls & Input Bar */}
+      <div className="px-6 pt-5 pb-3 flex flex-col gap-2.5 shrink-0">
+        <form onSubmit={handleStartDownload} className="flex items-center gap-2.5">
+          <div className="relative flex-1 flex items-center bg-[#121118]/80 backdrop-blur-xl rounded-xl border border-white/[0.08] focus-within:border-[#19E6A0]/50 focus-within:ring-2 focus-within:ring-[#19E6A0]/15 transition-all h-[44px] shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+            <Link2 className="w-4 h-4 ml-3.5 text-[#65616F] shrink-0" />
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => {
+                globalSession.url = e.target.value;
+                notifySessionListeners();
+              }}
+              disabled={isDownloading}
+              placeholder="Paste Spotify track, album, or playlist link (or song search)..."
+              className="w-full pl-3 pr-20 h-full text-xs bg-transparent text-[#F4F2F7] placeholder-[#65616F] focus:outline-none disabled:opacity-50"
+            />
 
-          <button
-            onClick={() => openInExplorer(downloadDir)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#292731]/60 text-xs font-medium transition-all duration-150 active:scale-95 cursor-pointer shrink-0"
-            title="Open music storage folder"
-          >
-            <FolderOpen className="w-3.5 h-3.5 text-[#AAA6B2]" />
-            <span>Open Music Folder</span>
-          </button>
-        </div>
-
-        {/* Compact Single-Card Input */}
-        <div className="p-3 rounded-2xl bg-[#14131A] border border-[#282631] flex flex-col gap-2.5">
-          <form onSubmit={handleStartDownload} className="flex items-center gap-2.5">
-            <div className="relative flex-1 flex items-center bg-[#0E0D14] rounded-xl border border-[#282631] focus-within:border-[#19E6A0]/50 transition-colors">
-              <Link2 className="w-4 h-4 ml-3.5 text-[#65616F] shrink-0" />
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => {
-                  globalSession.url = e.target.value;
-                  notifySessionListeners();
-                }}
-                disabled={isDownloading}
-                placeholder="Paste Spotify track, album, or playlist link..."
-                className="w-full pl-3 pr-10 py-2.5 text-xs bg-transparent text-[#F4F2F7] placeholder-[#65616F] focus:outline-none disabled:opacity-50"
-              />
+            <div className="absolute right-2.5 flex items-center gap-1">
+              {url.length > 0 && !isDownloading && (
+                <button
+                  type="button"
+                  onClick={handleClearUrl}
+                  className="p-1.5 rounded-lg text-[#777381] hover:text-[#FF667A] hover:bg-white/[0.06] transition-all duration-150 active:scale-90 cursor-pointer"
+                  title="Clear input"
+                  aria-label="Clear input"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handlePaste}
                 disabled={isDownloading}
-                className="absolute right-2 p-1.5 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1B1A24] transition-all duration-150 active:scale-90 cursor-pointer"
+                className="p-1.5 rounded-lg text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.06] transition-all duration-150 active:scale-90 cursor-pointer"
                 title="Paste from clipboard"
                 aria-label="Paste from clipboard"
               >
                 <ClipboardPaste className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
 
-            {isDownloading ? (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF667A]/15 hover:bg-[#FF667A]/25 text-[#FF667A] border border-[#FF667A]/30 font-medium text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer"
-              >
-                <StopCircle className="w-3.5 h-3.5" />
-                <span>Stop</span>
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!url.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download</span>
-              </button>
-            )}
-          </form>
-
-          {/* Target Folder & Activity Logs Toggle */}
-          <div className="flex items-center justify-between text-[11px] text-[#65616F] px-1">
-            <div className="flex items-center gap-1.5 truncate">
-              <Folder className="w-3 h-3 text-[#777381] shrink-0" />
-              <span>Target folder:</span>
-              <span
-                onClick={() => openInExplorer(downloadDir)}
-                className="text-[#9A96A5] hover:text-[#F4F2F7] cursor-pointer truncate transition-colors font-mono text-[10.5px]"
-                title="Click to view folder in Explorer"
-              >
-                {downloadDir}
-              </span>
-            </div>
-
+          {isDownloading ? (
             <button
               type="button"
-              onClick={() => setShowLogs((prev) => !prev)}
-              className="flex items-center gap-1 text-[11px] text-[#777381] hover:text-[#AAA6B2] transition-all duration-150 active:scale-95 cursor-pointer shrink-0 ml-2"
+              onClick={handleCancel}
+              className="h-[44px] flex items-center gap-2 px-5 rounded-xl bg-[#FF667A]/15 hover:bg-[#FF667A]/25 text-[#FF667A] border border-[#FF667A]/30 font-medium text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer shadow-sm"
             >
-              <Terminal className="w-3 h-3 text-[#19E6A0]" />
-              <span>Activity Log {logs.length > 0 ? `(${logs.length})` : ''}</span>
-              {showLogs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              <StopCircle className="w-4 h-4" />
+              <span>Stop</span>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!url.trim()}
+              className="h-[44px] flex items-center gap-2 px-5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer shadow-[0_2px_14px_rgba(25,230,160,0.3)] disabled:shadow-none"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download</span>
+            </button>
+          )}
+        </form>
+
+        {/* Minimal Meta Row: Target Folder & Activity Logs Toggle */}
+        <div className="flex items-center justify-between text-[11px] text-[#777381] px-1">
+          <div className="flex items-center gap-1.5 truncate">
+            <Folder className="w-3.5 h-3.5 text-[#19E6A0] shrink-0" />
+            <span>Save to:</span>
+            <span
+              onClick={() => openInExplorer(downloadDir)}
+              className="text-[#AAA6B2] hover:text-[#19E6A0] cursor-pointer truncate transition-colors font-mono text-[10.5px]"
+              title="Click to reveal folder in Explorer"
+            >
+              {downloadDir || 'Configuring folder...'}
+            </span>
+            <button
+              type="button"
+              onClick={handleBrowseDownloadDir}
+              className="ml-1 px-2 py-0.5 rounded-md text-[10px] text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.06] border border-white/[0.06] transition-colors cursor-pointer"
+              title="Change download folder location"
+            >
+              Change
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowLogs((prev) => !prev)}
+            className="flex items-center gap-1.5 text-[11px] text-[#777381] hover:text-[#AAA6B2] hover:bg-white/[0.04] px-2 py-0.5 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer shrink-0 ml-2"
+          >
+            <Terminal className="w-3 h-3 text-[#19E6A0]" />
+            <span>Activity Log {logs.length > 0 ? `(${logs.length})` : ''}</span>
+            {showLogs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
         </div>
 
         {/* Live Download Status & Progress Bar */}
@@ -448,7 +531,7 @@ export const DownloaderView: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="p-3 rounded-2xl bg-[#14131A] border border-[#282631] space-y-2 shrink-0"
+              className="p-3.5 rounded-2xl bg-[#121118]/80 backdrop-blur-xl border border-white/[0.06] space-y-2 shrink-0 shadow-lg"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -509,21 +592,21 @@ export const DownloaderView: React.FC = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="rounded-2xl bg-[#14131A] border border-[#282631] overflow-hidden shrink-0"
+              className="rounded-2xl bg-[#0E0D15]/90 backdrop-blur-2xl border border-white/[0.08] overflow-hidden shrink-0 shadow-2xl"
             >
-              <div className="px-4 py-1.5 bg-[#0E0D14] flex justify-end">
+              <div className="px-4 py-1.5 bg-[#08070D]/90 border-b border-white/[0.04] flex justify-end">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     globalSession.logs = [];
                     notifySessionListeners();
                   }}
-                  className="text-[11px] text-[#65616F] hover:text-[#AAA6B2] transition-all duration-150 active:scale-95 cursor-pointer"
+                  className="text-[11px] text-[#65616F] hover:text-[#9A96A5] transition-all duration-150 active:scale-95 cursor-pointer"
                 >
                   Clear logs
                 </button>
               </div>
-              <div className="p-3 font-mono text-[11px] text-[#9A96A5] bg-[#0E0D14] max-h-44 overflow-y-auto space-y-1">
+              <div className="p-3 font-mono text-[11px] text-[#9A96A5] bg-[#08070D]/90 max-h-44 overflow-y-auto space-y-1">
                 {logs.length === 0 ? (
                   <div className="text-[#65616F]">Ready. Download activity will display here...</div>
                 ) : (
@@ -549,43 +632,65 @@ export const DownloaderView: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Main Full-Space Stage: List songs downloaded currently during this active download process */}
+      {/* Main Full-Space Stage: Downloaded Tracks vs Active Session Tabs */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {sessionTracks.length > 0 && (
-          <div className="px-6 pt-2 pb-1 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
-                Session Songs
+        {/* Navigation Segments Bar */}
+        <div className="px-6 pt-1 pb-2 flex items-center justify-between shrink-0">
+          <div className="h-[34px] flex items-center gap-1 bg-[#121118]/80 backdrop-blur-xl p-0.5 rounded-xl border border-white/[0.08] shadow-sm">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex items-center gap-2 h-full px-3 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-white/[0.08] text-[#F4F2F7] shadow-sm border border-white/[0.08]'
+                  : 'text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.04]'
+              }`}
+            >
+              <Music2 className="w-3.5 h-3.5 text-[#19E6A0]" />
+              <span>Downloaded Tracks</span>
+              <span className="text-[10px] font-mono text-[#8E8A98] bg-white/[0.06] px-1.5 py-0.2 rounded-full">
+                {downloadedTracks.length}
               </span>
-              <span className="text-[11px] font-mono text-[#65616F]">
-                ({sessionTracks.length})
-              </span>
-            </div>
+            </button>
 
-            {isDownloading && (
-              <span className="text-[11px] text-[#19E6A0] flex items-center gap-1.5 font-medium animate-pulse">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Downloading...</span>
-              </span>
-            )}
+            <button
+              onClick={() => setActiveTab('session')}
+              className={`flex items-center gap-2 h-full px-3 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                activeTab === 'session'
+                  ? 'bg-white/[0.08] text-[#F4F2F7] shadow-sm border border-white/[0.08]'
+                  : 'text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.04]'
+              }`}
+            >
+              <ArrowDownToLine className="w-3.5 h-3.5 text-[#19E6A0]" />
+              <span>Session Queue</span>
+              {sessionTracks.length > 0 && (
+                <span className="text-[10px] font-mono text-[#19E6A0] bg-[#19E6A0]/15 px-1.5 py-0.2 rounded-full">
+                  {sessionTracks.length}
+                </span>
+              )}
+            </button>
           </div>
-        )}
 
-        {/* Captures Full Remaining View Space with Normal App Track List View */}
+          {isDownloading && (
+            <span className="text-[11px] text-[#19E6A0] flex items-center gap-1.5 font-medium animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Downloading active queue...</span>
+            </span>
+          )}
+        </div>
+
+        {/* Content View: TrackList or Empty State */}
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {sessionTracks.length === 0 ? (
+          {currentDisplayTracks.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none">
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-[#1C1B26] to-[#12111A] border border-white/[0.08] shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex items-center justify-center mb-4 transition-transform duration-200">
-                <div className="absolute inset-0 rounded-2xl bg-[#19E6A0]/10 blur-xl pointer-events-none" />
-                <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center relative z-10">
-                  <ArrowDownToLine className="w-5 h-5 text-[#19E6A0] stroke-[1.6]" />
-                </div>
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
+                <ArrowDownToLine className="w-6 h-6 text-[#19E6A0]" />
               </div>
-              <h3 className="text-sm font-semibold text-[#F4F2F7] tracking-tight">No active downloads</h3>
-              <p className="text-xs text-[#777381] mt-1.5">Paste a link above to start</p>
+              <h3 className="text-sm font-semibold text-[#8E8A98]">
+                {activeTab === 'session' ? 'Paste a link above to start downloading' : 'No offline tracks in download folder'}
+              </h3>
             </div>
           ) : (
-            <TrackList tracks={sessionTracks} />
+            <TrackList tracks={currentDisplayTracks} />
           )}
         </div>
       </div>

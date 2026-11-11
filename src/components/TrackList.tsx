@@ -22,6 +22,9 @@ import {
   Minus,
   Pencil,
   Mic2,
+  Shuffle,
+  ArrowUpDown,
+  Sparkles,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Track } from '../types';
@@ -81,6 +84,8 @@ export const TrackList: React.FC<TrackListProps> = ({
     removeTrackFromPlaylist,
     removeTracksFromPlaylist,
     updateTrackMetadata,
+    shuffle,
+    toggleShuffle,
   } = usePlayer();
 
   const isGlass = themeAppearance === 'aura_glass';
@@ -89,6 +94,79 @@ export const TrackList: React.FC<TrackListProps> = ({
   const hasMultiDisc = useMemo(() => {
     return isAlbumView && tracks.some((t) => t.disc_number && t.disc_number > 1);
   }, [isAlbumView, tracks]);
+
+  // Sorting state
+  type SortField = 'default' | 'title' | 'artist' | 'album' | 'duration';
+  type SortDirection = 'asc' | 'desc';
+
+  const [sortField, setSortField] = useState<SortField>('default');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const displayTracks = useMemo(() => {
+    if (sortField === 'default') return tracks;
+    const list = [...tracks];
+    list.sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'title') {
+        comparison = (a.title || '').localeCompare(b.title || '');
+      } else if (sortField === 'artist') {
+        comparison = (a.artist || '').localeCompare(b.artist || '');
+      } else if (sortField === 'album') {
+        comparison = (a.album || '').localeCompare(b.album || '');
+      } else if (sortField === 'duration') {
+        comparison = (a.duration || 0) - (b.duration || 0);
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+    return list;
+  }, [tracks, sortField, sortDirection]);
+
+  const totalDurationStr = useMemo(() => {
+    const totalSeconds = tracks.reduce((acc, t) => acc + (t.duration || 0), 0);
+    if (!totalSeconds) return '';
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours} hr ${minutes} min`;
+    }
+    return `${minutes} min`;
+  }, [tracks]);
+
+  const handleSortClick = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortField('default');
+        setSortDirection('asc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const isThisListPlaying = Boolean(
+    isPlaying && currentTrack && tracks.some((t) => t.id === currentTrack.id)
+  );
+
+  const handleHeroPlayAll = () => {
+    if (displayTracks.length === 0) return;
+    if (isThisListPlaying) {
+      togglePlay();
+    } else {
+      playTrack(displayTracks[0], displayTracks, playlistId);
+    }
+  };
+
+  const handleHeroShuffle = () => {
+    if (displayTracks.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * displayTracks.length);
+    if (!shuffle) {
+      toggleShuffle();
+    }
+    playTrack(displayTracks[randomIndex], displayTracks, playlistId);
+  };
 
   // Multi-selection state
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
@@ -195,6 +273,37 @@ export const TrackList: React.FC<TrackListProps> = ({
     });
     setAnchorTrackId((prev) => (prev && tracks.some((t) => t.id === prev) ? prev : null));
   }, [tracks]);
+
+  // Listen for scroll-to-track event to locate & flash currently playing track in view
+  useEffect(() => {
+    const handleScrollToTrack = (e: Event) => {
+      const customEvent = e as CustomEvent<{ trackId?: string; title?: string; artist?: string }>;
+      const targetId = customEvent.detail?.trackId;
+      const targetTitle = customEvent.detail?.title?.trim().toLowerCase();
+      const targetArtist = customEvent.detail?.artist?.trim().toLowerCase();
+      if (!targetId && !targetTitle) return;
+
+      const idx = displayTracks.findIndex(
+        (t) =>
+          (targetId && t.id === targetId) ||
+          (targetTitle &&
+            t.title?.trim().toLowerCase() === targetTitle &&
+            (!targetArtist || t.artist?.trim().toLowerCase() === targetArtist))
+      );
+
+      if (idx !== -1) {
+        rowVirtualizer.scrollToIndex(idx, { align: 'center', behavior: 'smooth' });
+        const matchedId = displayTracks[idx].id;
+        setFlashingTrackId(matchedId);
+        setTimeout(() => {
+          setFlashingTrackId((prev) => (prev === matchedId ? null : prev));
+        }, 1500);
+      }
+    };
+
+    window.addEventListener('scroll-to-track', handleScrollToTrack);
+    return () => window.removeEventListener('scroll-to-track', handleScrollToTrack);
+  }, [displayTracks, rowVirtualizer]);
 
   // Selected tracks ordered as they appear in the current track list view
   const selectedTracksInOrder = useMemo(() => {
@@ -575,154 +684,253 @@ export const TrackList: React.FC<TrackListProps> = ({
           }
         }}
       >
-        {/* Clean Hero Header with Dynamic Album Art / Collage */}
+        {/* Modern Hero Header with Dynamic Album Art / Collage */}
         {title && (
-          <div className="p-6 md:p-8 flex items-end gap-6 bg-gradient-to-b from-[#181722]/70 via-[#100F14]/40 to-transparent shrink-0">
-            <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden shadow-2xl border border-[#292731]/60 shrink-0 bg-[#16151C] flex items-center justify-center">
-              {isCollage ? (
-                <div className="w-full h-full grid grid-cols-2 grid-rows-2">
-                  {tracksWithCovers.slice(0, 4).map((art, i) => (
-                    <img key={i} src={art} alt="" className="w-full h-full object-cover" />
-                  ))}
-                </div>
-              ) : heroCover ? (
-                <img src={heroCover} alt={title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1A1924] to-[#121118]">
-                  <Disc3 className="w-14 h-14 text-[#E8C77A]/50" />
-                </div>
-              )}
-            </div>
+          <div className={`relative p-6 md:p-8 flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 transition-colors duration-300 ${
+            isGlass
+              ? 'bg-gradient-to-b from-white/[0.04] via-transparent to-transparent'
+              : 'bg-gradient-to-b from-[#181622]/80 via-[#100F15]/40 to-transparent'
+          } shrink-0 overflow-hidden`}>
+            {/* Ambient diffused atmospheric glow */}
+            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#19E6A0]/[0.08] blur-[100px] pointer-events-none" />
 
-            <div className="flex flex-col gap-1.5 min-w-0 flex-1 pb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AAA6B2]">
-                {playlistId === 'top_tracks'
-                  ? 'Personal Affinity Engine'
-                  : title === 'Liked Songs'
-                  ? 'Playlist'
-                  : 'Collection'}
-              </span>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight truncate">
+            {/* Left: Artwork + Title Metadata */}
+            <div className="flex items-end gap-6 md:gap-8 min-w-0 flex-1 relative z-10">
+              {/* Artwork Container with rich drop-shadow and hover play overlay */}
+              <div className="w-36 h-36 md:w-44 md:h-44 lg:w-48 lg:h-48 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/[0.12] shrink-0 bg-[#14131A] flex items-center justify-center relative group/heroart transition-transform duration-300 hover:scale-[1.02]">
+                {isCollage ? (
+                  <div className="w-full h-full grid grid-cols-2 grid-rows-2">
+                    {tracksWithCovers.slice(0, 4).map((art, i) => (
+                      <img key={i} src={art} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover/heroart:scale-105" />
+                    ))}
+                  </div>
+                ) : heroCover ? (
+                  <img src={heroCover} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover/heroart:scale-105" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1A1924] to-[#121118]">
+                    <Disc3 className="w-16 h-16 text-[#19E6A0]/40 animate-pulse" />
+                  </div>
+                )}
+
+                {/* Quick Play overlay on artwork hover */}
+                <button
+                  type="button"
+                  onClick={handleHeroPlayAll}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover/heroart:opacity-100 flex items-center justify-center transition-all duration-200 cursor-pointer backdrop-blur-[2px]"
+                  aria-label={isThisListPlaying ? "Pause" : "Play"}
+                >
+                  <div className="w-14 h-14 rounded-full bg-[#19E6A0] text-black flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform">
+                    {isThisListPlaying ? (
+                      <Pause className="w-6 h-6 fill-current" />
+                    ) : (
+                      <Play className="w-6 h-6 fill-current ml-0.5" />
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              {/* Title & Metadata */}
+              <div className="flex flex-col gap-2 min-w-0 flex-1 pb-1">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#19E6A0] flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-[#19E6A0]" />
+                  <span>
+                    {playlistId === 'top_tracks'
+                      ? 'Personal Affinity Engine'
+                      : title === 'Liked Songs'
+                      ? 'Playlist'
+                      : 'Collection'}
+                  </span>
+                </span>
+
+                <h1 className="text-3xl md:text-5xl font-black text-[#F4F2F7] tracking-tight truncate leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
                   {title}
                 </h1>
-                {playlistId === 'top_tracks' && tracks.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const rangeLabel =
+
+                {/* Subtitle & Live Stats */}
+                <div className="flex items-center gap-2 text-xs text-[#A9A5B3] font-medium mt-0.5 flex-wrap">
+                  <span className="text-[#F4F2F7] font-semibold">MusicVault</span>
+                  <span className="text-[#555260]">•</span>
+                  <span>{tracks.length} {tracks.length === 1 ? 'song' : 'songs'}</span>
+                  {totalDurationStr && (
+                    <>
+                      <span className="text-[#555260]">•</span>
+                      <span className="font-mono text-[#8E8A98]">{totalDurationStr}</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Spotify-style Time Range Selector Pills for Top Tracks */}
+                {playlistId === 'top_tracks' && (
+                  <div className="flex items-center gap-2 mt-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setTopTracksTimeRange('short_term')}
+                      className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                         topTracksTimeRange === 'short_term'
-                          ? 'On Repeat'
-                          : topTracksTimeRange === 'medium_term'
-                          ? 'Past 6 Months'
-                          : 'All Time';
-                      const ids = tracks.map((t) => t.id);
-                      createPlaylist(
-                        `Top Tracks (${rangeLabel})`,
-                        `Your personal ${rangeLabel} listening affinity mix • ${ids.length} tracks`,
-                        ids,
-                        '#E8C77A'
-                      );
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E8C77A]/15 hover:bg-[#E8C77A]/25 text-[#E8C77A] border border-[#E8C77A]/30 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
-                    title="Save current Top Tracks as a permanent playlist"
-                  >
-                    <ListPlus className="w-3.5 h-3.5" />
-                    <span>Save as Playlist</span>
-                  </button>
+                          ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                          : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
+                      }`}
+                    >
+                      <Flame
+                        className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
+                          topTracksTimeRange === 'short_term'
+                            ? 'fill-black text-black'
+                            : 'text-[#FF7A00] fill-[#FF7A00]/25'
+                        }`}
+                      />
+                      <span>On Repeat (30 Days)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTopTracksTimeRange('medium_term')}
+                      className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                        topTracksTimeRange === 'medium_term'
+                          ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                          : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
+                      }`}
+                    >
+                      <CalendarDays
+                        className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
+                          topTracksTimeRange === 'medium_term'
+                            ? 'stroke-black stroke-[2.3]'
+                            : 'text-[#00F2FE]'
+                        }`}
+                      />
+                      <span>Past 6 Months</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTopTracksTimeRange('all_time')}
+                      className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                        topTracksTimeRange === 'all_time'
+                          ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                          : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
+                      }`}
+                    >
+                      <Trophy
+                        className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
+                          topTracksTimeRange === 'all_time'
+                            ? 'fill-black text-black'
+                            : 'text-[#E8C77A] fill-[#E8C77A]/30'
+                        }`}
+                      />
+                      <span>All Time</span>
+                    </button>
+                  </div>
                 )}
               </div>
-              <p className="text-xs text-[#777381]">
-                {playlistId === 'top_tracks'
-                  ? topTracksTimeRange === 'short_term'
-                    ? `On Repeat • ${tracks.length} songs in heavy rotation right now`
-                    : topTracksTimeRange === 'medium_term'
-                    ? `Past 6 Months • ${tracks.length} songs you listened to most lately`
-                    : `All Time • ${tracks.length} all-time favorite songs ranked by affinity`
-                  : subtitle || `${tracks.length} tracks found on this computer`}
-              </p>
+            </div>
 
-              {/* Spotify-style Time Range Selector Pills for Top Tracks */}
-              {playlistId === 'top_tracks' && (
-                <div className="flex items-center gap-2 mt-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setTopTracksTimeRange('short_term')}
-                    className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+            {/* Right: Actions in Hero Header (Restored to Clean Original Placement) */}
+            <div className="flex items-center gap-3 shrink-0 relative z-10 pb-1 self-end">
+              {/* Play All Button */}
+              <button
+                type="button"
+                onClick={handleHeroPlayAll}
+                disabled={displayTracks.length === 0}
+                className="w-12 h-12 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black shadow-[0_6px_20px_rgba(25,230,160,0.35)] hover:shadow-[0_8px_28px_rgba(25,230,160,0.55)] hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0"
+                title={isThisListPlaying ? "Pause" : "Play all"}
+                aria-label={isThisListPlaying ? "Pause" : "Play all"}
+              >
+                {isThisListPlaying ? (
+                  <Pause className="w-5 h-5 fill-current" />
+                ) : (
+                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                )}
+              </button>
+
+              {/* Shuffle Button */}
+              <button
+                type="button"
+                onClick={handleHeroShuffle}
+                disabled={displayTracks.length === 0}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer border ${
+                  shuffle
+                    ? 'bg-[#19E6A0]/15 text-[#19E6A0] border-[#19E6A0]/40 shadow-sm'
+                    : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#8E8A98] hover:text-[#F4F2F7] border-white/[0.08]'
+                }`}
+                title={shuffle ? "Shuffle is ON (Click to toggle)" : "Shuffle play"}
+                aria-label="Shuffle"
+              >
+                <Shuffle className="w-4 h-4" />
+              </button>
+
+              {/* Add All to Queue */}
+              <button
+                type="button"
+                onClick={() => addTracksToQueue(displayTracks)}
+                disabled={displayTracks.length === 0}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/[0.04] hover:bg-white/[0.08] text-[#8E8A98] hover:text-[#F4F2F7] border border-white/[0.08] hover:border-white/[0.15] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+                title="Add all tracks to Queue"
+                aria-label="Add all to Queue"
+              >
+                <ListPlus className="w-4 h-4" />
+              </button>
+
+              {/* Save as Playlist (for Top Tracks) */}
+              {playlistId === 'top_tracks' && tracks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rangeLabel =
                       topTracksTimeRange === 'short_term'
-                        ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
-                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
-                    }`}
-                  >
-                    <Flame
-                      className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
-                        topTracksTimeRange === 'short_term'
-                          ? 'fill-black text-black'
-                          : 'text-[#FF7A00] fill-[#FF7A00]/25'
-                      }`}
-                    />
-                    <span>On Repeat (30 Days)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTopTracksTimeRange('medium_term')}
-                    className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
-                      topTracksTimeRange === 'medium_term'
-                        ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
-                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
-                    }`}
-                  >
-                    <CalendarDays
-                      className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
-                        topTracksTimeRange === 'medium_term'
-                          ? 'stroke-black stroke-[2.3]'
-                          : 'text-[#00F2FE]'
-                      }`}
-                    />
-                    <span>Past 6 Months</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTopTracksTimeRange('all_time')}
-                    className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
-                      topTracksTimeRange === 'all_time'
-                        ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
-                        : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
-                    }`}
-                  >
-                    <Trophy
-                      className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
-                        topTracksTimeRange === 'all_time'
-                          ? 'fill-black text-black'
-                          : 'text-[#E8C77A] fill-[#E8C77A]/30'
-                      }`}
-                    />
-                    <span>All Time</span>
-                  </button>
-                </div>
+                        ? 'On Repeat'
+                        : topTracksTimeRange === 'medium_term'
+                        ? 'Past 6 Months'
+                        : 'All Time';
+                    const ids = tracks.map((t) => t.id);
+                    createPlaylist(
+                      `Top Tracks (${rangeLabel})`,
+                      `Your personal ${rangeLabel} listening affinity mix • ${ids.length} tracks`,
+                      ids,
+                      '#E8C77A'
+                    );
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#E8C77A]/15 hover:bg-[#E8C77A]/25 text-[#E8C77A] border border-[#E8C77A]/30 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+                  title="Save current Top Tracks as a permanent playlist"
+                >
+                  <ListPlus className="w-3.5 h-3.5" />
+                  <span>Save</span>
+                </button>
+              )}
+
+              {/* Sort Reset Pill */}
+              {sortField !== 'default' && (
+                <button
+                  type="button"
+                  onClick={() => { setSortField('default'); setSortDirection('asc'); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#19E6A0]/10 hover:bg-[#19E6A0]/20 text-[#19E6A0] border border-[#19E6A0]/30 text-[11px] font-semibold transition-all active:scale-95 cursor-pointer"
+                  title="Reset sort order to default"
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  <span className="capitalize">{sortField}</span>
+                  <X className="w-3 h-3 ml-0.5 opacity-70 hover:opacity-100" />
+                </button>
               )}
             </div>
           </div>
         )}
 
         {/* Track Table */}
-        <div className="px-6 md:px-8 py-3">
-          {tracks.length === 0 ? (
-            <div className="py-20 text-center text-[#65616F]">
-              <Disc3 className="w-10 h-10 mx-auto mb-3 text-[#4B4854] animate-pulse" />
-              <p className="text-xs font-medium text-[#9A96A5]">No songs found in this view</p>
-              <p className="text-[11px] text-[#65616F] mt-1">
+        <div className="px-6 md:px-8 pb-4">
+          {displayTracks.length === 0 ? (
+            <div className="py-20 text-center text-[#777381]">
+              <Disc3 className="w-10 h-10 mx-auto mb-3 text-[#555260] animate-pulse" />
+              <p className="text-xs font-medium text-[#A9A5B3]">No songs found in this view</p>
+              <p className="text-[11px] text-[#777381] mt-1">
                 Check your search query or add music directories in Settings.
               </p>
             </div>
           ) : (
             <div className="w-full text-xs">
-              {/* Header Row */}
-              <div className={`grid ${
+              {/* Seamless Sticky Table Header (No Black Box) */}
+              <div className={`sticky top-0 z-20 backdrop-blur-xl ${
+                isGlass ? 'bg-[#0E0E13]/35' : 'bg-[#0E0E13]/90'
+              } grid ${
                 hasMultiDisc
-                  ? 'grid-cols-[52px_minmax(0,1fr)_80px_40px] md:grid-cols-[52px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
+                  ? 'grid-cols-[48px_minmax(0,1fr)_80px_40px] md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
                   : 'grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
-              } items-center px-3 pb-2.5 border-b border-[#292731]/40 text-[#65616F] uppercase tracking-wider font-semibold text-[10px]`}>
+              } items-center px-3 py-2.5 border-b border-white/[0.06] text-[#8E8A98] uppercase tracking-wider font-semibold text-[10px] select-none`}>
                 {/* Index / Select All Checkbox Header */}
                 <div className="text-center flex items-center justify-center">
                   {selectedTrackIds.size > 0 ? (
@@ -742,22 +950,56 @@ export const TrackList: React.FC<TrackListProps> = ({
                   ) : (
                     <button
                       type="button"
-                      onClick={toggleSelectAll}
+                      onClick={() => handleSortClick('default')}
                       className="group/select-header w-4 h-4 flex items-center justify-center mx-auto cursor-pointer"
-                      title="Select all (Ctrl+A)"
-                      aria-label="Select all"
+                      title="Sort by index / Reset sort"
+                      aria-label="Index header"
                     >
-                      <span className="font-mono text-[10px] text-[#65616F] group-hover/select-header:hidden">#</span>
-                      <div className="hidden group-hover/select-header:flex w-3.5 h-3.5 rounded border border-[#65616F] hover:border-[#19E6A0] items-center justify-center transition-colors" />
+                      <span className={`font-mono text-[10px] group-hover/select-header:hidden ${sortField === 'default' ? 'text-[#19E6A0]' : 'text-[#8E8A98]'}`}>#</span>
+                      <div className="hidden group-hover/select-header:flex w-3.5 h-3.5 rounded border border-[#8E8A98] hover:border-[#19E6A0] items-center justify-center transition-colors" />
                     </button>
                   )}
                 </div>
 
-                <div className="pl-1">Title</div>
-                <div className="hidden md:block">{playlistId === 'top_tracks' ? 'Listening Stats' : 'Album'}</div>
-                <div className="text-right pr-2">
-                  <Clock className="w-3 h-3 inline-block text-[#65616F]" />
+                <div
+                  onClick={() => handleSortClick('title')}
+                  className="pl-1 flex items-center gap-1 cursor-pointer hover:text-[#F4F2F7] transition-colors"
+                  title="Click to sort by Title"
+                >
+                  <span>Title</span>
+                  {sortField === 'title' && (
+                    <span className="text-[#19E6A0] text-xs font-bold leading-none">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
                 </div>
+
+                <div
+                  onClick={() => handleSortClick('album')}
+                  className="hidden md:flex items-center gap-1 cursor-pointer hover:text-[#F4F2F7] transition-colors"
+                  title="Click to sort by Album"
+                >
+                  <span>{playlistId === 'top_tracks' ? 'Listening Stats' : 'Album'}</span>
+                  {sortField === 'album' && (
+                    <span className="text-[#19E6A0] text-xs font-bold leading-none">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  onClick={() => handleSortClick('duration')}
+                  className="text-right pr-2 cursor-pointer hover:text-[#F4F2F7] transition-colors flex items-center justify-end gap-1"
+                  title="Click to sort by Duration"
+                >
+                  <Clock className="w-3 h-3 inline-block text-[#8E8A98]" />
+                  {sortField === 'duration' && (
+                    <span className="text-[#19E6A0] text-xs font-bold leading-none">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+
                 <div className="text-center"></div>
               </div>
 
@@ -772,7 +1014,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 }}
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const track = tracks[virtualRow.index];
+                  const track = displayTracks[virtualRow.index];
                   if (!track) return null;
                   const idx = virtualRow.index;
                   const isCurrent = currentTrack?.id === track.id;
@@ -814,15 +1056,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                         setTimeout(() => {
                           setFlashingTrackId((prev) => (prev === track.id ? null : prev));
                         }, 400);
-                        playTrack(track, tracks, playlistId);
+                        playTrack(track, displayTracks, playlistId);
                       }}
                       onContextMenu={(e) => handleContextMenu(e, track)}
                       className={`group grid ${
                         hasMultiDisc
-                          ? 'grid-cols-[52px_minmax(0,1fr)_80px_40px] md:grid-cols-[52px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
+                          ? 'grid-cols-[48px_minmax(0,1fr)_80px_40px] md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
                           : 'grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
                       } items-center px-3 ${
-                        matchingSnippet ? 'min-h-[66px] py-2' : 'h-[44px] py-1.5'
+                        matchingSnippet ? 'min-h-[66px] py-2' : 'h-[46px] py-1'
                       } rounded-xl transition-all duration-150 cursor-pointer ${
                         flashingTrackId === track.id ? 'animate-row-flash' : ''
                       } ${
@@ -831,8 +1073,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                             ? 'bg-[#19E6A0]/20 border border-[#19E6A0] shadow-[0_0_14px_rgba(25,230,160,0.14)] text-[#F4F2F7]'
                             : 'bg-[#19E6A0]/10 border border-[#19E6A0]/45 shadow-[0_0_10px_rgba(25,230,160,0.06)] text-[#F4F2F7]'
                           : isCurrent
-                          ? 'bg-[#19181F] border border-[#19E6A0]/50 shadow-[0_0_14px_rgba(25,230,160,0.06)] text-[#F4F2F7]'
-                          : 'border border-transparent hover:bg-[#1D1C23] hover:border-[#292731]/50 text-[#9A96A5]'
+                          ? 'bg-[#19E6A0]/[0.08] border border-[#19E6A0]/30 shadow-[0_0_14px_rgba(25,230,160,0.06)] text-[#F4F2F7]'
+                          : 'border border-transparent hover:bg-white/[0.04] hover:border-white/[0.06] text-[#8E8A98]'
                       }`}
                     >
                       {/* Index / Play Button / Checkbox */}
@@ -1002,16 +1244,16 @@ export const TrackList: React.FC<TrackListProps> = ({
                                 if (isCurrent) {
                                   togglePlay();
                                 } else {
-                                  playTrack(track, tracks, playlistId);
+                                  playTrack(track, displayTracks, playlistId);
                                 }
                               }}
                               className="group/rowplay hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[#19E6A0] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
                               aria-label={isCurrent && isPlaying ? 'Pause' : 'Play'}
                             >
                               {isCurrent && isPlaying ? (
-                                <Pause className="w-3 h-3 fill-current discord-icon discord-icon-pop" />
+                                <Pause className="w-3.5 h-3.5 fill-current discord-icon discord-icon-pop" />
                               ) : (
-                                <Play className="w-3 h-3 fill-current ml-0.5 discord-icon discord-icon-pop" />
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5 discord-icon discord-icon-pop" />
                               )}
                             </button>
                           </>
@@ -1020,7 +1262,7 @@ export const TrackList: React.FC<TrackListProps> = ({
 
                       {/* Title & Artist */}
                       <div className="flex items-center gap-3 min-w-0 pr-3">
-                        <div className="w-9 h-9 rounded-md overflow-hidden shrink-0 border border-[#292731] shadow-sm bg-[#16151C]">
+                        <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-white/[0.08] shadow-sm bg-[#12111A]">
                           {track.cover_art ? (
                             <img
                               src={track.cover_art}
@@ -1039,11 +1281,11 @@ export const TrackList: React.FC<TrackListProps> = ({
                         <div className="flex flex-col min-w-0 justify-center">
                           <div className="flex items-center gap-2 min-w-0">
                             <span
-                              className={`font-medium truncate text-xs transition-colors duration-200 ${
+                              className={`font-semibold truncate text-xs transition-colors duration-200 ${
                                 isCurrent
                                   ? 'text-[#19E6A0]'
                                   : isSelected
-                                  ? 'text-[#F4F2F7] font-semibold'
+                                  ? 'text-[#F4F2F7]'
                                   : 'text-[#F4F2F7] group-hover:text-[#19E6A0]'
                               }`}
                             >
@@ -1056,7 +1298,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-[#777381] truncate">
+                          <span className="text-[11px] text-[#8E8A98] group-hover:text-[#A9A5B3] truncate transition-colors">
                             {track.artist}
                           </span>
                           {matchingSnippet && (
@@ -1077,7 +1319,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                       </div>
 
                       {/* Album / Listening Stats */}
-                      <div className="hidden md:block text-[#777381] truncate text-[11px] pr-3">
+                      <div className="hidden md:block text-[#777381] group-hover:text-[#8E8A98] truncate text-[11px] pr-3 transition-colors">
                         {isTopTracksView && track.stats ? (
                           <div className="flex items-center gap-1.5 truncate">
                             <span className="text-[#AAA6B2] font-semibold">
@@ -1094,7 +1336,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                       </div>
 
                       {/* Duration & Like */}
-                      <div className="flex items-center justify-end gap-2.5 font-mono text-[11px] text-[#777381] pr-2">
+                      <div className="flex items-center justify-end gap-2.5 font-mono text-[11px] text-[#8E8A98] group-hover:text-[#F4F2F7] pr-2 transition-colors">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1113,12 +1355,12 @@ export const TrackList: React.FC<TrackListProps> = ({
                             }`}
                           />
                         </button>
-                        {(() => {
+                        {isTopTracksView && (() => {
                           const count = track.playCount ?? getPlayCount(track.id);
                           if (!count || count <= 0) return null;
                           return (
                             <span
-                              className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#E8C77A] font-semibold bg-[#E8C77A]/10 px-1.5 py-0.5 rounded-md"
+                              className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#A9A5B3] group-hover:text-[#E8C77A] font-semibold bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded-md transition-colors"
                               title={`${count} listens`}
                             >
                               <Flame className="w-2.5 h-2.5 text-[#E8C77A]" />

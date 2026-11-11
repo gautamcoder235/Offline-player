@@ -29,7 +29,7 @@ interface PlaylistsViewProps {
 }
 
 const PRESET_COLORS = [
-  '#19E6A0', // Emerald Mint
+  '[var(--accent)]', // Emerald Mint
   '#00F2FE', // Electric Cyan
   '#FF007F', // Neon Magenta
   '#9D4EDD', // Electric Purple
@@ -147,7 +147,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
       .filter((c): c is string => !!c);
     const uniqueCovers = Array.from(new Set(coverArts));
 
-    const accentColor = selectedPlaylist.coverColor || '#19E6A0';
+    const accentColor = selectedPlaylist.coverColor || '[var(--accent)]';
     const playTextColor = getContrastTextColor(accentColor);
 
     return (
@@ -169,16 +169,12 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         />
 
         <div
-          className="relative z-10 p-6 md:p-8 flex items-end justify-between gap-6 border-b border-[#292731]/40 shrink-0 min-w-0"
-          style={{
-            background: `linear-gradient(to bottom, rgba(20, 19, 26, 0.45) 0%, rgba(14, 13, 19, 0.7) 100%)`,
-            backdropFilter: 'blur(8px)',
-          }}
+          className="relative z-10 p-6 md:p-8 flex items-end justify-between gap-6 border-b border-white/[0.05] shrink-0 min-w-0 bg-[#0E0D14]/75 backdrop-blur-2xl"
         >
           <div className="flex items-end gap-6 min-w-0 flex-1">
             <div
               onClick={() => setPlaylistToEdit(selectedPlaylist)}
-              className="relative group w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden bg-[#16151C] border border-[#292731]/60 flex items-center justify-center shadow-2xl shrink-0 cursor-pointer"
+              className="relative group w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden bg-[#121019] border border-white/[0.08] flex items-center justify-center shadow-[0_12px_36px_rgba(0,0,0,0.7)] shrink-0 cursor-pointer transition-all duration-300 hover:border-white/[0.18]"
               title="Click to edit playlist artwork and details"
             >
               {selectedPlaylist.cover_art ? (
@@ -203,7 +199,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 <div
                   className="w-full h-full flex items-center justify-center"
                   style={{
-                    background: `linear-gradient(135deg, ${accentColor}25, #14131A)`,
+                    background: `linear-gradient(135deg, ${accentColor}25, #07060A)`,
                   }}
                 >
                   <ListMusic
@@ -283,7 +279,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           </div>
         </div>
 
-        <TrackList tracks={playlistTracks} playlistId={selectedPlaylist.id} />
+        <TrackList key={selectedPlaylist.id} tracks={playlistTracks} playlistId={selectedPlaylist.id} />
 
         {/* Modals for Detail View */}
         <DeletePlaylistModal
@@ -323,16 +319,13 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full w-full overflow-y-auto px-8 py-7 select-none bg-transparent">
       {/* Top Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#292731]/40 shrink-0 mb-6">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] shrink-0 mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-[#F4F2F7] tracking-tight">Your Playlists</h2>
-            <span className="text-xs font-mono text-[#AAA6B2] bg-[#16151C] border border-[#282631] px-2.5 py-0.5 rounded-full">
-              {playlists.length + 1} collections
-            </span>
+            <h2 className="text-2xl font-bold text-[#F4F2F7] tracking-tight">Playlists</h2>
           </div>
-          <p className="text-xs text-[#777381] mt-1">
-            Personal collections and automatically saved Spotify downloads
+          <p className="text-xs text-[#777381] mt-0.5">
+            {playlists.length + 1} {playlists.length === 0 ? 'playlist' : 'playlists'}
           </p>
         </div>
 
@@ -348,7 +341,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               };
               input.click();
             }}
-            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#16151C] hover:bg-[#1E1D26] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-200 shadow-sm active:scale-95 cursor-pointer shrink-0"
+            className="group h-[34px] flex items-center gap-2 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-white/[0.08] transition-all duration-200 shadow-sm active:scale-95 cursor-pointer shrink-0"
             title="Import .m3u or .m3u8 playlist file"
           >
             <AnimatedFileTransfer type="up" className="w-4 h-4 text-[#19E6A0]" />
@@ -357,7 +350,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
           <button
             onClick={() => setIsCreating(true)}
-            className="group/newpl flex items-center gap-2 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
+            className="group/newpl h-[34px] flex items-center gap-2 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-200 shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 discord-icon discord-icon-pop" />
             <span>New Playlist</span>
@@ -385,7 +378,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
                   onSubmit={handleCreate}
                   onClick={(e) => e.stopPropagation()}
-                  className="p-5 rounded-2xl bg-[#16151C] border border-[#282631] w-full max-w-sm space-y-4 shadow-2xl relative overflow-hidden"
+                  className="p-5 rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] w-full max-w-sm space-y-4 shadow-[0_24px_64px_rgba(0,0,0,0.85)] relative overflow-hidden"
                 >
                   {/* Dynamic ambient accent glow inside create form */}
                   <div
@@ -393,7 +386,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                     style={{ backgroundColor: selectedColor }}
                   />
                   <div
-                    className="absolute top-0 left-0 right-0 h-1 pointer-events-none transition-colors duration-500 z-0"
+                    className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none transition-colors duration-500 z-0"
                     style={{ backgroundColor: selectedColor, boxShadow: `0 0 10px ${selectedColor}` }}
                   />
 
@@ -402,7 +395,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsCreating(false)}
-                      className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#1C1B22] p-1 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
+                      className="text-[#65616F] hover:text-[#F4F2F7] hover:bg-white/[0.08] p-1.5 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -421,19 +414,19 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                               setName(e.target.value);
                             }
                           }}
-                          className="text-[10px] text-[#777381] hover:text-[#19E6A0] bg-[#14131A] px-2 py-0.5 rounded-lg border border-[#2D2B3B] outline-none cursor-pointer"
+                          className="text-[10px] text-[#777381] hover:text-[#19E6A0] bg-[#07060A] px-2 py-0.5 rounded-lg border border-white/[0.08] outline-none cursor-pointer"
                         >
                           <option value="" disabled className="text-[#777381]">
                             Fill from artist/album...
                           </option>
-                          <optgroup label="Artists" className="bg-[#14131A] text-[#19E6A0]">
+                          <optgroup label="Artists" className="bg-[#07060A] text-[#19E6A0]">
                             {libraryArtists.slice(0, 30).map((art) => (
                               <option key={art.normalizedKey} value={art.name} className="text-[#F4F2F7]">
                                 {art.name} ({art.tracks.length} songs)
                               </option>
                             ))}
                           </optgroup>
-                          <optgroup label="Albums" className="bg-[#14131A] text-[#19E6A0]">
+                          <optgroup label="Albums" className="bg-[#07060A] text-[#19E6A0]">
                             {libraryAlbums.slice(0, 30).map((alb) => (
                               <option key={alb.key} value={alb.name} className="text-[#F4F2F7]">
                                 {alb.name} ({alb.tracks.length} tracks)
@@ -449,7 +442,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       autoFocus
-                      className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
+                      className="w-full px-3 h-10 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-all"
                     />
                     {matchingAlbum ? (
                       <div className="flex items-center justify-between p-2 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/30 text-xs text-[#19E6A0]">
@@ -499,7 +492,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       placeholder="Chill tracks for coding..."
                       value={desc}
                       onChange={(e) => setDesc(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors"
+                      className="w-full px-3 h-10 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-all"
                     />
                   </div>
 
@@ -560,22 +553,25 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         {/* Special Hero Card: Liked Songs */}
         <div
           onClick={() => onViewChange?.('liked')}
-          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#19E6A0]/25 via-[#351070]/30 to-[#14131A] border border-[#292731] hover:border-[#19E6A0]/50 transition-all duration-200 cursor-pointer group flex flex-col justify-between relative shadow-xl min-h-[180px] active:scale-[0.98]"
+          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#19E6A0]/15 via-[#1A1230]/40 to-[#0F0E16]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#19E6A0]/40 transition-all duration-300 cursor-pointer group flex flex-col justify-between relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_40px_rgba(25,230,160,0.15)] min-h-[180px] active:scale-[0.98] overflow-hidden"
         >
-          <div className="flex items-start justify-between">
-            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
+          {/* Subtle ambient corner glow */}
+          <div className="absolute -top-12 -right-12 w-28 h-28 rounded-full bg-[#19E6A0]/20 blur-2xl pointer-events-none group-hover:bg-[#19E6A0]/30 transition-colors" />
+
+          <div className="flex items-start justify-between relative z-10">
+            <div className="w-11 h-11 rounded-xl bg-white/[0.08] backdrop-blur-md border border-white/[0.14] flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
               <Heart className="w-6 h-6 fill-[#19E6A0] text-[#19E6A0]" />
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#AAA6B2] bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#9A96A5] bg-white/[0.06] border border-white/[0.08] px-2.5 py-0.5 rounded-full">
               Auto Playlist
             </span>
           </div>
 
-          <div className="pr-12">
+          <div className="pr-12 relative z-10">
             <h3 className="text-xl font-black text-[#F4F2F7] tracking-tight group-hover:text-[#19E6A0] transition-colors duration-200">
               Liked Songs
             </h3>
-            <p className="text-xs text-[#AAA6B2] mt-1 font-medium">
+            <p className="text-xs text-[#9A96A5] mt-1 font-medium">
               {likedTrackIds.size} favorite songs
             </p>
           </div>
@@ -586,7 +582,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 e.stopPropagation();
                 playTrack(likedTracks[0], likedTracks, 'liked');
               }}
-              className="group/likedplay absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
+              className="group/likedplay absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-[0_4px_20px_rgba(25,230,160,0.4)] flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer z-10"
               title="Play Liked Songs"
             >
               <Play className="w-5 h-5 fill-black text-black ml-0.5 discord-icon discord-icon-pop" />
@@ -597,22 +593,25 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         {/* Special Hero Card: Top Tracks */}
         <div
           onClick={() => onViewChange?.('top_tracks')}
-          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#E8C77A]/20 via-[#4A2600]/30 to-[#14131A] border border-[#292731] hover:border-[#E8C77A]/50 transition-all duration-200 cursor-pointer group flex flex-col justify-between relative shadow-xl min-h-[180px] active:scale-[0.98]"
+          className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-gradient-to-br from-[#F5C056]/15 via-[#301C0A]/40 to-[#0F0E16]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F5C056]/40 transition-all duration-300 cursor-pointer group flex flex-col justify-between relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_40px_rgba(245,192,86,0.15)] min-h-[180px] active:scale-[0.98] overflow-hidden"
         >
-          <div className="flex items-start justify-between">
-            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
-              <Flame className="w-6 h-6 fill-[#E8C77A] text-[#E8C77A]" />
+          {/* Subtle ambient corner glow */}
+          <div className="absolute -top-12 -right-12 w-28 h-28 rounded-full bg-[#F5C056]/20 blur-2xl pointer-events-none group-hover:bg-[#F5C056]/30 transition-colors" />
+
+          <div className="flex items-start justify-between relative z-10">
+            <div className="w-11 h-11 rounded-xl bg-white/[0.08] backdrop-blur-md border border-white/[0.14] flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
+              <Flame className="w-6 h-6 fill-[#F5C056] text-[#F5C056]" />
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#E8C77A] bg-[#E8C77A]/10 border border-[#E8C77A]/20 px-2.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#F5C056] bg-[#F5C056]/10 border border-[#F5C056]/20 px-2.5 py-0.5 rounded-full">
               Most Played
             </span>
           </div>
 
-          <div className="pr-12">
-            <h3 className="text-xl font-black text-[#F4F2F7] tracking-tight group-hover:text-[#E8C77A] transition-colors duration-200">
+          <div className="pr-12 relative z-10">
+            <h3 className="text-xl font-black text-[#F4F2F7] tracking-tight group-hover:text-[#F5C056] transition-colors duration-200">
               Top Played Mix
             </h3>
-            <p className="text-xs text-[#AAA6B2] mt-1 font-medium">
+            <p className="text-xs text-[#9A96A5] mt-1 font-medium">
               {topTracks.length} tracks ranked by your listens
             </p>
           </div>
@@ -623,7 +622,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 e.stopPropagation();
                 playTrack(topTracks[0], topTracks, 'top_tracks');
               }}
-              className="group/topplay absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#E8C77A] hover:bg-[#F2D795] text-black shadow-2xl flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer"
+              className="group/topplay absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#F5C056] hover:bg-[#F8CF75] text-black shadow-[0_4px_20px_rgba(245,192,86,0.4)] flex items-center justify-center transition-all duration-200 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 hover:scale-[1.05] active:scale-95 cursor-pointer z-10"
               title="Play Top Tracks"
             >
               <Play className="w-5 h-5 fill-black text-black ml-0.5 discord-icon discord-icon-pop" />
@@ -638,14 +637,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             .map((t) => t.cover_art)
             .filter((c): c is string => !!c);
           const uniqueCovers = Array.from(new Set(coverArts));
-          const accentColor = pl.coverColor || '#19E6A0';
+          const accentColor = pl.coverColor || '[var(--accent)]';
           const playTextColor = getContrastTextColor(accentColor);
 
           return (
             <div
               key={pl.id}
               onClick={() => onSelectPlaylist(pl.id)}
-              className="p-3.5 rounded-2xl bg-[#14131A] hover:bg-[#1B1A24] border border-[#282631] hover:border-[#383545] transition-all duration-200 cursor-pointer group flex flex-col gap-3 relative shadow-md hover:shadow-xl active:scale-[0.98] overflow-hidden"
+              className="p-3.5 rounded-2xl bg-[#121118]/70 hover:bg-[#181622]/90 backdrop-blur-xl border border-white/[0.06] hover:border-white/[0.14] transition-all duration-200 cursor-pointer group flex flex-col gap-3 relative shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)] active:scale-[0.98] overflow-hidden"
             >
               {/* Top Accent Indicator on Hover */}
               <div
@@ -665,7 +664,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
               />
 
               {/* Square Aspect Ratio Cover with 2x2 Collage or Artwork */}
-              <div className="aspect-square w-full rounded-xl overflow-hidden shadow-md bg-[#0E0D14] relative border border-[#292731]/70 flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
+              <div className="aspect-square w-full rounded-xl overflow-hidden shadow-md bg-[#0E0D14] relative border border-white/[0.08] flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
                 {pl.cover_art ? (
                   <img src={pl.cover_art} alt={pl.name} className="w-full h-full object-cover" />
                 ) : uniqueCovers.length >= 4 ? (
@@ -770,9 +769,9 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         {playlists.length < 3 && (
           <button
             onClick={() => setIsCreating(true)}
-            className="p-3.5 rounded-2xl border-2 border-dashed border-[#282631] hover:border-[#19E6A0]/50 hover:bg-[#16151C]/50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 text-[#65616F] hover:text-[#19E6A0] min-h-[180px] group active:scale-[0.98]"
+            className="p-3.5 rounded-2xl border-2 border-dashed border-white/[0.1] hover:border-[#19E6A0]/50 hover:bg-white/[0.02] transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 text-[#65616F] hover:text-[#19E6A0] min-h-[180px] group active:scale-[0.98]"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#14131A] flex items-center justify-center border border-[#282631] group-hover:border-[#19E6A0]/40 transition-colors duration-200">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center border border-white/[0.08] group-hover:border-[#19E6A0]/40 transition-colors duration-200">
               <FolderPlus className="w-5 h-5 text-[#777381] group-hover:text-[#19E6A0] transition-transform duration-200 group-hover:scale-110" />
             </div>
             <span className="text-xs font-semibold">Create Playlist</span>

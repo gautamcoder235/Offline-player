@@ -100,7 +100,7 @@ button:hover .animated-settings-icon .settings-cog,
 .animated-settings-icon:hover .settings-cog,
 .animated-settings-icon.is-spinning .settings-cog {
   transform: rotate(90deg);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 0 4px rgba(25, 230, 160, 0.45));
 }
 
@@ -110,7 +110,7 @@ button:hover .animated-settings-icon .settings-axle-group,
 .animated-settings-icon:hover .settings-axle-group,
 .animated-settings-icon.is-spinning .settings-axle-group {
   transform: scale(1.06);
-  stroke: #19E6A0;
+  stroke: var(--accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -148,7 +148,7 @@ button:hover .animated-settings-icon .settings-axle-group,
 button:hover .animated-dices-icon .dice-front,
 .animated-dices-icon:hover .dice-front {
   transform: translate(-1.5px, 1.5px) rotate(-16deg);
-  stroke: #19E6A0;
+  stroke: var(--accent);
 }
 
 .group:hover .animated-dices-icon .dice-back,
@@ -156,7 +156,7 @@ button:hover .animated-dices-icon .dice-front,
 button:hover .animated-dices-icon .dice-back,
 .animated-dices-icon:hover .dice-back {
   transform: translate(-1px, 2px) rotate(45deg);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 0 5px rgba(25, 230, 160, 0.55));
 }
 
@@ -182,12 +182,12 @@ button:hover .animated-dices-icon,
 
 .animated-dices-icon.is-rolling .dice-front {
   animation: diceTumbleRollFront 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  stroke: #19E6A0;
+  stroke: var(--accent);
 }
 
 .animated-dices-icon.is-rolling .dice-back {
   animation: diceTumbleRollBack 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 0 6px rgba(25, 230, 160, 0.7));
 }
 
@@ -217,7 +217,7 @@ button:hover .animated-dices-icon,
 button:hover .animated-file-transfer-icon.file-transfer-up .file-arrow-up,
 .animated-file-transfer-icon.file-transfer-up:hover .file-arrow-up {
   transform: translateY(-3.5px);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 -1px 3.5px rgba(25, 230, 160, 0.5));
 }
 
@@ -227,7 +227,7 @@ button:hover .animated-file-transfer-icon.file-transfer-up .file-arrow-up,
 button:hover .animated-file-transfer-icon.file-transfer-down .file-arrow-down,
 .animated-file-transfer-icon.file-transfer-down:hover .file-arrow-down {
   transform: translateY(3.5px);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 1px 3.5px rgba(25, 230, 160, 0.5));
 }
 
@@ -273,7 +273,7 @@ button:hover .animated-panel-toggle-icon.is-collapsed .panel-divider,
 button:hover .animated-panel-toggle-icon.is-collapsed .panel-chevron-open,
 .animated-panel-toggle-icon.is-collapsed:hover .panel-chevron-open {
   transform: translateX(2.5px);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 0 3px rgba(25, 230, 160, 0.45));
 }
 
@@ -285,7 +285,7 @@ button:hover .animated-panel-toggle-icon.is-expanded .panel-divider,
 button:hover .animated-panel-toggle-icon.is-expanded .panel-chevron-close,
 .animated-panel-toggle-icon.is-expanded:hover .panel-chevron-close {
   transform: translateX(-2.5px);
-  stroke: #19E6A0;
+  stroke: var(--accent);
   filter: drop-shadow(0 0 3px rgba(25, 230, 160, 0.45));
 }
 

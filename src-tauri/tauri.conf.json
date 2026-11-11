@@ -45,7 +45,8 @@
     "targets": "all",
     "createUpdaterArtifacts": true,
     "resources": [
-      "scripts/savify_bridge.py"
+      "scripts/savify_bridge.py",
+      "scripts/stream_resolver.py"
     ],
     "icon": [
       "icons/32x32.png",

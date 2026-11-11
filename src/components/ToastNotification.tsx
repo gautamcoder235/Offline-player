@@ -19,10 +19,10 @@ export const ToastNotification: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.95 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col rounded-xl bg-[#16151C] border border-[#292731] shadow-2xl max-w-sm overflow-hidden"
+            className="flex flex-col rounded-xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.8)] max-w-sm overflow-hidden"
           >
             <div className="flex items-center gap-3 px-3.5 py-2.5">
-              <div className="w-9 h-9 rounded-md overflow-hidden shrink-0 border border-[#292731] bg-[#14131A]">
+              <div className="w-9 h-9 rounded-md overflow-hidden shrink-0 border border-white/[0.08] bg-[#07060A]">
                 {toast.cover ? (
                   <img src={toast.cover} alt="" className="w-full h-full object-cover" />
                 ) : (

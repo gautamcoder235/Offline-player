@@ -22,7 +22,8 @@ export const AnimatedRefresh: React.FC<AnimatedRefreshProps> = ({
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`animated-refresh-icon ${isSpinning ? 'is-spinning' : ''} ${className}`}
+      className={`animated-refresh-icon origin-center ${isSpinning ? 'is-spinning text-[#19E6A0]' : ''} ${className}`}
+      style={{ transformOrigin: '50% 50%', transformBox: 'fill-box' }}
     >
       {/* Top Clockwise Semicircular Arrow */}
       <g className="refresh-arm refresh-arm-top">

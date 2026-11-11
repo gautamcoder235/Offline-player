@@ -13,9 +13,9 @@ interface Layer {
 
 const BLOBS = [
   {
-    top: '-15%',
-    left: '-10%',
-    width: '90vw',
+    top: '-12%',
+    left: '-8%',
+    width: '88vw',
     height: '75vh',
     borderRadius: '42% 58% 70% 30% / 45% 45% 55% 55%',
     anim: 'aura-a',
@@ -23,9 +23,9 @@ const BLOBS = [
     colorIdx: 0,
   },
   {
-    top: '5%',
-    left: '30%',
-    width: '85vw',
+    top: '4%',
+    left: '32%',
+    width: '84vw',
     height: '70vh',
     borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%',
     anim: 'aura-b',
@@ -33,20 +33,20 @@ const BLOBS = [
     colorIdx: 1,
   },
   {
-    top: '35%',
-    left: '-10%',
-    width: '92vw',
-    height: '80vh',
+    top: '32%',
+    left: '-8%',
+    width: '90vw',
+    height: '78vh',
     borderRadius: '35% 65% 60% 40% / 50% 60% 40% 50%',
     anim: 'aura-c',
     dur: '42s',
     colorIdx: 2,
   },
   {
-    top: '20%',
-    left: '15%',
+    top: '18%',
+    left: '16%',
     width: '80vw',
-    height: '68vh',
+    height: '66vh',
     borderRadius: '50% 50% 40% 60% / 40% 60% 50% 50%',
     anim: 'aura-d',
     dur: '30s',
@@ -54,21 +54,21 @@ const BLOBS = [
   },
 ];
 
-/** Smooth Gaussian asymptotic gradient that dissolves seamlessly without any visible edge or circle boundary */
+/** Smooth Gaussian asymptotic gradient that dissolves seamlessly without sharp edges */
 const makeGaussianGradient = (color: string) => `
   radial-gradient(
     ellipse 60% 50% at 50% 50%,
-    color-mix(in oklab, ${color} 70%, transparent) 0%,
-    color-mix(in oklab, ${color} 50%, transparent) 25%,
-    color-mix(in oklab, ${color} 28%, transparent) 50%,
-    color-mix(in oklab, ${color} 10%, transparent) 75%,
-    color-mix(in oklab, ${color} 2%, transparent) 90%,
+    color-mix(in oklab, ${color} 65%, transparent) 0%,
+    color-mix(in oklab, ${color} 45%, transparent) 25%,
+    color-mix(in oklab, ${color} 25%, transparent) 50%,
+    color-mix(in oklab, ${color} 8%, transparent) 75%,
+    color-mix(in oklab, ${color} 1%, transparent) 90%,
     transparent 100%
   )
 `;
 
 /** One full set of blended aura layers. New layers crossfade smoothly over previous ones. */
-const AuraLayer: React.FC<{ palette: Palette; paused: boolean; reduceEffects: boolean }> = ({
+const AuraLayer = React.memo<{ palette: Palette; paused: boolean; reduceEffects: boolean }>(({
   palette,
   paused,
   reduceEffects,
@@ -88,30 +88,29 @@ const AuraLayer: React.FC<{ palette: Palette; paused: boolean; reduceEffects: bo
       className="absolute inset-0"
       style={{
         opacity: visible ? 1 : 0,
-        transition: `opacity ${FADE_MS}ms ease-in-out`,
+        transition: `opacity ${FADE_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
         isolation: 'isolate',
       }}
     >
-      {/* 1. Base diffuse color mesh: eliminates empty black voids and ensures colors seamlessly wash across the screen */}
+      {/* 1. Base diffuse color wash: provides foundational atmospheric illumination */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{
           background: `
-            radial-gradient(ellipse 95% 75% at 15% 15%, color-mix(in oklab, ${c0} 40%, transparent) 0%, transparent 75%),
-            radial-gradient(ellipse 90% 80% at 85% 25%, color-mix(in oklab, ${c1} 40%, transparent) 0%, transparent 75%),
-            radial-gradient(ellipse 100% 85% at 50% 90%, color-mix(in oklab, ${c2} 35%, transparent) 0%, transparent 80%)
+            radial-gradient(ellipse 95% 75% at 15% 15%, color-mix(in oklab, ${c0} 38%, transparent) 0%, transparent 75%),
+            radial-gradient(ellipse 90% 80% at 85% 25%, color-mix(in oklab, ${c1} 36%, transparent) 0%, transparent 75%),
+            radial-gradient(ellipse 100% 85% at 50% 90%, color-mix(in oklab, ${c2} 32%, transparent) 0%, transparent 80%)
           `,
-          filter: reduceEffects ? 'none' : 'blur(70px)',
         }}
       />
 
-      {/* 2. Floating organic morphing aura blobs with mix-blend-mode: screen */}
+      {/* 2. Floating organic morphing aura blobs */}
       {BLOBS.map((b, i) => {
         const color = palette.colors[b.colorIdx] || c0;
         return (
           <div
             key={i}
-            className="aura-blob absolute"
+            className="aura-blob absolute pointer-events-none"
             style={{
               top: b.top,
               left: b.left,
@@ -120,20 +119,21 @@ const AuraLayer: React.FC<{ palette: Palette; paused: boolean; reduceEffects: bo
               borderRadius: b.borderRadius,
               background: makeGaussianGradient(color),
               mixBlendMode: 'screen',
-              filter: reduceEffects ? 'none' : 'blur(55px)',
               animation: `${b.anim} ${b.dur} ease-in-out infinite alternate`,
               animationPlayState: paused ? 'paused' : 'running',
-              willChange: 'transform',
+              transform: 'translate3d(0, 0, 0)',
+              backfaceVisibility: 'hidden',
+              willChange: reduceEffects ? 'auto' : 'transform',
             }}
           />
         );
       })}
     </div>
   );
-};
+});
 
 export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffects = false }) => {
-  const { currentTrack, isPlaying, themeAppearance } = usePlayer();
+  const { currentTrack, isPlaying, themeAppearance, coverMap } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
   const pulseRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(0);
@@ -142,7 +142,7 @@ export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffec
   ]);
 
   const trackKey = currentTrack ? `${currentTrack.title}|${currentTrack.artist}` : null;
-  const cover = currentTrack?.cover_art ?? null;
+  const cover = currentTrack ? (coverMap[currentTrack.id] || currentTrack.cover_art || null) : null;
   const fallbackGlow = currentTrack ? getTrackColor(currentTrack.title, currentTrack.artist).glow : null;
 
   useBassLevel(pulseRef, isPlaying && !reduceEffects);
@@ -178,7 +178,10 @@ export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffec
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#07060A]"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#08080B]"
+      style={{
+        contain: 'strict',
+      }}
       aria-hidden="true"
     >
       <style>{`
@@ -207,35 +210,26 @@ export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffec
         }
       `}</style>
 
-      {/* Permanent subtle brand gradient for ambient base tone */}
+      {/* Outer div: play/pause dimming with single unified high-efficiency blur filter */}
       <div
-        className="absolute inset-0"
-        style={{
-          background: `
-            radial-gradient(800px ellipse at 75% 5%, rgba(25, 230, 160, 0.04), transparent 60%),
-            radial-gradient(700px ellipse at 15% 25%, rgba(232, 199, 122, 0.025), transparent 60%)
-          `,
-        }}
-      />
-
-      {/* Outer div: play/pause dimming (CSS transition). Inner div: bass pulse (driven by --bass). */}
-      <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{
           opacity: isGlass
             ? (isPlaying ? 0.72 : 0.32)
-            : (isPlaying ? 0.36 : 0.14),
+            : (isPlaying ? 0.32 : 0.12),
           transition: 'opacity 800ms ease-in-out',
-          filter: reduceEffects ? 'none' : 'blur(120px) saturate(140%)',
-          willChange: 'filter, opacity',
+          filter: reduceEffects ? 'none' : 'blur(80px) saturate(140%)',
+          willChange: 'opacity',
         }}
       >
+        {/* Inner div: responsive acoustic bass pulse */}
         <div
           ref={pulseRef}
           className="absolute inset-0"
           style={{
             opacity: 'calc(0.78 + var(--bass, 0) * 0.22)',
-            transform: 'scale(calc(1 + var(--bass, 0) * 0.035))',
+            transform: 'scale(calc(1 + var(--bass, 0) * 0.04))',
+            willChange: 'transform, opacity',
           }}
         >
           {layers.map((l) => (
@@ -249,15 +243,16 @@ export const AmbientGlow: React.FC<{ reduceEffects?: boolean }> = ({ reduceEffec
         </div>
       </div>
 
-      {/* Radial Obsidian vignette: smoothly softens window corners without any horizontal/vertical partition bands */}
+      {/* Radial Obsidian Vignette & Contrast Shield:
+          Protects foreground text legibility while letting the ambient glow halo gracefully around the window */}
       <div
         className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${
-          isGlass ? 'opacity-80' : 'opacity-100'
+          isGlass ? 'opacity-65' : 'opacity-100'
         }`}
         style={{
           background: isGlass
-            ? 'radial-gradient(ellipse 100% 85% at 50% 50%, transparent 45%, rgba(7, 6, 10, 0.40) 80%, rgba(7, 6, 10, 0.75) 100%)'
-            : 'radial-gradient(ellipse 100% 85% at 50% 50%, transparent 35%, rgba(11, 10, 15, 0.55) 75%, rgba(11, 10, 15, 0.90) 100%)',
+            ? 'radial-gradient(ellipse 110% 90% at 50% 50%, transparent 40%, rgba(7, 6, 10, 0.35) 75%, rgba(7, 6, 10, 0.75) 100%)'
+            : 'radial-gradient(ellipse 110% 90% at 50% 50%, transparent 20%, rgba(7, 6, 10, 0.55) 60%, rgba(7, 6, 10, 0.92) 100%)',
         }}
       />
     </div>

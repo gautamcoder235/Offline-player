@@ -11,6 +11,7 @@ export const LyricsView: React.FC = () => {
     activeLyricIndex,
     seekTo,
     saveLyrics,
+    coverMap,
   } = usePlayer();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -53,19 +54,22 @@ export const LyricsView: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none relative bg-transparent">
       {/* Top Bar */}
-      <div className="px-8 py-4 flex items-center justify-between border-b border-[#292731] z-10 bg-[#100F14]/60 backdrop-blur-md min-w-0">
+      <div className="px-8 py-4 flex items-center justify-between border-b border-white/[0.05] z-10 bg-[#0C0B12]/80 backdrop-blur-2xl min-w-0">
         <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
-          <div className="w-11 h-11 rounded-lg overflow-hidden border border-[#292731] shrink-0 bg-[#16151C]">
-            {currentTrack.cover_art ? (
-              <img src={currentTrack.cover_art} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div
-                className="w-full h-full flex items-center justify-center font-bold text-xs"
-                style={{ background: trackColor.bg, color: trackColor.text }}
-              >
-                <Disc3 className="w-5 h-5" />
-              </div>
-            )}
+          <div className="w-11 h-11 rounded-xl overflow-hidden border border-white/[0.08] shrink-0 bg-[#121019] shadow-md">
+            {(() => {
+              const lyrCover = coverMap[currentTrack.id] || currentTrack.cover_art;
+              return lyrCover ? (
+                <img key={lyrCover} src={lyrCover} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center font-bold text-xs"
+                  style={{ background: trackColor.bg, color: trackColor.text }}
+                >
+                  <Disc3 className="w-5 h-5 text-[#65616F]" />
+                </div>
+              );
+            })()}
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight truncate">
@@ -79,7 +83,7 @@ export const LyricsView: React.FC = () => {
 
         <div className="flex items-center gap-2 shrink-0">
           {currentLyrics?.isSynced && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#19E6A0]/10 text-[#19E6A0] text-[11px] font-medium border border-[#19E6A0]/20">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#19E6A0]/10 text-[#19E6A0] text-[11px] font-medium border border-[#19E6A0]/25 shadow-[0_0_10px_rgba(25,230,160,0.15)]">
               <Check className="w-3 h-3" />
               <span>Synced Lyrics</span>
             </span>
@@ -88,7 +92,7 @@ export const LyricsView: React.FC = () => {
           {isEditing ? (
             <button
               onClick={handleSaveEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold transition-all duration-150 active:scale-95 cursor-pointer shadow-md"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold transition-all duration-150 active:scale-95 cursor-pointer shadow-md"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Save</span>
@@ -96,7 +100,7 @@ export const LyricsView: React.FC = () => {
           ) : (
             <button
               onClick={handleStartEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16151C] hover:bg-[#1D1C23] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#292731] transition-all duration-150 active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#9A96A5] hover:text-[#F4F2F7] text-xs font-medium border border-white/[0.06] hover:border-white/[0.12] transition-all duration-150 active:scale-95 cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span>Edit LRC</span>
@@ -124,7 +128,7 @@ export const LyricsView: React.FC = () => {
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
               placeholder="[00:10.00] First lyric line&#10;[00:14.50] Second lyric line..."
-              className="flex-1 w-full p-4 rounded-xl bg-[#14131A] border border-[#282631] font-mono text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 resize-none"
+              className="flex-1 w-full p-4 rounded-xl bg-[#07060A]/80 border border-white/[0.08] font-mono text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 resize-none"
             />
           </div>
         ) : !currentLyrics || currentLyrics.lines.length === 0 ? (

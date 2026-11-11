@@ -131,18 +131,18 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-        className="w-full max-w-lg bg-[#14131A] border border-[#2B2936] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#24222E]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-2.5">
             <Music className="w-4 h-4 text-[#19E6A0]" />
             <h2 className="text-sm font-bold text-[#F4F2F7]">Edit Track Tags & Artwork</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1E1D26] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-white/[0.08] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -162,7 +162,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
             <div className="flex flex-col items-center gap-2 shrink-0">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="group relative w-32 h-32 rounded-xl border-2 border-dashed border-[#2B2936] hover:border-[#19E6A0]/60 bg-[#1A1924] overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 shadow-md"
+                className="group relative w-32 h-32 rounded-xl border-2 border-dashed border-white/[0.1] hover:border-[#19E6A0]/60 bg-[#12111A] overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 shadow-md"
                 title="Click to replace album artwork"
               >
                 {coverArt ? (
@@ -212,7 +212,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Bohemian Rhapsody"
                   required
-                  className="w-full px-3 py-1.5 text-xs bg-[#1C1B24] border border-[#2B2936] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/40 transition-colors"
+                  className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
                 />
               </div>
 
@@ -225,7 +225,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                   value={artist}
                   onChange={(e) => setArtist(e.target.value)}
                   placeholder="e.g. Queen"
-                  className="w-full px-3 py-1.5 text-xs bg-[#1C1B24] border border-[#2B2936] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/40 transition-colors"
+                  className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
                 />
               </div>
 
@@ -239,7 +239,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                     value={album}
                     onChange={(e) => setAlbum(e.target.value)}
                     placeholder="e.g. A Night at the Opera"
-                    className="w-full px-3 py-1.5 text-xs bg-[#1C1B24] border border-[#2B2936] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/40 transition-colors"
+                    className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
                   />
                 </div>
                 <div>
@@ -251,7 +251,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
                     placeholder="1975"
-                    className="w-full px-3 py-1.5 text-xs bg-[#1C1B24] border border-[#2B2936] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/40 transition-colors"
+                    className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
                   />
                 </div>
               </div>
@@ -263,19 +263,19 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#24222E]">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1C1B24] transition-colors cursor-pointer"
+              className="h-9 px-4 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-white/[0.06] border border-white/[0.08] transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#16CE8F] text-black text-xs font-semibold shadow-lg shadow-[#19E6A0]/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              className="h-9 flex items-center gap-1.5 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold shadow-lg shadow-[#19E6A0]/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
             >
               {isSaving ? (
                 <>

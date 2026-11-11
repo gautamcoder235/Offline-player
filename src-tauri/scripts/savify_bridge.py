@@ -38,7 +38,7 @@ def main():
         sys.exit(1)
 
     default_music = Path.home() / "Music" / "Spotify offline"
-    output_dir = sys.argv[2] if len(sys.argv) > 2 else str(default_music)
+    output_dir = sys.argv[2].strip() if len(sys.argv) > 2 and sys.argv[2].strip() else str(default_music)
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -172,7 +172,11 @@ def main():
                     elif expected_file.is_file():
                         file_location = str(expected_file)
                     else:
-                        file_location = str(actual_location or expected_file)
+                        matches = list(out_path.glob(f"*{safe_path_string(track.name)}*.mp3"))
+                        if matches:
+                            file_location = str(matches[-1])
+                        else:
+                            file_location = str(actual_location or expected_file)
                     emit({
                         "type": "track_done",
                         "current": current_num,

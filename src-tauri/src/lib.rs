@@ -6,11 +6,13 @@ pub mod streamer;
 #[cfg(windows)]
 pub mod taskbar;
 
+use base64::Engine;
 use downloader::{run_download, stop_download, DownloaderState};
 use lyrics::{get_local_lyrics, save_lrc_file, LyricsResult};
 use metadata::{extract_metadata, TrackMetadata};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::Mutex;
 use tauri::{AppHandle, State};
 use walkdir::WalkDir;
@@ -77,13 +79,129 @@ fn persist_settings(settings: &AppSettings) {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryCacheEntry {
+    pub mtime: u64,
+    pub size: u64,
+    pub track: TrackMetadata,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LibraryCache {
+    pub version: u32,
+    pub entries: std::collections::HashMap<String, LibraryCacheEntry>,
+}
+
+pub fn get_appdata_dir() -> PathBuf {
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        PathBuf::from(appdata).join("OfflinePlayer")
+    } else {
+        dirs::config_dir()
+            .map(|p| p.join("OfflinePlayer"))
+            .unwrap_or_else(|| PathBuf::from("OfflinePlayer"))
+    }
+}
+
+pub fn get_covers_dir() -> PathBuf {
+    let dir = get_appdata_dir().join("covers");
+    let _ = std::fs::create_dir_all(&dir);
+    dir
+}
+
+fn get_library_cache_path() -> PathBuf {
+    let dir = get_appdata_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    dir.join("library_cache.json")
+}
+
+fn load_library_cache_from_disk() -> LibraryCache {
+    let path = get_library_cache_path();
+    if path.is_file() {
+        if let Ok(data) = std::fs::read_to_string(&path) {
+            if let Ok(cache) = serde_json::from_str::<LibraryCache>(&data) {
+                return cache;
+            }
+        }
+    }
+    LibraryCache {
+        version: 1,
+        entries: std::collections::HashMap::new(),
+    }
+}
+
+fn save_library_cache_to_disk(cache: &LibraryCache) {
+    let cache_file = get_library_cache_path();
+    let tmp_file = cache_file.with_extension("tmp");
+    if let Ok(json) = serde_json::to_string(cache) {
+        if std::fs::write(&tmp_file, json).is_ok() {
+            let _ = std::fs::rename(tmp_file, cache_file);
+        }
+    }
+}
+
+pub fn update_track_session_urls(track: &mut TrackMetadata) {
+    let current_port = streamer::SERVER_PORT.load(std::sync::atomic::Ordering::SeqCst);
+    track.stream_url = streamer::get_stream_url(&track.file_path);
+    if let Some(ref cover) = track.cover_art {
+        if let Some(pos) = cover.find("/cover?") {
+            track.cover_art = Some(format!("http://127.0.0.1:{}{}", current_port, &cover[pos..]));
+        }
+    } else {
+        // If track has no cover URL, check if artwork exists in APPDATA covers dir
+        let covers_dir = get_covers_dir();
+        let clean_artist = if track.artist.to_lowercase().contains("unknown") { "" } else { track.artist.trim() };
+        let term = if clean_artist.is_empty() {
+            track.title.trim().to_string()
+        } else {
+            format!("{} {}", clean_artist, track.title.trim())
+        };
+        let term_hash = metadata::deterministic_id(&term);
+        let track_id = metadata::deterministic_id(&track.file_path);
+
+        if covers_dir.join(format!("{}.jpg", term_hash)).is_file()
+            || covers_dir.join(format!("{}.png", term_hash)).is_file()
+            || covers_dir.join(format!("{}.txt", term_hash)).is_file()
+        {
+            track.cover_art = Some(streamer::get_cover_url(&term_hash, &track.file_path));
+        } else if covers_dir.join(format!("{}.jpg", track_id)).is_file()
+            || covers_dir.join(format!("{}.png", track_id)).is_file()
+            || covers_dir.join(format!("{}.txt", track_id)).is_file()
+        {
+            track.cover_art = Some(streamer::get_cover_url(&track_id, &track.file_path));
+        }
+    }
+}
+
+#[tauri::command]
+async fn load_cached_library() -> Result<Vec<TrackMetadata>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let cache = load_library_cache_from_disk();
+        let mut tracks: Vec<TrackMetadata> = cache.entries.into_values().map(|e| e.track).collect();
+
+        for track in &mut tracks {
+            update_track_session_urls(track);
+        }
+
+        tracks.sort_by(|a, b| {
+            a.artist
+                .to_lowercase()
+                .cmp(&b.artist.to_lowercase())
+                .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+        });
+
+        Ok(tracks)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String>>) -> Result<Vec<TrackMetadata>, String> {
     let dirs_to_scan = match directories {
         Some(d) if !d.is_empty() => d,
         _ => {
             let lock = state.settings.lock().unwrap();
-            if !lock.music_directories.is_empty() {
+            let mut dirs = if !lock.music_directories.is_empty() {
                 lock.music_directories.clone()
             } else {
                 let default_dir = dirs::audio_dir()
@@ -94,17 +212,22 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
                             .unwrap_or_else(|| "Music".to_string())
                     });
                 vec![default_dir]
+            };
+            if !lock.download_directory.is_empty() && !dirs.contains(&lock.download_directory) {
+                dirs.push(lock.download_directory.clone());
             }
+            dirs
         }
     };
 
     tauri::async_runtime::spawn_blocking(move || {
+        let mut cache = load_library_cache_from_disk();
         let mut tracks = Vec::new();
         let mut seen_paths = std::collections::HashSet::new();
 
         let valid_extensions = ["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "webm", "alac", "aiff", "aif"];
 
-        for dir_path in dirs_to_scan {
+        for dir_path in &dirs_to_scan {
             let p = Path::new(&dir_path);
             if !p.exists() || !p.is_dir() {
                 continue;
@@ -115,8 +238,41 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
                     if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
                         if valid_extensions.contains(&ext.to_lowercase().as_str()) {
                             let path_str = entry.path().to_string_lossy().to_string();
-                            if seen_paths.insert(path_str) {
-                                if let Some(meta) = extract_metadata(entry.path()) {
+                            if seen_paths.insert(path_str.clone()) {
+                                let (mtime, size) = match entry.metadata() {
+                                    Ok(m) => {
+                                        let mt = m
+                                            .modified()
+                                            .ok()
+                                            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                                            .map(|d| d.as_secs())
+                                            .unwrap_or(0);
+                                        (mt, m.len())
+                                    }
+                                    Err(_) => (0, 0),
+                                };
+
+                                // Delta check: if unmodified, reuse cached metadata
+                                if let Some(cached_entry) = cache.entries.get(&path_str) {
+                                    if cached_entry.mtime == mtime && cached_entry.size == size {
+                                        let mut track = cached_entry.track.clone();
+                                        update_track_session_urls(&mut track);
+                                        tracks.push(track);
+                                        continue;
+                                    }
+                                }
+
+                                // New or modified file: extract metadata with lofty
+                                if let Some(mut meta) = extract_metadata(entry.path()) {
+                                    cache.entries.insert(
+                                        path_str,
+                                        LibraryCacheEntry {
+                                            mtime,
+                                            size,
+                                            track: meta.clone(),
+                                        },
+                                    );
+                                    update_track_session_urls(&mut meta);
                                     tracks.push(meta);
                                 }
                             }
@@ -125,6 +281,22 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
                 }
             }
         }
+
+        // Prune deleted files only if their directory was scanned and the file is gone
+        cache.entries.retain(|path, _| {
+            if seen_paths.contains(path) {
+                return true;
+            }
+            let p = Path::new(path);
+            let under_scanned_dir = dirs_to_scan.iter().any(|d| p.starts_with(Path::new(d)));
+            if under_scanned_dir && !p.exists() {
+                return false;
+            }
+            true
+        });
+
+        // Save updated cache atomically
+        save_library_cache_to_disk(&cache);
 
         // Sort by artist, then title
         tracks.sort_by(|a, b| {
@@ -235,6 +407,12 @@ async fn delete_track_file(file_path: String) -> Result<(), String> {
         return Err("File does not exist on disk".to_string());
     }
     std::fs::remove_file(path).map_err(|e| format!("Failed to delete file from disk: {}", e))?;
+
+    // Also remove from library cache
+    let mut cache = load_library_cache_from_disk();
+    if cache.entries.remove(&file_path).is_some() || cache.entries.remove(&clean_path).is_some() {
+        save_library_cache_to_disk(&cache);
+    }
     Ok(())
 }
 
@@ -423,6 +601,26 @@ fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
+fn update_cache_cover_for_track(artist: &str, title: &str, cover_url: &str) {
+    let mut cache = load_library_cache_from_disk();
+    let mut updated = false;
+    let clean_artist = artist.trim().to_lowercase();
+    let clean_title = title.trim().to_lowercase();
+    for entry in cache.entries.values_mut() {
+        if entry.track.artist.trim().to_lowercase() == clean_artist
+            && entry.track.title.trim().to_lowercase() == clean_title
+        {
+            if entry.track.cover_art.as_deref() != Some(cover_url) {
+                entry.track.cover_art = Some(cover_url.to_string());
+                updated = true;
+            }
+        }
+    }
+    if updated {
+        save_library_cache_to_disk(&cache);
+    }
+}
+
 #[tauri::command]
 async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -434,16 +632,34 @@ async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>
         };
         let hash = crate::metadata::deterministic_id(&term);
         
-        let base = std::env::var("APPDATA")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("."));
-        let cache_dir = base.join("OfflinePlayer").join("covers");
-        let _ = std::fs::create_dir_all(&cache_dir);
-        let cache_file = cache_dir.join(format!("{}.txt", hash));
+        let cache_dir = get_covers_dir();
+        let jpg_file = cache_dir.join(format!("{}.jpg", hash));
+        let png_file = cache_dir.join(format!("{}.png", hash));
+        let txt_file = cache_dir.join(format!("{}.txt", hash));
         
-        if cache_file.exists() {
-            if let Ok(cached_data) = std::fs::read_to_string(&cache_file) {
-                return Ok(Some(cached_data));
+        if jpg_file.is_file() || png_file.is_file() {
+            let url = crate::streamer::get_cover_url(&hash, "");
+            update_cache_cover_for_track(&artist, &title, &url);
+            return Ok(Some(url));
+        }
+
+        if txt_file.is_file() {
+            if let Ok(raw_content) = std::fs::read_to_string(&txt_file) {
+                let trimmed = raw_content.trim();
+                let b64_str = if let Some(idx) = trimmed.find(";base64,") {
+                    &trimmed[idx + 8..]
+                } else {
+                    trimmed
+                };
+                if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64_str.trim()) {
+                    let is_png = trimmed.contains("image/png") || bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]);
+                    let target = if is_png { &png_file } else { &jpg_file };
+                    let _ = std::fs::write(target, &bytes);
+                    let _ = std::fs::remove_file(&txt_file);
+                    let url = crate::streamer::get_cover_url(&hash, "");
+                    update_cache_cover_for_track(&artist, &title, &url);
+                    return Ok(Some(url));
+                }
             }
         }
 
@@ -465,9 +681,15 @@ async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>
                                 let high_res_url = art_url.replace("100x100", "600x600");
                                 if let Ok(img_resp) = client.get(&high_res_url).send() {
                                     if let Ok(bytes) = img_resp.bytes() {
-                                        use base64::{Engine as _, engine::general_purpose};
-                                        let encoded = general_purpose::STANDARD.encode(&bytes);
-                                        return Some(format!("data:image/jpeg;base64,{}", encoded));
+                                        let is_png = bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]);
+                                        let target = if is_png {
+                                            cache_dir.join(format!("{}.png", hash))
+                                        } else {
+                                            cache_dir.join(format!("{}.jpg", hash))
+                                        };
+                                        if std::fs::write(&target, &bytes).is_ok() {
+                                            return Some(crate::streamer::get_cover_url(&hash, ""));
+                                        }
                                     }
                                 }
                             }
@@ -478,16 +700,16 @@ async fn fetch_cover_art(artist: String, title: String) -> Result<Option<String>
             None
         };
 
-        if let Some(base64_str) = search_itunes(&term) {
-            let _ = std::fs::write(&cache_file, &base64_str);
-            return Ok(Some(base64_str));
+        if let Some(cover_url) = search_itunes(&term) {
+            update_cache_cover_for_track(&artist, &title, &cover_url);
+            return Ok(Some(cover_url));
         }
 
         let clean_title = title.split('(').next().unwrap_or(&title).split('[').next().unwrap_or(&title).trim();
         if !clean_title.is_empty() && clean_title != term {
-            if let Some(base64_str) = search_itunes(clean_title) {
-                let _ = std::fs::write(&cache_file, &base64_str);
-                return Ok(Some(base64_str));
+            if let Some(cover_url) = search_itunes(clean_title) {
+                update_cache_cover_for_track(&artist, &title, &cover_url);
+                return Ok(Some(cover_url));
             }
         }
 
@@ -508,7 +730,33 @@ async fn save_track_tags(
 ) -> Result<TrackMetadata, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(&file_path);
-        metadata::save_track_metadata(&path, &title, &artist, &album, year, cover_art)
+        let updated = metadata::save_track_metadata(&path, &title, &artist, &album, year, cover_art)?;
+
+        // Update library cache on disk
+        let mut cache = load_library_cache_from_disk();
+        let (mtime, size) = match std::fs::metadata(&path) {
+            Ok(m) => {
+                let mt = m
+                    .modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                (mt, m.len())
+            }
+            Err(_) => (0, 0),
+        };
+        cache.entries.insert(
+            file_path,
+            LibraryCacheEntry {
+                mtime,
+                size,
+                track: updated.clone(),
+            },
+        );
+        save_library_cache_to_disk(&cache);
+
+        Ok(updated)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -550,6 +798,37 @@ async fn handle_dropped_paths(paths: Vec<String>) -> Result<Vec<TrackMetadata>, 
                         }
                     }
                 }
+            }
+        }
+        if !results.is_empty() {
+            let mut cache = load_library_cache_from_disk();
+            let mut updated = false;
+            for track in &results {
+                let p = Path::new(&track.file_path);
+                let (mtime, size) = match p.metadata() {
+                    Ok(m) => {
+                        let mt = m
+                            .modified()
+                            .ok()
+                            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0);
+                        (mt, m.len())
+                    }
+                    Err(_) => (0, 0),
+                };
+                cache.entries.insert(
+                    track.file_path.clone(),
+                    LibraryCacheEntry {
+                        mtime,
+                        size,
+                        track: track.clone(),
+                    },
+                );
+                updated = true;
+            }
+            if updated {
+                save_library_cache_to_disk(&cache);
             }
         }
         Ok(results)
@@ -598,13 +877,17 @@ async fn clear_discord_status(state: State<'_, AppState>) -> Result<(), String> 
 }
 
 #[tauri::command]
-async fn search_spotify(query: String, limit: Option<u32>) -> Result<Vec<OnlineSearchResult>, String> {
+async fn search_spotify(query: String, limit: Option<u32>, country: Option<String>) -> Result<Vec<OnlineSearchResult>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let limit = limit.unwrap_or(20).min(25);
+        let limit = limit.unwrap_or(30).min(50);
         let encoded_query = percent_encoding::utf8_percent_encode(&query, percent_encoding::NON_ALPHANUMERIC).to_string();
+        let country_param = match country {
+            Some(ref c) if !c.trim().is_empty() => format!("&country={}", c.trim().to_uppercase()),
+            _ => String::new(),
+        };
         let url = format!(
-            "https://itunes.apple.com/search?term={}&media=music&limit={}",
-            encoded_query, limit
+            "https://itunes.apple.com/search?term={}&media=music&limit={}{}",
+            encoded_query, limit, country_param
         );
 
         let client = reqwest::blocking::Client::builder()
@@ -662,6 +945,120 @@ async fn search_spotify(query: String, limit: Option<u32>) -> Result<Vec<OnlineS
     .await
     .map_err(|e| e.to_string())?
 }
+
+const STREAM_RESOLVER_PY: &str = include_str!("../scripts/stream_resolver.py");
+
+static STREAM_URL_CACHE: std::sync::LazyLock<Mutex<std::collections::HashMap<String, String>>> =
+    std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+
+#[tauri::command]
+fn check_cached_stream_url(title: String, artist: String) -> Option<String> {
+    let cache_key = format!("{} - {}", artist.trim().to_lowercase(), title.trim().to_lowercase());
+    let cache = STREAM_URL_CACHE.lock().unwrap();
+    cache.get(&cache_key).cloned()
+}
+
+#[tauri::command]
+async fn get_online_stream_url(
+    app: AppHandle,
+    title: String,
+    artist: String,
+) -> Result<String, String> {
+    let cache_key = format!("{} - {}", artist.trim().to_lowercase(), title.trim().to_lowercase());
+    {
+        let cache = STREAM_URL_CACHE.lock().unwrap();
+        if let Some(cached_url) = cache.get(&cache_key) {
+            return Ok(cached_url.clone());
+        }
+    }
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let cur_dir = std::env::current_dir().unwrap_or_default();
+        let mut python_candidates: Vec<PathBuf> = Vec::new();
+
+        python_candidates.push(cur_dir.join(".venv").join("Scripts").join("python.exe"));
+        python_candidates.push(cur_dir.join(".venv").join("bin").join("python"));
+        if let Some(home) = dirs::home_dir() {
+            python_candidates.push(home.join(".musicvault").join(".venv").join("Scripts").join("python.exe"));
+            python_candidates.push(home.join(".musicvault").join(".venv").join("bin").join("python"));
+        }
+
+        let python_path = python_candidates
+            .into_iter()
+            .find(|p| p.is_file())
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| {
+                if Command::new("python").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+                    "python".to_string()
+                } else if Command::new("py").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+                    "py".to_string()
+                } else {
+                    "python3".to_string()
+                }
+            });
+
+        let mut candidate_paths = Vec::new();
+        if let Ok(res_dir) = app.path().resource_dir() {
+            candidate_paths.push(res_dir.join("scripts").join("stream_resolver.py"));
+            candidate_paths.push(res_dir.join("stream_resolver.py"));
+        }
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                candidate_paths.push(exe_dir.join("scripts").join("stream_resolver.py"));
+                candidate_paths.push(exe_dir.join("stream_resolver.py"));
+            }
+        }
+        candidate_paths.push(cur_dir.join("src-tauri").join("scripts").join("stream_resolver.py"));
+        candidate_paths.push(cur_dir.join("scripts").join("stream_resolver.py"));
+
+        let script_path = if let Some(found) = candidate_paths.into_iter().find(|p| p.is_file()) {
+            found
+        } else {
+            let fallback_dir = dirs::config_dir()
+                .map(|p| p.join("OfflinePlayer").join("scripts"))
+                .unwrap_or_else(|| cur_dir.join("scripts"));
+            let _ = std::fs::create_dir_all(&fallback_dir);
+            let fallback_file = fallback_dir.join("stream_resolver.py");
+            let _ = std::fs::write(&fallback_file, STREAM_RESOLVER_PY);
+            fallback_file
+        };
+
+        let mut cmd = Command::new(&python_path);
+        let query = format!("{} - {}", artist.trim(), title.trim());
+        cmd.arg(script_path)
+            .arg(&query)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        let output = cmd.output().map_err(|e| format!("Failed to spawn stream resolver: {}", e))?;
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&stdout) {
+                if parsed.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+                    if let Some(url) = parsed.get("data").and_then(|d| d.get("url")).and_then(|u| u.as_str()) {
+                        let proxy_url = streamer::get_proxy_stream_url(url);
+                        let mut cache = STREAM_URL_CACHE.lock().unwrap();
+                        cache.insert(cache_key, proxy_url.clone());
+                        return Ok(proxy_url);
+                    }
+                }
+            }
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Stream resolver could not locate audio stream: {}", stderr))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -842,6 +1239,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            load_cached_library,
             scan_library,
             get_audio_url,
             start_download,
@@ -870,7 +1268,208 @@ pub fn run() {
             update_discord_status,
             clear_discord_status,
             search_spotify,
+            check_cached_stream_url,
+            get_online_stream_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn test_update_track_session_urls() {
+        streamer::SERVER_PORT.store(49200, Ordering::SeqCst);
+
+        let mut track = TrackMetadata {
+            id: "track_123".to_string(),
+            file_path: "C:\\Music\\song.mp3".to_string(),
+            title: "Test Song".to_string(),
+            artist: "Test Artist".to_string(),
+            album: "Test Album".to_string(),
+            duration: 180.0,
+            duration_str: "3:00".to_string(),
+            year: Some(2025),
+            bitrate: Some(320),
+            size_bytes: 4096,
+            cover_art: Some("http://127.0.0.1:11111/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3".to_string()),
+            stream_url: "http://127.0.0.1:11111/audio?file=C%3A%5CMusic%5Csong.mp3".to_string(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: Some(1),
+            disc_number: Some(1),
+            genre: Some("Rock".to_string()),
+        };
+
+        update_track_session_urls(&mut track);
+
+        assert!(track.stream_url.starts_with("http://127.0.0.1:49200/audio?file="));
+        assert_eq!(
+            track.cover_art,
+            Some("http://127.0.0.1:49200/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3".to_string())
+        );
+
+        // Switch to a new session port (simulating app restart)
+        streamer::SERVER_PORT.store(56789, Ordering::SeqCst);
+        update_track_session_urls(&mut track);
+
+        assert!(track.stream_url.starts_with("http://127.0.0.1:56789/audio?file="));
+        assert_eq!(
+            track.cover_art,
+            Some("http://127.0.0.1:56789/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3".to_string())
+        );
+    }
+
+    #[test]
+    fn test_library_cache_serialization() {
+        let mut cache = LibraryCache::default();
+        let track = TrackMetadata {
+            id: "track_456".to_string(),
+            file_path: "C:\\Music\\another.flac".to_string(),
+            title: "Another Song".to_string(),
+            artist: "Another Artist".to_string(),
+            album: "Another Album".to_string(),
+            duration: 210.0,
+            duration_str: "3:30".to_string(),
+            year: Some(2024),
+            bitrate: Some(1000),
+            size_bytes: 8192,
+            cover_art: None,
+            stream_url: "http://127.0.0.1:3000/audio?file=test".to_string(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: None,
+            disc_number: None,
+            genre: None,
+        };
+
+        cache.entries.insert(
+            track.file_path.clone(),
+            LibraryCacheEntry {
+                mtime: 1700000000,
+                size: 8192,
+                track: track.clone(),
+            },
+        );
+
+        let json = serde_json::to_string(&cache).expect("Serialization failed");
+        let deserialized: LibraryCache = serde_json::from_str(&json).expect("Deserialization failed");
+
+        assert_eq!(deserialized.entries.len(), 1);
+        let entry = deserialized.entries.get(&track.file_path).expect("Entry not found");
+        assert_eq!(entry.mtime, 1700000000);
+        assert_eq!(entry.size, 8192);
+        assert_eq!(entry.track.title, "Another Song");
+    }
+
+    #[test]
+    fn test_update_track_session_urls_resolves_disk_cover() {
+        streamer::SERVER_PORT.store(49200, Ordering::SeqCst);
+        let covers_dir = get_covers_dir();
+        let term = "DiskArtist DiskTitle";
+        let hash = metadata::deterministic_id(term);
+        let test_cover_file = covers_dir.join(format!("{}.jpg", hash));
+        let _ = std::fs::write(&test_cover_file, b"fake_jpeg_bytes");
+
+        let mut track = TrackMetadata {
+            id: "disk_track_1".to_string(),
+            file_path: "C:\\Music\\disk_song.mp3".to_string(),
+            title: "DiskTitle".to_string(),
+            artist: "DiskArtist".to_string(),
+            album: "DiskAlbum".to_string(),
+            duration: 120.0,
+            duration_str: "2:00".to_string(),
+            year: None,
+            bitrate: None,
+            size_bytes: 1024,
+            cover_art: None,
+            stream_url: "".to_string(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: None,
+            disc_number: None,
+            genre: None,
+        };
+
+        update_track_session_urls(&mut track);
+        assert!(track.cover_art.is_some());
+        let cover = track.cover_art.unwrap();
+        assert!(cover.starts_with("http://127.0.0.1:49200/cover?id="));
+        assert!(cover.contains(&hash));
+
+        // Cleanup
+        let _ = std::fs::remove_file(test_cover_file);
+    }
+
+    #[test]
+    fn test_cache_retain_preserves_unscanned_directories() {
+        let mut cache = LibraryCache::default();
+        let track_a = TrackMetadata {
+            id: "a".to_string(),
+            file_path: "C:\\FolderA\\songA.mp3".to_string(),
+            title: "Song A".to_string(),
+            artist: "Artist A".to_string(),
+            album: "Album A".to_string(),
+            duration: 100.0,
+            duration_str: "1:40".to_string(),
+            year: None,
+            bitrate: None,
+            size_bytes: 500,
+            cover_art: None,
+            stream_url: "".to_string(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: None,
+            disc_number: None,
+            genre: None,
+        };
+        let track_b = TrackMetadata {
+            id: "b".to_string(),
+            file_path: "D:\\FolderB\\songB.mp3".to_string(),
+            title: "Song B".to_string(),
+            artist: "Artist B".to_string(),
+            album: "Album B".to_string(),
+            duration: 100.0,
+            duration_str: "1:40".to_string(),
+            year: None,
+            bitrate: None,
+            size_bytes: 500,
+            cover_art: None,
+            stream_url: "".to_string(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: None,
+            disc_number: None,
+            genre: None,
+        };
+
+        cache.entries.insert("C:\\FolderA\\songA.mp3".to_string(), LibraryCacheEntry { mtime: 1, size: 500, track: track_a });
+        cache.entries.insert("D:\\FolderB\\songB.mp3".to_string(), LibraryCacheEntry { mtime: 2, size: 500, track: track_b });
+
+        // Simulate scanning ONLY "C:\FolderA", where songA was seen
+        let dirs_to_scan = vec!["C:\\FolderA".to_string()];
+        let mut seen_paths = std::collections::HashSet::new();
+        seen_paths.insert("C:\\FolderA\\songA.mp3".to_string());
+
+        // Prune logic from scan_library
+        cache.entries.retain(|path, _| {
+            if seen_paths.contains(path) {
+                return true;
+            }
+            let p = Path::new(path);
+            let under_scanned_dir = dirs_to_scan.iter().any(|d| p.starts_with(Path::new(d)));
+            if under_scanned_dir && !p.exists() {
+                return false;
+            }
+            true
+        });
+
+        // Track B in FolderB MUST be preserved!
+        assert_eq!(cache.entries.len(), 2);
+        assert!(cache.entries.contains_key("C:\\FolderA\\songA.mp3"));
+        assert!(cache.entries.contains_key("D:\\FolderB\\songB.mp3"));
+    }
 }

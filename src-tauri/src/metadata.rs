@@ -81,6 +81,17 @@ pub fn save_track_metadata(
 
     tagged_file.save_to_path(file_path, lofty::config::WriteOptions::default()).map_err(|e| e.to_string())?;
 
+    let covers_dir = crate::get_covers_dir();
+    let track_id = deterministic_id(&file_path.to_string_lossy());
+    let _ = std::fs::remove_file(covers_dir.join(format!("{}.jpg", track_id)));
+    let _ = std::fs::remove_file(covers_dir.join(format!("{}.png", track_id)));
+    let _ = std::fs::remove_file(covers_dir.join(format!("{}.txt", track_id)));
+    let term = format!("{} {}", artist.trim(), title.trim());
+    let term_hash = deterministic_id(&term);
+    let _ = std::fs::remove_file(covers_dir.join(format!("{}.jpg", term_hash)));
+    let _ = std::fs::remove_file(covers_dir.join(format!("{}.png", term_hash)));
+    let _ = std::fs::remove_file(covers_dir.join(format!("{}.txt", term_hash)));
+
     extract_metadata(file_path).ok_or_else(|| "Failed to re-read metadata".to_string())
 }
 
@@ -120,11 +131,18 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         .to_string();
 
     // Default artist & title attempt by splitting "Artist - Title" if present
-    let (default_artist, default_title) = if fallback_title.contains(" - ") {
-        let parts: Vec<&str> = fallback_title.splitn(2, " - ").collect();
-        (parts[0].trim().to_string(), parts[1].trim().to_string())
+    let clean_fallback = fallback_title.trim_start_matches(|c| c == ' ' || c == '-').trim();
+    let (default_artist, default_title) = if clean_fallback.contains(" - ") {
+        let parts: Vec<&str> = clean_fallback.splitn(2, " - ").collect();
+        let artist_candidate = parts[0].trim();
+        let title_candidate = parts[1].trim();
+        if artist_candidate.is_empty() {
+            ("Unknown Artist".to_string(), title_candidate.to_string())
+        } else {
+            (artist_candidate.to_string(), title_candidate.to_string())
+        }
     } else {
-        ("Unknown Artist".to_string(), fallback_title.clone())
+        ("Unknown Artist".to_string(), clean_fallback.to_string())
     };
 
     let probe = Probe::open(file_path).ok()?;
@@ -174,7 +192,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let mut artist = None;
     let mut album = None;
     let mut year = None;
-    let mut cover_art = None;
+    let mut has_embedded_art = false;
     let mut lyrics = None;
     let mut replay_gain = None;
     let mut track_number = None;
@@ -246,14 +264,8 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                 genre = Some(g);
             }
         }
-        if cover_art.is_none() {
-            if let Some(pic) = tag.pictures().first() {
-                let mime = match pic.mime_type() {
-                    Some(m) => m.as_str(),
-                    None => "image/jpeg",
-                };
-                cover_art = Some(format!("data:{};base64,{}", mime, BASE64.encode(pic.data())));
-            }
+        if !has_embedded_art && !tag.pictures().is_empty() {
+            has_embedded_art = true;
         }
         if lyrics.is_none() {
             if let Some(lyr) = tag.get_string(&ItemKey::Lyrics) {
@@ -273,49 +285,45 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         }
     }
 
-    // Check adjacent folder files for cover art fallback if not embedded
-    if cover_art.is_none() {
-        if let Some(parent) = file_path.parent() {
-            let candidates = [
-                file_path.with_extension("jpg"),
-                file_path.with_extension("png"),
-                file_path.with_extension("jpeg"),
-                parent.join("cover.jpg"),
-                parent.join("folder.jpg"),
-                parent.join("album.jpg"),
-                parent.join("cover.png"),
-                parent.join("folder.png"),
-            ];
-            for cand in candidates {
-                if cand.is_file() {
-                    if let Ok(bytes) = std::fs::read(&cand) {
-                        let mime = if cand.extension().and_then(|s| s.to_str()) == Some("png") {
-                            "image/png"
-                        } else {
-                            "image/jpeg"
-                        };
-                        cover_art = Some(format!("data:{};base64,{}", mime, BASE64.encode(&bytes)));
-                        break;
-                    }
-                }
-            }
+    // Check track-specific image files first (e.g. SongName.jpg or SongName.png)
+    let mut has_track_specific_art = false;
+    let track_specific = [
+        file_path.with_extension("jpg"),
+        file_path.with_extension("png"),
+        file_path.with_extension("jpeg"),
+    ];
+    for cand in &track_specific {
+        if cand.is_file() {
+            has_track_specific_art = true;
+            break;
         }
     }
 
-    // Check local cover art cache in APPDATA
-    if cover_art.is_none() {
-        if let (Some(t), Some(a)) = (&title, &artist) {
-            let term = format!("{} {}", a, t);
-            let hash = deterministic_id(&term);
-            if let Ok(appdata) = std::env::var("APPDATA") {
-                let cache_file = std::path::PathBuf::from(appdata)
-                    .join("OfflinePlayer")
-                    .join("covers")
-                    .join(format!("{}.txt", hash));
-                if cache_file.exists() {
-                    if let Ok(cached_data) = std::fs::read_to_string(&cache_file) {
-                        cover_art = Some(cached_data);
-                    }
+    // For directory-level artwork (cover.jpg/folder.jpg), only accept if the parent directory
+    // is explicitly named after this album or artist (to prevent a rogue folder.jpg in a shared
+    // music downloads folder from contaminating hundreds of unrelated songs).
+    let mut has_folder_art = false;
+    if let (Some(parent), Some(alb)) = (file_path.parent(), &album) {
+        let alb_clean = alb.trim().to_lowercase();
+        let folder_name = parent
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.trim().to_lowercase())
+            .unwrap_or_default();
+
+        if !alb_clean.is_empty() && (folder_name == alb_clean || folder_name.contains(&alb_clean)) {
+            let folder_cands = [
+                parent.join("cover.jpg"),
+                parent.join("cover.png"),
+                parent.join("album.jpg"),
+                parent.join("album.png"),
+                parent.join("folder.jpg"),
+                parent.join("folder.png"),
+            ];
+            for cand in &folder_cands {
+                if cand.is_file() {
+                    has_folder_art = true;
+                    break;
                 }
             }
         }
@@ -325,10 +333,42 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let artist = artist.unwrap_or(default_artist);
     let album = album.unwrap_or_else(|| "Offline Music".to_string());
 
+    // Check local cover art cache in APPDATA
+    let clean_artist = if artist.to_lowercase().contains("unknown") { "" } else { artist.trim() };
+    let term = if clean_artist.is_empty() {
+        title.trim().to_string()
+    } else {
+        format!("{} {}", clean_artist, title.trim())
+    };
+    let term_hash = deterministic_id(&term);
+    let track_id = deterministic_id(&file_path_str);
+
+    let mut appdata_art_id = None;
+    let covers_dir = crate::get_covers_dir();
+    if covers_dir.join(format!("{}.jpg", term_hash)).is_file()
+        || covers_dir.join(format!("{}.png", term_hash)).is_file()
+        || covers_dir.join(format!("{}.txt", term_hash)).is_file()
+    {
+        appdata_art_id = Some(term_hash);
+    } else if covers_dir.join(format!("{}.jpg", track_id)).is_file()
+        || covers_dir.join(format!("{}.png", track_id)).is_file()
+        || covers_dir.join(format!("{}.txt", track_id)).is_file()
+    {
+        appdata_art_id = Some(track_id.clone());
+    }
+
+    let has_artwork = has_embedded_art || has_track_specific_art || has_folder_art || appdata_art_id.is_some();
+    let cover_art = if has_artwork {
+        let art_id = appdata_art_id.unwrap_or_else(|| track_id.clone());
+        Some(crate::streamer::get_cover_url(&art_id, &file_path_str))
+    } else {
+        None
+    };
+
     let stream_url = crate::streamer::get_stream_url(&file_path_str);
 
     Some(TrackMetadata {
-        id: deterministic_id(&file_path_str),
+        id: track_id,
         file_path: file_path_str,
         title,
         artist,
@@ -432,6 +472,8 @@ mod tests {
                 assert_eq!(meta.album, test_album);
                 assert_eq!(meta.year, test_year);
                 assert!(meta.cover_art.is_some());
+                assert!(meta.cover_art.as_ref().unwrap().contains("/cover?id="));
+                assert!(!meta.cover_art.as_ref().unwrap().starts_with("data:image"));
 
                 // Re-extract from disk to prove lofty persisted tags to the file
                 let re_extracted = extract_metadata(&temp_path).expect("Failed to re-extract saved file");
@@ -440,6 +482,8 @@ mod tests {
                 assert_eq!(re_extracted.album, test_album);
                 assert_eq!(re_extracted.year, test_year);
                 assert!(re_extracted.cover_art.is_some());
+                assert!(re_extracted.cover_art.as_ref().unwrap().contains("/cover?id="));
+                assert!(!re_extracted.cover_art.as_ref().unwrap().starts_with("data:image"));
 
                 let _ = std::fs::remove_file(temp_path);
             }

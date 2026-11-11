@@ -21,12 +21,21 @@ export function getTrackColor(title: string, artist: string): { bg: string; text
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = Math.abs(hash) % 360;
-  return {
-    bg: `hsl(${hue}, 65%, 25%)`,
-    text: `hsl(${hue}, 80%, 75%)`,
-    glow: `hsla(${hue}, 75%, 45%, 0.45)`,
-  };
+  
+  // Curated acoustic analogous / harmonized palette for fallback badges (avoids chaotic 360° rainbow saturation)
+  const HARMONIZED_TONES = [
+    { bg: 'hsl(162, 36%, 17%)', text: 'hsl(162, 72%, 74%)', glow: 'hsla(162, 70%, 45%, 0.25)' }, // Emerald Slate
+    { bg: 'hsl(182, 34%, 18%)', text: 'hsl(182, 68%, 74%)', glow: 'hsla(182, 65%, 45%, 0.25)' }, // Oceanic Teal
+    { bg: 'hsl(198, 35%, 19%)', text: 'hsl(198, 70%, 76%)', glow: 'hsla(198, 68%, 48%, 0.25)' }, // Nordic Cyan
+    { bg: 'hsl(224, 30%, 20%)', text: 'hsl(224, 65%, 80%)', glow: 'hsla(224, 60%, 50%, 0.25)' }, // Deep Indigo
+    { bg: 'hsl(256, 26%, 20%)', text: 'hsl(256, 58%, 78%)', glow: 'hsla(256, 55%, 48%, 0.25)' }, // Smoked Violet
+    { bg: 'hsl(348, 28%, 20%)', text: 'hsl(348, 62%, 78%)', glow: 'hsla(348, 60%, 48%, 0.25)' }, // Muted Rose
+    { bg: 'hsl(36, 32%, 18%)', text: 'hsl(36, 68%, 76%)', glow: 'hsla(36, 65%, 46%, 0.25)' },   // Warm Cedar
+    { bg: 'hsl(140, 24%, 18%)', text: 'hsl(140, 50%, 75%)', glow: 'hsla(140, 48%, 45%, 0.25)' }, // Titanium Sage
+  ];
+
+  const index = Math.abs(hash) % HARMONIZED_TONES.length;
+  return HARMONIZED_TONES[index];
 }
 
 export function parseLrcLyrics(lrcText: string): ParsedLyrics {

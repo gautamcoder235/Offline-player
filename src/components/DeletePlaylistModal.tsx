@@ -45,7 +45,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 select-none"
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 select-none"
           onClick={onClose}
         >
           <motion.div
@@ -53,7 +53,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-            className="w-full max-w-md rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 text-left"
+            className="w-full max-w-md rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.85)] p-6 space-y-5 text-left"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -74,7 +74,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#201F29] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-white/[0.08] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -82,8 +82,8 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
         </div>
 
         {/* Playlist Card Preview */}
-        <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[#100F14] border border-[#282631]">
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#16151C] border border-white/10 shrink-0 flex items-center justify-center">
+        <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[#07060A]/80 border border-white/[0.08]">
+          <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#12111A] border border-white/10 shrink-0 flex items-center justify-center">
             {playlist.cover_art ? (
               <img src={playlist.cover_art} alt={playlist.name} className="w-full h-full object-cover" />
             ) : uniqueCovers.length >= 4 ? (
@@ -98,10 +98,10 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
               <div
                 className="w-full h-full flex items-center justify-center"
                 style={{
-                  background: `linear-gradient(135deg, ${playlist.coverColor || '#19E6A0'}25, #14131A)`,
+                  background: `linear-gradient(135deg, ${playlist.coverColor || '[var(--accent)]'}25, #0B0A11)`,
                 }}
               >
-                <Music className="w-5 h-5" style={{ color: playlist.coverColor || '#19E6A0' }} />
+                <Music className="w-5 h-5" style={{ color: playlist.coverColor || '[var(--accent)]' }} />
               </div>
             )}
           </div>
@@ -125,7 +125,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
             type="button"
             onClick={onClose}
             autoFocus
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#201F29] border border-[#282631] transition-colors cursor-pointer"
+            className="h-9 px-4 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-white/[0.06] border border-white/[0.08] transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -135,7 +135,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
               onConfirm(playlist);
               onClose();
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#FF667A] hover:bg-[#FF4D66] text-black shadow-lg shadow-[#FF667A]/20 transition-all active:scale-95 cursor-pointer"
+            className="h-9 flex items-center gap-2 px-4 rounded-xl text-xs font-semibold bg-[#FF667A] hover:bg-[#FF4D66] text-black shadow-lg shadow-[#FF667A]/20 transition-all active:scale-95 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Delete Playlist</span>

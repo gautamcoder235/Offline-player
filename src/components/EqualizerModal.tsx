@@ -122,30 +122,30 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
             className={`relative w-full max-w-2xl rounded-2xl ${
               isGlass
-                ? 'bg-[#1B2127]/90 backdrop-blur-2xl border border-white/[0.1] shadow-[0_25px_60px_rgba(0,0,0,0.85)]'
-                : 'bg-[#1B2127] border border-[#2B3540] shadow-[0_25px_60px_rgba(0,0,0,0.85)]'
+                ? 'bg-[#0B0A11]/80 backdrop-blur-3xl border border-white/[0.1] shadow-[0_25px_60px_rgba(0,0,0,0.85)]'
+                : 'bg-[#0E0D15]/95 backdrop-blur-xl border border-white/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.85)]'
             } p-6 flex flex-col gap-5 text-[#F4F2F7] overflow-hidden`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Ambient Radial Top Glow Matching App Identity */}
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#19E6A0]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#19E6A0]/15 rounded-full blur-3xl pointer-events-none" />
 
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between pb-3.5 border-b border-[#2B3540]">
+            <div className="relative z-10 flex items-center justify-between pb-3.5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-[#19E6A0]/10 text-[#19E6A0] border border-[#19E6A0]/25 shadow-[0_0_15px_rgba(25,230,160,0.2)] flex items-center justify-center">
                   <AnimatedEqualizer size={20} className="w-5 h-5 text-[#19E6A0]" />
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-[#F4F2F7] tracking-tight">Audio Equalizer</h2>
-                  <p className="text-[11px] text-[#8E99A6] mt-0.5">5-Band Studio Parametric Acoustic Response</p>
+                  <p className="text-[11px] text-[#9A96A5] mt-0.5">5-Band Studio Parametric Acoustic Response</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleReset}
-                  className="group px-3 py-1.5 rounded-lg text-xs font-medium text-[#8E99A6] hover:text-[#19E6A0] bg-[#222A32] hover:bg-[#19E6A0]/10 border border-[#2E3946] hover:border-[#19E6A0]/30 transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="group px-3 py-1.5 rounded-xl text-xs font-medium text-[#9A96A5] hover:text-[#19E6A0] bg-white/[0.04] hover:bg-[#19E6A0]/10 border border-white/[0.06] hover:border-[#19E6A0]/30 transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                   title="Reset all bands to 0 dB Flat"
                 >
                   <AnimatedRefresh isSpinning={isResetting} className="w-3.5 h-3.5" />
@@ -153,7 +153,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                 </button>
                 <button
                   onClick={onClose}
-                  className="group/close p-1.5 rounded-lg text-[#8E99A6] hover:text-[#FF667A] hover:bg-[#FF667A]/10 border border-transparent hover:border-[#FF667A]/30 transition-all duration-200 active:scale-90 cursor-pointer"
+                  className="group/close p-1.5 rounded-xl text-[#9A96A5] hover:text-[#FF667A] hover:bg-[#FF667A]/10 border border-transparent hover:border-[#FF667A]/30 transition-all duration-200 active:scale-90 cursor-pointer"
                   aria-label="Close Equalizer"
                 >
                   <AnimatedClose className="w-4 h-4" />
@@ -161,15 +161,13 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
               </div>
             </div>
 
-            {/* 1. Interactive Frequency Response Curve (SVG Graph) - Unified #1B2127 */}
-            <div className={`relative z-10 w-full rounded-2xl bg-[#1B2127] border ${
-              isGlass ? 'border-white/[0.08]' : 'border-[#2B3540]'
-            } p-4 shadow-inner overflow-hidden`}>
+            {/* 1. Interactive Frequency Response Curve (SVG Graph) */}
+            <div className={`relative z-10 w-full rounded-2xl bg-[#07060A]/90 border border-white/[0.06] p-4 shadow-inner overflow-hidden`}>
               {/* Header Info */}
               <div className="flex items-center justify-between text-[10px] text-[#777381] mb-2 font-mono">
                 <span className="text-[#65616F] font-semibold">20 Hz</span>
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#9A96A5] uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#19E6A0] animate-pulse shadow-[0_0_6px_rgba(25,230,160,0.8)]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
                   Frequency Response Curve
                 </span>
                 <span className="text-[#65616F] font-semibold">20 kHz</span>
@@ -184,9 +182,9 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                   <defs>
                     {/* Curve Glow Gradient */}
                     <linearGradient id="eqCurveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#19E6A0" />
-                      <stop offset="50%" stopColor="#35F0B1" />
-                      <stop offset="100%" stopColor="#19E6A0" />
+                      <stop offset="0%" stopColor="[var(--accent)]" />
+                      <stop offset="50%" stopColor="[var(--accent-hover)]" />
+                      <stop offset="100%" stopColor="[var(--accent)]" />
                     </linearGradient>
 
                     {/* Shaded Area Fill */}
@@ -212,7 +210,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                   {/* 0 dB Baseline (Neutral Reference) with subtle mint accent */}
                   <line x1="0" y1="60" x2="500" y2="60" stroke="#3A3845" strokeWidth="1.5" />
                   <line x1="0" y1="60" x2="500" y2="60" stroke="rgba(25, 230, 160, 0.2)" strokeWidth="1.5" />
-                  <text x="6" y="58" fill="#19E6A0" fontSize="9" fontFamily="monospace" fontWeight="bold">0dB</text>
+                  <text x="6" y="58" fill="[var(--accent)]" fontSize="9" fontFamily="monospace" fontWeight="bold">0dB</text>
 
                   <line x1="0" y1="82" x2="500" y2="82" stroke="#23212B" strokeDasharray="2 4" strokeWidth="1" />
                   <text x="6" y="80" fill="#65616F" fontSize="9" fontFamily="monospace">-6dB</text>
@@ -259,7 +257,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                           cx={b.x}
                           cy={cy}
                           r={isBoosted || isCut ? "8" : "6"}
-                          fill={isBoosted ? '#19E6A0' : isCut ? '#FF667A' : '#777381'}
+                          fill={isBoosted ? '[var(--accent)]' : isCut ? '#FF667A' : '#777381'}
                           fillOpacity={isBoosted || isCut ? 0.35 : 0.15}
                         />
                         {/* Inner Core Point */}
@@ -267,8 +265,8 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                           cx={b.x}
                           cy={cy}
                           r="3.5"
-                          fill={isBoosted ? '#19E6A0' : isCut ? '#FF667A' : '#F4F2F7'}
-                          stroke={isBoosted ? '#35F0B1' : isCut ? '#FF4D6D' : '#19E6A0'}
+                          fill={isBoosted ? '[var(--accent)]' : isCut ? '#FF667A' : '#F4F2F7'}
+                          stroke={isBoosted ? '[var(--accent-hover)]' : isCut ? '#FF4D6D' : '[var(--accent)]'}
                           strokeWidth="1.5"
                         />
                       </g>
@@ -278,10 +276,8 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
               </div>
             </div>
 
-            {/* 2. Precision 5-Band Studio Faders - Unified #1B2127 */}
-            <div className={`relative z-10 p-5 rounded-2xl bg-[#1B2127] border ${
-              isGlass ? 'border-white/[0.08]' : 'border-[#2B3540]'
-            } grid grid-cols-5 gap-3 shadow-inner`}>
+            {/* 2. Precision 5-Band Studio Faders */}
+            <div className="relative z-10 p-5 rounded-2xl bg-[#0C0B12]/80 border border-white/[0.06] grid grid-cols-5 gap-3 shadow-inner">
               {bandConfigs.map((band, idx) => {
                 const gain = customGains[idx] || 0;
                 const thumbTopPercent = ((12 - gain) / 24) * 100;
@@ -299,7 +295,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                         isBoost
                           ? 'text-[#19E6A0] bg-[#19E6A0]/15 border border-[#19E6A0]/35 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
                           : isZero
-                          ? 'text-[#8E99A6] bg-[#222A32] border border-[#2E3946]'
+                          ? 'text-[#9A96A5] bg-white/[0.04] border border-white/[0.06]'
                           : 'text-[#FF667A] bg-[#FF667A]/15 border border-[#FF667A]/35 shadow-[0_0_10px_rgba(255,102,122,0.2)]'
                       }`}
                     >
@@ -316,9 +312,9 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                       title={`${band.label} (${band.freq}): ${gain} dB (Double-click to reset)`}
                     >
                       {/* Vertical Slot Groove */}
-                      <div className="w-2.5 h-full bg-[#14181D] rounded-full relative overflow-hidden border border-[#26303A] shadow-inner">
+                      <div className="w-2.5 h-full bg-[#07060A] rounded-full relative overflow-hidden border border-white/[0.08] shadow-inner">
                         {/* Zero Reference Notch */}
-                        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-[#3A4756] -translate-y-1/2 z-10" />
+                        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-white/[0.18] -translate-y-1/2 z-10" />
 
                         {/* Active Gain Fill Bar */}
                         {isBoost ? (
@@ -401,7 +397,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                       className={`px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer text-center truncate active:scale-95 ${
                         isActive
                           ? 'bg-[#19E6A0] text-black font-semibold shadow-[0_0_14px_rgba(25,230,160,0.4)] border border-[#19E6A0] scale-[1.02]'
-                          : 'bg-[#222A32] text-[#8E99A6] hover:text-[#F4F2F7] hover:bg-[#2B3540] border border-[#2E3946]'
+                          : 'bg-white/[0.04] text-[#9A96A5] hover:text-[#F4F2F7] hover:bg-white/[0.08] border border-white/[0.06]'
                       }`}
                       title={p.name}
                     >

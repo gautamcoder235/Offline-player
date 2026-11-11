@@ -11,6 +11,8 @@ export interface Track {
   size_bytes: number;
   cover_art?: string | null;
   stream_url: string;
+  preview_url?: string | null;
+  is_online?: boolean;
   playCount?: number;
   lyrics?: string | null;
   matchingLyricSnippet?: string | null;
@@ -25,6 +27,8 @@ export interface Track {
 export type RepeatMode = 'off' | 'all' | 'one';
 
 export type ThemeAppearance = 'default' | 'aura_glass';
+
+export type AccentColor = 'emerald' | 'gold' | 'slate' | 'cyan';
 
 export type ViewMode =
   | 'songs'

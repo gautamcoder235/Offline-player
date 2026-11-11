@@ -88,7 +88,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
 
             {/* Filter Tabs if artist has collaborations */}
             {hasCollabs && (
-              <div className="flex items-center gap-1 bg-[#14131A] p-0.5 rounded-xl border border-[#272533]">
+              <div className="flex items-center gap-1 bg-white/[0.04] p-0.5 rounded-xl border border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setFilterTab('all')}
@@ -191,16 +191,13 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
   return (
     <div className="flex-1 overflow-y-auto p-6 md:p-8 select-none">
       {/* Header */}
-      <div className="flex items-end justify-between mb-6 pb-4 border-b border-[#24222E]">
+      <div className="flex items-end justify-between mb-6 pb-4 border-b border-white/[0.06]">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#777381]">
-            Library Collection
-          </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-[#F4F2F7] tracking-tight">
             Artists
           </h1>
           <p className="text-xs text-[#777381] mt-0.5">
-            {artists.length} artists in your offline music library (including collaborations & features)
+            {artists.length} {artists.length === 1 ? 'artist' : 'artists'}
           </p>
         </div>
       </div>
@@ -224,21 +221,21 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
             return (
               <motion.div
                 key={artist.normalizedKey}
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                whileHover={{ y: -5, scale: 1.01 }}
+                transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                 onClick={() => {
                   setSelectedArtistKey(artist.normalizedKey);
                   setFilterTab('all');
                 }}
-                className="group p-4 rounded-2xl bg-[#14131A] hover:bg-[#1C1B25] border border-[#25232F] hover:border-[#333040] shadow-md transition-all duration-200 cursor-pointer flex flex-col items-center text-center gap-3 relative"
+                className="group p-4 rounded-2xl bg-[#121118]/70 hover:bg-[#181622]/90 border border-white/[0.06] hover:border-[#19E6A0]/30 shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_8px_30px_rgba(25,230,160,0.12)] backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col items-center text-center gap-3.5 relative"
               >
                 {/* Circular Artist Avatar Card */}
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-[#181720] border-2 border-[#2A2836] group-hover:border-[#19E6A0]/50 relative shadow-lg transition-colors">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-[#16151E] border-2 border-white/[0.08] group-hover:border-[#19E6A0] relative shadow-xl transition-all duration-300">
                   {artist.coverArt ? (
                     <img
                       src={artist.coverArt}
                       alt={artist.name}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108"
                     />
                   ) : (
                     <div
@@ -251,7 +248,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                   )}
 
                   {/* Floating Action Buttons on Hover */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2.5 transition-opacity duration-200 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity duration-200 backdrop-blur-[2px]">
                     {/* Play Artist Button */}
                     <button
                       type="button"
@@ -263,7 +260,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                           playTrack(artist.tracks[0], artist.tracks, `artist_${artist.normalizedKey}`);
                         }
                       }}
-                      className="w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#16CE8F] text-black shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                      className="w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-[0_4px_20px_rgba(25,230,160,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                       title={isThisArtistPlaying ? 'Pause Artist' : 'Play Artist'}
                       aria-label={isThisArtistPlaying ? 'Pause Artist' : 'Play Artist'}
                     >

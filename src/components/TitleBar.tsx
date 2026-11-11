@@ -62,33 +62,17 @@ export function TitleBar() {
   };
 
   return (
-    <div
+    <header
       data-tauri-drag-region
       onMouseDown={handleStartDragging}
       onDoubleClick={handleToggleMaximize}
       className={`flex justify-between items-center w-full h-[40px] shrink-0 transition-colors duration-300 ${
         isGlass
-          ? 'bg-[#0E0D12]/45 backdrop-blur-xl border-b border-white/[0.06]'
-          : 'bg-[#0E0D12]/85 backdrop-blur-md border-b border-white/[0.04]'
+          ? 'bg-[#07060A]/40 backdrop-blur-xl border-b border-white/[0.06]'
+          : 'bg-[#07060A]/90 backdrop-blur-md border-b border-white/[0.05]'
       } select-none z-50 sticky top-0 cursor-default`}
     >
-      {/* Left: App Brand */}
-      <div data-tauri-drag-region className="flex items-center gap-2 px-3.5 pointer-events-none shrink-0 group">
-        <img
-          src="/app-icon.png"
-          alt="MusicVault"
-          className="w-7 h-7 rounded-full object-contain shrink-0 drop-shadow-md select-none discord-icon discord-icon-pop"
-        />
-        <span className="text-[13.5px] font-semibold text-[#F4F2F7] tracking-tight leading-none select-none">
-          MusicVault
-        </span>
-        <span className="text-[11px] text-[#4B4854] select-none mx-0.5">•</span>
-        <span className="text-[11.5px] font-medium text-[#777381] select-none tracking-normal">
-          created by GAUTAM KUMAR
-        </span>
-      </div>
-
-      {/* Middle Drag Spacer */}
+      {/* Draggable TitleBar Space */}
       <div
         data-tauri-drag-region
         onMouseDown={handleStartDragging}
@@ -97,13 +81,13 @@ export function TitleBar() {
       />
 
       {/* Right: Window Controls */}
-      <div className="flex h-full items-stretch">
+      <div className="flex items-stretch h-full shrink-0">
         <button
           type="button"
           aria-label="Minimize window"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleMinimize}
-          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] active:scale-90 transition-all duration-150 cursor-pointer"
+          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-white/[0.06] hover:text-[#F4F2F7] active:scale-95 transition-colors duration-150 cursor-pointer"
         >
           <AnimatedMinus className="w-3.5 h-3.5 pointer-events-none" />
         </button>
@@ -112,7 +96,7 @@ export function TitleBar() {
           aria-label="Maximize or Restore window"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleToggleMaximize}
-          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#1D1C23] hover:text-[#F4F2F7] active:scale-90 transition-all duration-150 cursor-pointer"
+          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-white/[0.06] hover:text-[#F4F2F7] active:scale-95 transition-colors duration-150 cursor-pointer"
         >
           <AnimatedSquare className="w-3 h-3 pointer-events-none" />
         </button>
@@ -121,11 +105,11 @@ export function TitleBar() {
           aria-label="Close to background tray"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleClose}
-          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#FF667A] hover:text-white active:scale-90 transition-all duration-150 cursor-pointer"
+          className="group flex items-center justify-center w-[46px] h-full text-[#9A96A5] hover:bg-[#E81123] hover:text-white active:scale-95 transition-colors duration-150 cursor-pointer"
         >
           <AnimatedClose className="w-3.5 h-3.5 pointer-events-none" />
         </button>
       </div>
-    </div>
+    </header>
   );
 }

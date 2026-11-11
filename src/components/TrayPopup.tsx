@@ -98,7 +98,7 @@ export const TrayPopup: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-full h-full bg-black border border-[#222226] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col select-none text-[#F4F2F7] overflow-hidden box-border"
+      className="fixed inset-0 w-full h-full bg-[#07060A]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.95)] p-2.5 flex flex-col select-none text-[#F4F2F7] overflow-hidden box-border"
       style={{
         width: '100vw',
         height: '100vh',

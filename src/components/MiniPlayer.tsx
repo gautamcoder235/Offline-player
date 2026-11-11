@@ -40,6 +40,7 @@ export const MiniPlayer: React.FC = () => {
     toggleShuffle,
     repeatMode,
     cycleRepeat,
+    coverMap,
   } = usePlayer();
 
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -246,7 +247,7 @@ export const MiniPlayer: React.FC = () => {
 
   return (
     <div
-      className="w-full h-full p-3.5 flex flex-col justify-between bg-[#0E0D13] select-none overflow-hidden text-[#F4F2F7] border border-white/[0.08]"
+      className="w-full h-full p-3.5 flex flex-col justify-between bg-[#07060A]/95 backdrop-blur-2xl select-none overflow-hidden text-[#F4F2F7] border border-white/[0.08]"
       data-tauri-drag-region
       onMouseDown={handleStartDragging}
     >
@@ -337,20 +338,24 @@ export const MiniPlayer: React.FC = () => {
       {/* Center Stage: Artwork & Track Metadata */}
       <div className="flex items-center gap-3.5 px-1 py-0.5 min-w-0" onMouseDown={(e) => e.stopPropagation()}>
         {/* Cover Artwork */}
-        <div className={`w-16 h-16 rounded-xl overflow-hidden bg-[#16151C] border border-white/[0.08] shrink-0 shadow-lg flex items-center justify-center relative group transition-all duration-500 ${
+        <div className={`w-16 h-16 rounded-xl overflow-hidden bg-[#0D0B13] border border-white/[0.08] shrink-0 shadow-lg flex items-center justify-center relative group transition-all duration-500 ${
           isPlaying ? 'shadow-[0_0_18px_rgba(25,230,160,0.3)] border-[#19E6A0]/40' : ''
         }`}>
-          {currentTrack?.cover_art ? (
-            <img
-              src={currentTrack.cover_art}
-              alt={currentTrack.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1C1B24] to-[#121118]">
-              <Music className="w-7 h-7 text-[#65616F]" />
-            </div>
-          )}
+          {(() => {
+            const miniCover = currentTrack ? (coverMap[currentTrack.id] || currentTrack.cover_art) : null;
+            return miniCover ? (
+              <img
+                key={miniCover}
+                src={miniCover}
+                alt={currentTrack?.title || ''}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1C1B24] to-[#121118]">
+                <Music className="w-7 h-7 text-[#65616F]" />
+              </div>
+            );
+          })()}
         </div>
 
         {/* Track Title, Artist, & Album with Crossfade */}

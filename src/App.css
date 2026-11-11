@@ -3,23 +3,47 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --bg-primary: #0B0A0F;
-    --bg-sidebar: #0E0D12;
-    --bg-header: #100F14;
-    --bg-surface: #16151C;
-    --bg-hover: #1D1C23;
-    --bg-selected: #211F26;
-    --border-subtle: #282631;
-    --border-default: #292731;
-    --text-primary: #F4F2F7;
-    --text-secondary: #9A96A5;
-    --text-muted: #65616F;
-    --accent: #19E6A0;
-    --accent-hover: #35F0B1;
-    --accent-muted: rgba(25, 230, 160, 0.12);
-    --gold: #E8C77A;
-    --gold-muted: rgba(232, 199, 122, 0.15);
+    /* Precision Dark Neutral Studio Surfaces (True Velvet Obsidian Carbon) */
+    --bg-oled: #08080A;
+    --bg-primary: #09090C;
+    --bg-sidebar: #0C0C10;
+    --bg-header: #0F0F14;
+    --bg-surface: #141419;
+    --bg-surface-elevated: #1A1A22;
+    --bg-hover: rgba(255, 255, 255, 0.04);
+    --bg-hover-solid: #171720;
+    --bg-selected: rgba(255, 255, 255, 0.07);
+    --bg-selected-solid: #1E1E28;
+
+    /* Hairline micro-borders */
+    --border-subtle: rgba(255, 255, 255, 0.04);
+    --border-default: rgba(255, 255, 255, 0.07);
+    --border-hairline: rgba(255, 255, 255, 0.07);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --border-elevated: rgba(255, 255, 255, 0.12);
+
+    /* Luxury Typography Scale */
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+
+    /* Precision Lossless Studio Accent: Tailored Emerald (#10B981) */
+    --accent: #10B981;
+    --accent-neon: #10B981;
+    --accent-cyan: #06B6D4;
+    --accent-hover: #34D399;
+    --accent-muted: rgba(16, 185, 129, 0.12);
+    --accent-glow: rgba(16, 185, 129, 0.22);
+
+    /* Champagne Gold VIP & Top Track Accents */
+    --gold: #E5B869;
+    --gold-hover: #FDE68A;
+    --gold-muted: rgba(229, 184, 105, 0.14);
+    --gold-glow: rgba(229, 184, 105, 0.25);
+
+    /* Danger */
     --danger: #FF667A;
+    --danger-hover: #FF4D6D;
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
@@ -73,6 +97,11 @@
 }
 
 /* Custom sleek scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -83,12 +112,19 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 9999px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(25, 230, 160, 0.55);
+  box-shadow: 0 0 8px rgba(25, 230, 160, 0.35);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #19E6A0;
+  box-shadow: 0 0 12px rgba(25, 230, 160, 0.65), 0 0 4px rgba(0, 242, 254, 0.4);
 }
 
 /* Tray popup window scrollbars */
@@ -121,33 +157,102 @@ html.tray-popup-mode ::-webkit-scrollbar-thumb:hover {
 
 /* Surface helpers */
 .glass-panel {
-  background: rgba(22, 21, 28, 0.7);
+  background: rgba(18, 18, 24, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-default);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-lg);
 }
 
 .glass-panel-elevated {
-  background: rgba(22, 21, 28, 0.88);
+  background: rgba(24, 24, 32, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border-default);
-  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-xl);
 }
 
 .glass-card {
-  background: #16151C;
-  border: 1px solid var(--border-default);
+  background: rgba(18, 18, 24, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
-  background: #1D1C23;
-  border-color: rgba(255, 255, 255, 0.14);
-  transform: translateY(-1px);
+  background: rgba(26, 26, 34, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 14px -2px rgba(16, 185, 129, 0.08);
+}
+
+/* Hairline glass borders */
+.hairline-border {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-border-glass {
+  border: 1px solid #24222E;
+}
+
+.hairline-t {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-b {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-l {
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-r {
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Glowing utility classes for active states and indicators */
+.glow-emerald {
+  box-shadow: 0 0 16px -2px rgba(25, 230, 160, 0.42), 0 0 6px 0 rgba(29, 185, 84, 0.3);
+}
+
+.glow-emerald-sm {
+  box-shadow: 0 0 8px 0 rgba(25, 230, 160, 0.4);
+}
+
+.glow-emerald-lg {
+  box-shadow: 0 0 28px 2px rgba(25, 230, 160, 0.35), 0 0 10px 1px rgba(0, 242, 254, 0.25);
+}
+
+.glow-emerald-pulse {
+  animation: glowEmeraldPulse 2.8s ease-in-out infinite;
+}
+
+.glow-cyan {
+  box-shadow: 0 0 16px -2px rgba(0, 242, 254, 0.45), 0 0 6px 0 rgba(0, 242, 254, 0.25);
+}
+
+.glow-gold {
+  box-shadow: 0 0 16px -2px rgba(245, 192, 86, 0.45), 0 0 6px 0 rgba(245, 192, 86, 0.25);
+}
+
+.glow-gold-sm {
+  box-shadow: 0 0 8px 0 rgba(245, 192, 86, 0.4);
+}
+
+@keyframes glowEmeraldPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px 0 rgba(25, 230, 160, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 18px 2px rgba(25, 230, 160, 0.65), 0 0 8px 1px rgba(0, 242, 254, 0.4);
+  }
 }
 
 .slider-track {
@@ -323,15 +428,22 @@ html.tray-popup-mode ::-webkit-scrollbar-thumb:hover {
 /* Row double-click flash */
 @keyframes rowFlash {
   0% {
-    background-color: rgba(25, 230, 160, 0.15);
+    background-color: rgba(25, 230, 160, 0.35);
+    box-shadow: 0 0 24px rgba(25, 230, 160, 0.4), inset 0 0 12px rgba(25, 230, 160, 0.2);
+    border-color: rgba(25, 230, 160, 0.8);
+  }
+  30% {
+    background-color: rgba(25, 230, 160, 0.22);
+    box-shadow: 0 0 16px rgba(25, 230, 160, 0.3);
   }
   100% {
     background-color: transparent;
+    box-shadow: none;
   }
 }
 
 .animate-row-flash {
-  animation: rowFlash 0.4s ease-out forwards;
+  animation: rowFlash 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Spin once for reset icon */

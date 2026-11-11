@@ -92,7 +92,11 @@ pub fn run_download(
                 .map(|p| p.join("Music").join("Spotify offline").to_string_lossy().to_string())
                 .unwrap_or_else(|| "Music".to_string())
         });
-    let target_dir = output_dir.unwrap_or(default_output);
+    let target_dir = match output_dir {
+        Some(ref d) if !d.trim().is_empty() => d.trim().to_string(),
+        _ => default_output,
+    };
+    let _ = std::fs::create_dir_all(&target_dir);
 
     let mut cmd = Command::new(&python_path);
     cmd.arg(script_path)

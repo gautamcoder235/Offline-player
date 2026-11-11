@@ -25,7 +25,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { usePlayer } from '../context/PlayerContext';
 import { useUpdate } from '../context/UpdateContext';
-import { AppSettings } from '../types';
+import { AppSettings, AccentColor } from '../types';
 import { formatBytes } from '../utils/helpers';
 import { audioEngine } from '../services/audioEngine';
 
@@ -38,6 +38,8 @@ export const SettingsView: React.FC = () => {
     setCrossfadeDuration,
     themeAppearance,
     setThemeAppearance,
+    accentColor,
+    setAccentColor,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
   const {
@@ -230,12 +232,9 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 select-none w-full space-y-6 pb-12 bg-transparent">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#292731]/60">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
         <div>
-          <h2 className="text-xl font-bold text-[#F4F2F7] tracking-tight">Settings & Library</h2>
-          <p className="text-xs text-[#777381] mt-0.5">
-            Configure local audio directories, downloader storage, appearance, and view shortcuts.
-          </p>
+          <h2 className="text-xl font-bold text-[#F4F2F7] tracking-tight">Settings</h2>
         </div>
 
         {saveSuccess && (
@@ -248,11 +247,11 @@ export const SettingsView: React.FC = () => {
 
       {/* Music Folders Section */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
               <Folder className="w-4 h-4" />
             </div>
             <div>
@@ -266,7 +265,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleRescan}
             disabled={isScanning}
-            className="group flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-95"
+            className="group h-[34px] flex items-center gap-2 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-[#F4F2F7] transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-95"
             title="Rescan music library from disk"
           >
             <RefreshCw
@@ -283,7 +282,7 @@ export const SettingsView: React.FC = () => {
           {settings.music_directories.map((dir) => (
             <div
               key={dir}
-              className="flex items-center justify-between p-3 rounded-xl bg-[#0E0D14] border border-[#282631]/80 hover:border-[#282631] transition-colors"
+              className="flex items-center justify-between p-3 rounded-xl bg-[#07060A]/80 border border-white/[0.08] hover:border-white/[0.12] transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0 pr-3">
                 <Folder className="w-4 h-4 text-[#777381] shrink-0" />
@@ -293,7 +292,7 @@ export const SettingsView: React.FC = () => {
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openInExplorer(dir)}
-                  className="p-1.5 text-[#777381] hover:text-[#F4F2F7] hover:bg-[#1C1B24] rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
+                  className="p-1.5 text-[#777381] hover:text-[#F4F2F7] hover:bg-white/[0.06] rounded-lg transition-all duration-150 active:scale-90 cursor-pointer"
                   title="Open folder in Explorer"
                   aria-label="Open folder in Explorer"
                 >
@@ -316,7 +315,7 @@ export const SettingsView: React.FC = () => {
 
         {/* Add custom folder input */}
         <div className="flex gap-2.5 pt-1">
-          <div className="relative flex-1 flex items-center bg-[#0E0D14] rounded-xl border border-[#282631] focus-within:border-[#19E6A0]/50 transition-colors">
+          <div className="relative flex-1 flex items-center bg-[#07060A]/80 rounded-xl border border-white/[0.08] focus-within:border-[#19E6A0]/50 h-10 transition-colors">
             <Folder className="w-4 h-4 ml-3.5 text-[#65616F] shrink-0" />
             <input
               type="text"
@@ -329,13 +328,13 @@ export const SettingsView: React.FC = () => {
                 }
               }}
               placeholder="Enter absolute directory path (e.g. D:\Music)..."
-              className="w-full pl-3 pr-3 py-2.5 text-xs bg-transparent text-[#F4F2F7] placeholder-[#65616F] focus:outline-none"
+              className="w-full pl-3 pr-3 h-full text-xs bg-transparent text-[#F4F2F7] placeholder-[#65616F] focus:outline-none"
             />
           </div>
           <button
             type="button"
             onClick={handleBrowseMusicDir}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1C1B24] hover:bg-[#282635] text-[#F4F2F7] border border-[#282631] font-medium text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            className="h-10 flex items-center gap-1.5 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#F4F2F7] border border-white/[0.08] font-medium text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
             title="Browse folder via system dialog"
           >
             <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
@@ -344,7 +343,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleAddDirectory}
             disabled={!newDirInput.trim()}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            className="h-10 flex items-center gap-1.5 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-white/[0.04] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Folder</span>
@@ -354,17 +353,17 @@ export const SettingsView: React.FC = () => {
 
       {/* Theme & Background Appearance Section */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
               <Palette className="w-4 h-4 text-[#19E6A0]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Theme & Background Appearance</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#19E6A0] font-semibold">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#19E6A0] font-semibold">
                   {isGlass ? 'Transparent Front Panels' : 'Classic Obsidian'}
                 </span>
               </div>
@@ -383,44 +382,44 @@ export const SettingsView: React.FC = () => {
             onClick={() => setThemeAppearance('default')}
             className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 active:scale-[0.98] ${
               !isGlass
-                ? 'bg-[#19E6A0]/10 border-[#19E6A0]/50 shadow-sm'
-                : 'bg-[#0E0D14]/80 border-[#282631] hover:border-[#383545] hover:bg-[#121118]'
+                ? 'bg-[var(--accent-muted)] border-[var(--accent)]/50 shadow-sm'
+                : 'bg-[#141419] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]'
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-colors ${
                   !isGlass
-                    ? 'bg-[#19E6A0]/20 border-[#19E6A0]/40 text-[#19E6A0]'
-                    : 'bg-[#16151D] border-[#282631] text-[#777381] group-hover:text-[#AAA6B2]'
+                    ? 'bg-[var(--accent)]/20 border-[var(--accent)]/40 text-[var(--accent)]'
+                    : 'bg-white/[0.04] border-white/[0.08] text-[#94A3B8] group-hover:text-white'
                 }`}>
                   <Layers className="w-3.5 h-3.5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-[#F4F2F7]">Classic Obsidian</span>
-                    <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-[#1C1B24] text-[#AAA6B2] border border-[#282631]">
+                    <span className="text-xs font-semibold text-[#F8FAFC]">Classic Obsidian</span>
+                    <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-[#94A3B8] border border-white/[0.08]">
                       Default
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#777381]">Solid Opaque Panels</span>
+                  <span className="text-[10px] text-[#64748B]">Solid Opaque Panels</span>
                 </div>
               </div>
 
               {!isGlass && (
-                <div className="w-4 h-4 rounded-full bg-[#19E6A0] flex items-center justify-center shrink-0">
+                <div className="w-4 h-4 rounded-full bg-[var(--accent)] flex items-center justify-center shrink-0">
                   <Check className="w-2.5 h-2.5 text-black stroke-[3]" />
                 </div>
               )}
             </div>
 
-            <p className="text-[11px] text-[#AAA6B2] leading-relaxed">
+            <p className="text-[11px] text-[#94A3B8] leading-relaxed">
               Solid dark opaque panels with subtle edge ambient lighting. Distraction-free, crisp contrast, minimal GPU overhead.
             </p>
 
-            <div className="h-2 rounded-full w-full bg-[#0E0D14] border border-[#282631] overflow-hidden flex">
-              <div className="w-1/3 h-full bg-[#181722]" />
-              <div className="w-2/3 h-full bg-[#100F14]" />
+            <div className="h-2 rounded-full w-full bg-[#08080B] border border-white/[0.08] overflow-hidden flex">
+              <div className="w-1/3 h-full bg-[#181822]" />
+              <div className="w-2/3 h-full bg-[#101015]" />
             </div>
           </button>
 
@@ -430,49 +429,93 @@ export const SettingsView: React.FC = () => {
             onClick={() => setThemeAppearance('aura_glass')}
             className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer relative group flex flex-col justify-between gap-3 active:scale-[0.98] ${
               isGlass
-                ? 'bg-[#19E6A0]/10 border-[#19E6A0]/50 shadow-sm'
-                : 'bg-[#0E0D14]/80 border-[#282631] hover:border-[#383545] hover:bg-[#121118]'
+                ? 'bg-[var(--accent-muted)] border-[var(--accent)]/50 shadow-sm'
+                : 'bg-[#141419] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]'
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-colors ${
                   isGlass
-                    ? 'bg-[#19E6A0]/20 border-[#19E6A0]/40 text-[#19E6A0]'
-                    : 'bg-[#16151D] border-[#282631] text-[#777381] group-hover:text-[#AAA6B2]'
+                    ? 'bg-[var(--accent)]/20 border-[var(--accent)]/40 text-[var(--accent)]'
+                    : 'bg-white/[0.04] border-white/[0.08] text-[#94A3B8] group-hover:text-white'
                 }`}>
                   <Sparkles className="w-3.5 h-3.5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-[#F4F2F7]">Vibrant Aura Glass</span>
-                    <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 font-semibold">
+                    <span className="text-xs font-semibold text-[#F8FAFC]">Vibrant Aura Glass</span>
+                    <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-[var(--accent-muted)] text-[var(--accent)] border border-[var(--accent)]/30 font-semibold">
                       Transparent
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#777381]">Dynamic Reactive Glass</span>
+                  <span className="text-[10px] text-[#64748B]">Dynamic Reactive Glass</span>
                 </div>
               </div>
 
               {isGlass && (
-                <div className="w-4 h-4 rounded-full bg-[#19E6A0] flex items-center justify-center shrink-0">
+                <div className="w-4 h-4 rounded-full bg-[var(--accent)] flex items-center justify-center shrink-0">
                   <Check className="w-2.5 h-2.5 text-black stroke-[3]" />
                 </div>
               )}
             </div>
 
-            <p className="text-[11px] text-[#AAA6B2] leading-relaxed">
-              Transparent frosted glass front panels that let the playing song's dynamic colors, animated aura blobs, and live bass energy pulse through the entire window.
+            <p className="text-[11px] text-[#94A3B8] leading-relaxed">
+              Transparent frosted glass front panels with directional top ambient backlight that gently responds to the playing song's artwork.
             </p>
 
-            <div className="h-2 rounded-full w-full bg-gradient-to-r from-[#19E6A0] via-[#E8C77A] to-[#8A5CF6] opacity-80" />
+            <div className="h-2 rounded-full w-full bg-gradient-to-r from-[var(--accent)] via-[#E5B869] to-[#06B6D4] opacity-80" />
           </button>
+        </div>
+
+        {/* Luxury Acoustic Accent Harmony Section */}
+        <div className="pt-3 border-t border-white/[0.06] space-y-3">
+          <div>
+            <span className="text-xs font-semibold text-[#F8FAFC]">Acoustic Accent Harmony</span>
+            <p className="text-[11px] text-[#94A3B8] mt-0.5">Curated luxury color palette for controls, interactive indicators, and highlights</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { id: 'emerald' as AccentColor, label: 'Studio Emerald', desc: 'Lossless Hi-Fi', dot: '#10B981' },
+              { id: 'gold' as AccentColor, label: 'Champagne Gold', desc: 'Audiophile Turntable', dot: '#E5B869' },
+              { id: 'slate' as AccentColor, label: 'Studio Slate', desc: 'Minimalist Monolith', dot: '#F8FAFC' },
+              { id: 'cyan' as AccentColor, label: 'Celestial Cyan', desc: 'Tidal Master', dot: '#06B6D4' },
+            ].map((pal) => {
+              const isSelected = accentColor === pal.id;
+              return (
+                <button
+                  key={pal.id}
+                  type="button"
+                  onClick={() => setAccentColor(pal.id)}
+                  className={`p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between gap-2.5 active:scale-95 ${
+                    isSelected
+                      ? 'bg-white/[0.08] border-white/[0.22] shadow-sm'
+                      : 'bg-[#141419] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="w-4 h-4 rounded-full shadow-xs flex items-center justify-center shrink-0" style={{ backgroundColor: pal.dot }}>
+                      {isSelected && <Check className="w-2.5 h-2.5 text-black stroke-[3]" />}
+                    </span>
+                    {isSelected && (
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--accent)] font-semibold">Active</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-[#F8FAFC] block">{pal.label}</span>
+                    <span className="text-[10px] text-[#64748B] block mt-0.5">{pal.desc}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Download Directory Configuration Section */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -490,7 +533,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => openInExplorer(settings.download_directory)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
+              className="h-[34px] flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-white/[0.08] transition-all duration-150 cursor-pointer active:scale-95"
               title="Reveal in Windows Explorer"
             >
               <FolderOpen className="w-3.5 h-3.5 text-[#AAA6B2]" />
@@ -498,7 +541,7 @@ export const SettingsView: React.FC = () => {
             </button>
             <button
               onClick={handleResetDownloadDir}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
+              className="h-[34px] flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-white/[0.08] transition-all duration-150 cursor-pointer active:scale-95"
               title="Reset to default music directory"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -508,7 +551,7 @@ export const SettingsView: React.FC = () => {
         </div>
 
         <div className="flex gap-2.5">
-          <div className="relative flex-1 flex items-center bg-[#0E0D14] rounded-xl border border-[#282631] focus-within:border-[#19E6A0]/50 transition-colors">
+          <div className="relative flex-1 flex items-center bg-[#07060A]/80 rounded-xl border border-white/[0.08] focus-within:border-[#19E6A0]/50 h-10 transition-colors">
             <input
               type="text"
               value={downloadDirInput}
@@ -520,13 +563,13 @@ export const SettingsView: React.FC = () => {
                 }
               }}
               placeholder="Enter absolute download folder path..."
-              className="w-full px-3.5 py-2.5 font-mono text-xs bg-transparent text-[#F4F2F7] placeholder-[#65616F] focus:outline-none"
+              className="w-full px-3.5 h-full font-mono text-xs bg-transparent text-[#F4F2F7] placeholder-[#65616F] focus:outline-none"
             />
           </div>
           <button
             type="button"
             onClick={handleBrowseDownloadDir}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1C1B24] hover:bg-[#282635] text-[#F4F2F7] border border-[#282631] font-medium text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            className="h-10 flex items-center gap-1.5 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#F4F2F7] border border-white/[0.08] font-medium text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
             title="Browse folder via system dialog"
           >
             <FolderOpen className="w-3.5 h-3.5 text-[#E8C77A]" />
@@ -535,7 +578,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleSaveDownloadDir}
             disabled={!downloadDirInput.trim() || downloadDirInput === settings.download_directory}
-            className="px-4 py-2.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            className="h-10 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-white/[0.04] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
           >
             Save Target
           </button>
@@ -544,17 +587,17 @@ export const SettingsView: React.FC = () => {
 
       {/* Audio Playback & Transitions: Smooth Crossfade */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
               <Sliders className="w-4 h-4 text-[#19E6A0]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Smooth Crossfade</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#19E6A0] font-semibold">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#19E6A0] font-semibold">
                   {crossfadeDuration === 0 ? 'Off' : `${crossfadeDuration}s`}
                 </span>
               </div>
@@ -568,17 +611,17 @@ export const SettingsView: React.FC = () => {
             {crossfadeDuration > 0 && (
               <button
                 onClick={() => setCrossfadeDuration(0)}
-                className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
+                className="h-[34px] px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#777381] hover:text-[#F4F2F7] border border-white/[0.08] transition-all duration-150 cursor-pointer active:scale-95"
               >
                 Disable
               </button>
             )}
             <button
               onClick={() => setCrossfadeDuration(crossfadeDuration === 0 ? 3 : crossfadeDuration)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 ${
+              className={`h-[34px] px-3 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 ${
                 crossfadeDuration > 0
                   ? 'bg-[#19E6A0]/15 border-[#19E6A0]/30 text-[#19E6A0]'
-                  : 'bg-[#1C1B23] border-[#282631] text-[#AAA6B2] hover:text-[#F4F2F7]'
+                  : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7]'
               }`}
             >
               {crossfadeDuration > 0 ? 'Active' : 'Enable (3s)'}
@@ -603,7 +646,7 @@ export const SettingsView: React.FC = () => {
               onChange={(e) => setCrossfadeDuration(parseInt(e.target.value, 10))}
               className="w-full h-1.5 slider-track cursor-pointer transition-all duration-200"
               style={{
-                background: `linear-gradient(to right, #19E6A0 0%, #19E6A0 ${(crossfadeDuration / 12) * 100}%, #201F29 ${(crossfadeDuration / 12) * 100}%, #201F29 100%)`
+                background: `linear-gradient(to right, [var(--accent)] 0%, [var(--accent)] ${(crossfadeDuration / 12) * 100}%, #201F29 ${(crossfadeDuration / 12) * 100}%, #201F29 100%)`
               }}
               aria-label="Crossfade duration slider"
             />
@@ -622,7 +665,7 @@ export const SettingsView: React.FC = () => {
 
       {/* Audio Output Device Selector */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -632,7 +675,7 @@ export const SettingsView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Audio Output Device</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#19E6A0] font-semibold">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#19E6A0] font-semibold">
                   {audioDevices.length > 0 ? `${audioDevices.length} Available` : 'System Default'}
                 </span>
               </div>
@@ -647,7 +690,7 @@ export const SettingsView: React.FC = () => {
           <select
             value={selectedAudioDevice}
             onChange={(e) => handleDeviceChange(e.target.value)}
-            className="w-full sm:w-80 px-3.5 py-2.5 rounded-xl bg-[#0E0D14] border border-[#282631] text-xs text-[#F4F2F7] focus:outline-none focus:border-[#19E6A0]/50 transition-colors cursor-pointer"
+            className="w-full sm:w-80 h-10 px-3.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] focus:outline-none focus:border-[#19E6A0]/50 transition-all cursor-pointer"
           >
             <option value="default">Default Audio Device</option>
             {audioDevices.map((dev) => (
@@ -661,17 +704,17 @@ export const SettingsView: React.FC = () => {
 
       {/* Application Updates Section */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
               <Sparkles className="w-4 h-4 text-[#19E6A0]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Application Updates</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1C1B24] border border-[#282631] text-[#AAA6B2]">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#AAA6B2]">
                   v{currentVersion}
                 </span>
               </div>
@@ -684,7 +727,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             {/* Status indicator pill */}
             {updateStatus === 'checking' && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C1B24] border border-[#282631] text-[11px] font-medium text-[#AAA6B2]">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] font-medium text-[#AAA6B2]">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[#19E6A0]" />
                 <span>Checking...</span>
               </span>
@@ -706,7 +749,7 @@ export const SettingsView: React.FC = () => {
             <button
               onClick={() => void checkForUpdates(false)}
               disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'installing'}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] border border-[#282631] text-xs font-medium text-[#F4F2F7] transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-95"
+              className="h-[34px] flex items-center gap-2 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-[#F4F2F7] transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-95"
               title="Check GitHub for newer releases"
             >
               <RefreshCw
@@ -722,14 +765,14 @@ export const SettingsView: React.FC = () => {
               <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
                 <button
                   onClick={dismissUpdate}
-                  className="px-3 py-1.5 rounded-xl bg-[#1C1B23] hover:bg-[#23222C] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-[#282631] transition-all duration-150 cursor-pointer active:scale-95"
+                  className="h-[34px] px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7] text-xs font-medium border border-white/[0.08] transition-all duration-150 cursor-pointer active:scale-95"
                   title="Dismiss update notification"
                 >
                   Later
                 </button>
                 <button
                   onClick={() => void downloadAndInstall()}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95"
+                  className="h-[34px] flex items-center gap-1.5 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95"
                 >
                   <ArrowDownCircle className="w-3.5 h-3.5" />
                   <span>Update to v{updateInfo?.version}</span>
@@ -752,7 +795,7 @@ export const SettingsView: React.FC = () => {
 
         {/* Downloading / Installing Progress Bar */}
         {(updateStatus === 'downloading' || updateStatus === 'installing') && (
-          <div className="p-3.5 rounded-xl bg-[#0E0D14] border border-[#282631] space-y-2 animate-in fade-in duration-200">
+          <div className="p-3.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] space-y-2 animate-in fade-in duration-200">
             <div className="flex items-center justify-between text-xs">
               <span className="text-[#AAA6B2] flex items-center gap-2">
                 {updateStatus === 'downloading' ? (
@@ -816,7 +859,7 @@ export const SettingsView: React.FC = () => {
 
         {/* Release Notes Card */}
         {updateInfo && (
-          <div className="p-3.5 rounded-xl bg-[#0E0D14] border border-[#282631] space-y-2 animate-in fade-in duration-200">
+          <div className="p-3.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] space-y-2 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-[#F4F2F7]">
@@ -831,7 +874,7 @@ export const SettingsView: React.FC = () => {
               <span className="text-[10px] font-mono text-[#19E6A0]">Available Now</span>
             </div>
             {updateInfo.body ? (
-              <div className="text-xs text-[#AAA6B2] bg-[#14131A] p-3 rounded-lg border border-[#282631]/60 whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto no-scrollbar">
+              <div className="text-xs text-[#AAA6B2] bg-[#07060A] p-3 rounded-lg border border-white/[0.08] whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto no-scrollbar">
                 {updateInfo.body}
               </div>
             ) : (
@@ -865,9 +908,9 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Library Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div className={`p-4 rounded-2xl border flex items-center gap-3.5 shadow-sm transition-colors duration-200 ${
-          isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+          isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
         }`}>
           <div className="w-10 h-10 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shrink-0">
             <Music className="w-5 h-5" />
@@ -882,7 +925,7 @@ export const SettingsView: React.FC = () => {
         </div>
 
         <div className={`p-4 rounded-2xl border flex items-center gap-3.5 shadow-sm transition-colors duration-200 ${
-          isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+          isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
         }`}>
           <div className="w-10 h-10 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shrink-0">
             <HardDrive className="w-5 h-5" />
@@ -895,26 +938,11 @@ export const SettingsView: React.FC = () => {
             <span className="text-[10.5px] text-[#65616F]">Local audio data</span>
           </div>
         </div>
-
-        <div className={`p-4 rounded-2xl border flex items-center gap-3.5 shadow-sm transition-colors duration-200 ${
-          isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
-        }`}>
-          <div className="w-10 h-10 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shrink-0">
-            <Volume2 className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider block">
-              Audio Quality
-            </span>
-            <span className="text-lg font-bold text-[#19E6A0] leading-tight block">320 kbps HQ</span>
-            <span className="text-[10.5px] text-[#65616F]">High-definition MP3</span>
-          </div>
-        </div>
       </div>
 
       {/* Keyboard Shortcuts Table */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
-        isGlass ? 'bg-[#14131A]/70 backdrop-blur-md border-white/[0.08]' : 'bg-[#14131A] border-[#282631]'
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
       }`}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
@@ -930,10 +958,10 @@ export const SettingsView: React.FC = () => {
           {shortcuts.map((sc) => (
             <div
               key={sc.key}
-              className="flex items-center justify-between p-3 rounded-xl bg-[#0E0D14] border border-[#282631]/80 hover:border-[#282631] transition-colors"
+              className="flex items-center justify-between p-3 rounded-xl bg-[#07060A]/80 border border-white/[0.08] hover:border-white/[0.12] transition-colors"
             >
               <span className="text-xs text-[#AAA6B2]">{sc.desc}</span>
-              <kbd className="px-2.5 py-1 rounded-lg bg-[#181722] border border-[#282631] font-mono text-[11px] text-[#19E6A0] font-semibold shadow-sm">
+              <kbd className="px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.08] font-mono text-[11px] text-[#19E6A0] font-semibold shadow-sm">
                 {sc.key}
               </kbd>
             </div>

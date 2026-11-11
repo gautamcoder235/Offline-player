@@ -36,7 +36,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none"
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 select-none"
           onClick={onClose}
         >
           <motion.div
@@ -44,7 +44,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-            className="w-full max-w-md rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 text-left"
+            className="w-full max-w-md rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.85)] p-6 space-y-5 text-left"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -65,7 +65,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#201F29] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-white/[0.08] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -73,8 +73,8 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
         </div>
 
         {/* Track Preview Card */}
-        <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[#100F14] border border-[#282631]">
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#16151C] border border-white/10 shrink-0 flex items-center justify-center">
+        <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[#07060A]/80 border border-white/[0.08]">
+          <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#12111A] border border-white/10 shrink-0 flex items-center justify-center">
             {track.cover_art ? (
               <img src={track.cover_art} alt={track.title} className="w-full h-full object-cover" />
             ) : (
@@ -95,7 +95,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
             className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
               deleteFromDisk
                 ? 'bg-[#FF667A]/10 border-[#FF667A]/40 text-[#F4F2F7]'
-                : 'bg-[#100F14] border-[#282631] text-[#AAA6B2] hover:bg-[#16151E]'
+                : 'bg-[#07060A]/80 border-white/[0.08] text-[#AAA6B2] hover:bg-white/[0.04]'
             }`}
           >
             <div className={`mt-0.5 p-1 rounded-lg ${deleteFromDisk ? 'bg-[#FF667A]/20 text-[#FF667A]' : 'text-[#65616F]'}`}>
@@ -123,7 +123,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
             className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
               !deleteFromDisk
                 ? 'bg-[#19E6A0]/10 border-[#19E6A0]/40 text-[#F4F2F7]'
-                : 'bg-[#100F14] border-[#282631] text-[#AAA6B2] hover:bg-[#16151E]'
+                : 'bg-[#07060A]/80 border-white/[0.08] text-[#AAA6B2] hover:bg-white/[0.04]'
             }`}
           >
             <div className={`mt-0.5 p-1 rounded-lg ${!deleteFromDisk ? 'bg-[#19E6A0]/20 text-[#19E6A0]' : 'text-[#65616F]'}`}>
@@ -148,12 +148,12 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#292731]/40">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/[0.06]">
           <button
             type="button"
             onClick={onClose}
             autoFocus
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#201F29] border border-[#282631] transition-colors cursor-pointer"
+            className="h-9 px-4 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-white/[0.06] border border-white/[0.08] transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -163,7 +163,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
               onConfirm(track, deleteFromDisk);
               onClose();
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#FF667A] hover:bg-[#FF4D66] text-black shadow-lg shadow-[#FF667A]/20 transition-all active:scale-95 cursor-pointer"
+            className="h-9 flex items-center gap-2 px-4 rounded-xl text-xs font-semibold bg-[#FF667A] hover:bg-[#FF4D66] text-black shadow-lg shadow-[#FF667A]/20 transition-all active:scale-95 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>{deleteFromDisk ? 'Delete File from Disk' : 'Remove Track'}</span>

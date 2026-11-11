@@ -169,7 +169,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 select-none overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 select-none overflow-y-auto"
           onClick={onClose}
         >
           <motion.div
@@ -177,7 +177,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-            className="w-full max-w-lg rounded-2xl bg-[#16151C] border border-[#292731] shadow-2xl p-6 space-y-5 text-left my-8 relative overflow-hidden"
+            className="w-full max-w-lg rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.85)] p-6 space-y-5 text-left my-8 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -185,16 +185,16 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
           >
         {/* Dynamic ambient accent glow inside the modal reflecting the selected color */}
         <div
-          className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none blur-3xl opacity-25 transition-all duration-500 ease-out z-0"
+          className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none blur-3xl opacity-20 transition-all duration-500 ease-out z-0"
           style={{ backgroundColor: coverColor }}
         />
         <div
-          className="absolute top-0 left-0 right-0 h-1 pointer-events-none transition-colors duration-500 z-0"
-          style={{ backgroundColor: coverColor, boxShadow: `0 0 12px ${coverColor}` }}
+          className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none transition-colors duration-500 z-0"
+          style={{ backgroundColor: coverColor, boxShadow: `0 0 10px ${coverColor}` }}
         />
 
         {/* Header */}
-        <div className="relative z-10 flex items-center justify-between pb-1 border-b border-[#292731]/40">
+        <div className="relative z-10 flex items-center justify-between pb-1 border-b border-white/[0.06]">
           <div>
             <h3 id="edit-playlist-title" className="text-base font-bold text-[#F4F2F7]">
               Edit Playlist Details
@@ -204,7 +204,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-[#201F29] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#65616F] hover:text-[#F4F2F7] hover:bg-white/[0.08] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -218,11 +218,11 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
               Playlist Artwork
             </label>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-xl bg-[#100F14] border border-[#282631]">
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08]">
               {/* Preview Thumbnail with clickable overlay */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="relative w-28 h-28 rounded-xl overflow-hidden bg-[#181720] border border-white/10 shrink-0 flex items-center justify-center cursor-pointer group shadow-md"
+                className="relative w-28 h-28 rounded-xl overflow-hidden bg-[#12111A] border border-white/10 shrink-0 flex items-center justify-center cursor-pointer group shadow-md"
                 title="Click to upload custom cover"
               >
                 {coverArt ? (
@@ -273,7 +273,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#201F29] hover:bg-[#282734] text-xs font-medium text-[#F4F2F7] border border-[#353342] transition-colors cursor-pointer active:scale-95"
+                    className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-[#F4F2F7] border border-white/[0.08] transition-colors cursor-pointer active:scale-95"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#19E6A0]" />
                     <span>Upload Image</span>
@@ -283,7 +283,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setCoverArt(undefined)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#201F29] hover:bg-[#282734] text-xs font-medium text-[#AAA6B2] hover:text-[#FF667A] border border-[#353342] transition-colors cursor-pointer active:scale-95"
+                      className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.06] hover:bg-[#FF667A]/15 text-xs font-medium text-[#AAA6B2] hover:text-[#FF667A] border border-white/[0.08] hover:border-[#FF667A]/30 transition-colors cursor-pointer active:scale-95"
                       title="Revert to dynamic track collage"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
@@ -336,7 +336,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Playlist title"
-              className="w-full px-3.5 py-2 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 transition-colors"
+              className="w-full px-3.5 h-10 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
             />
           </div>
 
@@ -350,7 +350,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Give your playlist a mood or description..."
-              className="w-full px-3.5 py-2 rounded-xl bg-[#100F14] border border-[#282631] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 transition-colors resize-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all resize-none"
             />
           </div>
 
@@ -389,7 +389,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
 
           {/* Playlist Management Actions: Export, Back to Playlists, Delete */}
           {(onExport || onBackToPlaylists || onDelete) && (
-            <div className="pt-3 border-t border-[#292731]/40 space-y-2">
+            <div className="pt-3 border-t border-white/[0.06] space-y-2">
               <label className="text-[11px] font-semibold text-[#AAA6B2] uppercase tracking-wider block">
                 Playlist Actions
               </label>
@@ -398,7 +398,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onExport(playlist.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201F29] hover:bg-[#282734] text-xs font-medium text-[#AAA6B2] hover:text-[#19E6A0] border border-[#353342] transition-colors cursor-pointer active:scale-95"
+                    className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#AAA6B2] hover:text-[#19E6A0] border border-white/[0.08] transition-colors cursor-pointer active:scale-95"
                     title="Export playlist as .m3u8"
                   >
                     <FileDown className="w-3.5 h-3.5" />
@@ -413,7 +413,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                       onClose();
                       onBackToPlaylists();
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201F29] hover:bg-[#282734] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-[#353342] transition-colors cursor-pointer active:scale-95"
+                    className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-white/[0.08] transition-colors cursor-pointer active:scale-95"
                     title="Go back to all playlists"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
@@ -428,7 +428,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                       onClose();
                       onDelete(playlist);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201F29] hover:bg-[#FF667A]/15 text-xs font-medium text-[#AAA6B2] hover:text-[#FF667A] border border-[#353342] hover:border-[#FF667A]/30 transition-colors cursor-pointer active:scale-95 sm:ml-auto"
+                    className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-[#FF667A]/15 text-xs font-medium text-[#AAA6B2] hover:text-[#FF667A] border border-white/[0.08] hover:border-[#FF667A]/30 transition-colors cursor-pointer active:scale-95 sm:ml-auto"
                     title="Delete playlist"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -440,18 +440,18 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#292731]/40">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#201F29] border border-[#282631] transition-colors cursor-pointer"
+              className="h-9 px-4 rounded-xl text-xs font-semibold text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-white/[0.06] border border-white/[0.08] transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+              className="h-9 px-5 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
               style={{
                 backgroundColor: coverColor,
                 color: getContrastTextColor(coverColor),

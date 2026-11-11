@@ -6,13 +6,13 @@ export interface Palette {
 }
 
 export const DEFAULT_PALETTE: Palette = {
-  colors: ['hsl(160 75% 40%)', 'hsl(40 65% 52%)', 'hsl(255 45% 42%)'],
-  accent: 'hsl(160 75% 45%)',
+  // Pure analogous acoustic harmony: Emerald (162°) -> Oceanic Teal (182°) -> Acoustic Cyan (200°)
+  colors: ['hsl(162 76% 38%)', 'hsl(182 70% 36%)', 'hsl(200 66% 34%)'],
+  accent: 'hsl(162 82% 48%)',
 };
 
 const SIZE = 32;
 const HUE_BINS = 12; // 30° each
-const MIN_HUE_GAP = 40;
 
 const cache = new Map<string, Palette>();
 
@@ -86,23 +86,35 @@ export async function extractPalette(src: string, cacheKey: string): Promise<Pal
       return DEFAULT_PALETTE;
     }
 
-    const topW = ranked[0].w;
-    const picked: Swatch[] = [];
-    for (const b of ranked) {
-      if (b.w < topW * 0.05) break; // ignore noise bins
-      const sw = { h: b.h / b.w, s: b.s / b.w, l: b.l / b.w };
-      if (picked.every((p) => hueDist(p.h, sw.h) >= MIN_HUE_GAP)) picked.push(sw);
-      if (picked.length === 3) break;
+    // Select dominant key swatch
+    const topBin = ranked[0];
+    const baseSwatch: Swatch = {
+      h: topBin.h / topBin.w,
+      s: topBin.s / topBin.w,
+      l: topBin.l / topBin.w,
+    };
+
+    const picked: Swatch[] = [baseSwatch];
+
+    // Look for natural analogous neighbors in the artwork (within 15° to 48° hue window)
+    for (const b of ranked.slice(1)) {
+      if (b.w < topBin.w * 0.12) break;
+      const hCandidate = b.h / b.w;
+      const dist = hueDist(baseSwatch.h, hCandidate);
+      if (dist >= 14 && dist <= 48) {
+        picked.push({ h: hCandidate, s: b.s / b.w, l: b.l / b.w });
+        if (picked.length === 3) break;
+      }
     }
 
-    // Single-hue covers: derive neighbors so the blobs still have variety
-    const offsets = [0, 30, -35];
+    // If artwork does not have natural analogous bins, mathematically derive an analogous harmony arc (±26°)
+    const analogousOffsets = [0, 26, -22];
     while (picked.length < 3) {
-      const base = picked[0];
+      const offset = analogousOffsets[picked.length];
       picked.push({
-        h: (base.h + offsets[picked.length] + 360) % 360,
-        s: base.s,
-        l: clamp(base.l + (picked.length === 1 ? 0.06 : -0.06), 0.3, 0.55),
+        h: (baseSwatch.h + offset + 360) % 360,
+        s: clamp(baseSwatch.s * 0.95, 0.45, 0.85),
+        l: clamp(baseSwatch.l + (picked.length === 1 ? 0.05 : -0.05), 0.32, 0.52),
       });
     }
 

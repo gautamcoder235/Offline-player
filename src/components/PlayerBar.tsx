@@ -1,11 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Play,
   Pause,
   ListOrdered,
   Mic2,
-  Radio,
   Disc3,
   PictureInPicture2,
   Moon,
@@ -14,7 +13,6 @@ import { usePlayer } from '../context/PlayerContext';
 import { audioEngine } from '../services/audioEngine';
 import { formatTime, getTrackColor } from '../utils/helpers';
 import {
-  AnimatedEqualizer,
   AnimatedVolume,
   AnimatedShuffle,
   AnimatedRepeat,
@@ -27,10 +25,6 @@ interface PlayerBarProps {
   isLyricsActive: boolean;
   onToggleQueue: () => void;
   isQueueActive: boolean;
-  onToggleEqualizer: () => void;
-  isEqualizerActive: boolean;
-  onToggleVisualizer: () => void;
-  isVisualizerActive: boolean;
 }
 
 export const PlayerBar: React.FC<PlayerBarProps> = ({
@@ -38,10 +32,6 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   isLyricsActive,
   onToggleQueue,
   isQueueActive,
-  onToggleEqualizer,
-  isEqualizerActive,
-  onToggleVisualizer,
-  isVisualizerActive,
 }) => {
   const {
     currentTrack,
@@ -52,6 +42,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     isMuted,
     shuffle,
     repeatMode,
+    queue,
     likedTrackIds,
     togglePlay,
     nextTrack,
@@ -63,10 +54,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     cycleRepeat,
     toggleLike,
     toggleMiniPlayer,
-    themeAppearance,
     sleepTimerMinutes,
     sleepTimerRemainingSec,
     setSleepTimer,
+    coverMap,
+    themeAppearance,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
 
@@ -138,14 +130,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     isDraggingProgressRef.current = true;
     setIsDraggingProgress(true);
 
-    // Hide hover line during dragging so there is NO desynchronized ghost/back-glow line!
+    // Hide hover line during dragging so there is no desynchronized line
     if (hoverLineRef.current) hoverLineRef.current.style.display = 'none';
 
     const ratio = getProgressRatio(e.clientX);
     const percent = ratio * 100;
     const targetTime = ratio * duration;
 
-    // Instant synchronous DOM updates for zero latency between dot and line
+    // Instant synchronous DOM updates for zero latency between knob and line
     if (progressFillRef.current) progressFillRef.current.style.width = `${percent}%`;
     if (progressKnobRef.current) progressKnobRef.current.style.left = `${percent}%`;
     if (currentTimeDisplayRef.current) currentTimeDisplayRef.current.innerText = formatTime(targetTime);
@@ -169,7 +161,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
       // Keep hover line hidden while dragging
       if (hoverLineRef.current) hoverLineRef.current.style.display = 'none';
 
-      // Instant synchronous DOM updates: fill width, knob left, time text, tooltip
+      // Instant synchronous DOM updates
       if (progressFillRef.current) progressFillRef.current.style.width = `${percent}%`;
       if (progressKnobRef.current) progressKnobRef.current.style.left = `${percent}%`;
       if (currentTimeDisplayRef.current) currentTimeDisplayRef.current.innerText = formatTime(targetTime);
@@ -182,7 +174,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
       setDragProgressPercent(percent);
       performRealtimeSeek(targetTime);
     } else {
-      // Passive hover preview only
+      // Passive hover preview
       if (hoverLineRef.current) {
         hoverLineRef.current.style.width = `${percent}%`;
         hoverLineRef.current.style.display = 'block';
@@ -362,62 +354,101 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   const effectiveVol = isMuted ? 0 : volume;
   const volPercent = Math.round(effectiveVol * 100);
 
+  const handleLocateCurrentTrack = useCallback(() => {
+    if (!currentTrack) return;
+    window.dispatchEvent(
+      new CustomEvent('locate-current-track', {
+        detail: {
+          track: currentTrack,
+        },
+      })
+    );
+  }, [currentTrack]);
+
   const trackColor = currentTrack
     ? getTrackColor(currentTrack.title, currentTrack.artist)
-    : { bg: '#16151C', text: '#777381', glow: 'transparent' };
+    : { bg: '#0D0B13', text: '#7E7A8A', glow: 'transparent' };
 
   return (
-    <footer className={`h-20 shrink-0 px-3 sm:px-6 flex items-center justify-between transition-colors duration-300 ${
+    <footer className={`h-[76px] shrink-0 px-4 md:px-6 flex items-center justify-between transition-colors duration-300 ${
       isGlass
-        ? 'border-t border-white/[0.08] bg-[#100F14]/45 backdrop-blur-2xl'
-        : 'border-t border-[#292731]/40 bg-[#100F14]/85 backdrop-blur-md'
-    } z-20 select-none overflow-hidden`}>
-      {/* LEFT: Track Info & Champagne Heart */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none sm:w-1/4 min-w-0 max-w-[200px] sm:max-w-[280px] md:max-w-[320px] shrink-0">
+        ? 'bg-[#0A0910]/55 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-8px_32px_rgba(0,0,0,0.5)]'
+        : 'bg-[#0E0E13]/98 backdrop-blur-3xl border-t border-white/[0.06] shadow-[0_-8px_32px_rgba(0,0,0,0.7)]'
+    } z-20 select-none overflow-visible relative`}>
+      {/* =========================================================================
+          LEFT COLUMN: Now-Playing Track Info & High-Res Artwork
+          ========================================================================= */}
+      <div className="flex-1 min-w-0 max-w-[360px] flex items-center gap-3">
         {currentTrack ? (
           <>
-            <div className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden border border-[#292731] shrink-0 bg-[#16151C] transition-shadow duration-500 ${
-              isPlaying ? 'shadow-[0_0_14px_rgba(25,230,160,0.25)] border-[#19E6A0]/30' : ''
-            }`}>
-              {currentTrack.cover_art ? (
-                <img
-                  src={currentTrack.cover_art}
-                  alt={currentTrack.title}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center text-sm font-bold"
-                  style={{ background: trackColor.bg, color: trackColor.text }}
-                >
-                  <Disc3 className={`w-5 h-5 ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
-                </div>
+            {/* High-res Album Art (52x52px) with click-to-locate navigation */}
+            <div
+              onClick={handleLocateCurrentTrack}
+              className="relative group/cover w-[52px] h-[52px] rounded-xl overflow-hidden shrink-0 bg-[#0D0B13] border border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              title={`Jump to "${currentTrack.title}" in library`}
+            >
+              {(() => {
+                const nowPlayingCover = coverMap[currentTrack.id] || currentTrack.cover_art;
+                return nowPlayingCover ? (
+                  <img
+                    key={nowPlayingCover}
+                    src={nowPlayingCover}
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover/cover:scale-110"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-sm font-bold"
+                    style={{ background: trackColor.bg, color: trackColor.text }}
+                  >
+                    <Disc3 className={`w-5 h-5 ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
+                  </div>
+                );
+              })()}
+
+              {/* Subtle emerald ring when playing */}
+              {isPlaying && (
+                <div className="absolute inset-0 rounded-xl ring-1 ring-[var(--accent)]/40 pointer-events-none" />
               )}
             </div>
+
+            {/* Track Title & Artist with click-to-locate navigation */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentTrack.id}
-                initial={{ opacity: 0, y: 4 }}
+                initial={{ opacity: 0, y: 3 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.16 }}
-                className="flex flex-col min-w-0 pr-1 sm:pr-2 flex-1"
+                exit={{ opacity: 0, y: -3 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col min-w-0 justify-center flex-1 pr-1"
               >
-                <span className="text-xs font-semibold text-[#F4F2F7] truncate">
+                <span
+                  onClick={handleLocateCurrentTrack}
+                  className="text-[13px] font-bold text-[#FFFFFF] truncate leading-tight hover:text-[var(--accent)] hover:underline active:opacity-80 transition-all cursor-pointer"
+                  title={`Jump to "${currentTrack.title}" in library`}
+                >
                   {currentTrack.title}
                 </span>
-                <span className="text-[10px] sm:text-[11px] text-[#777381] truncate">
+                <span
+                  onClick={handleLocateCurrentTrack}
+                  className="text-[11px] font-medium text-[#9C98A6] truncate leading-tight hover:text-white hover:underline active:opacity-80 transition-all cursor-pointer mt-0.5"
+                  title={`Jump to "${currentTrack.artist}" in library`}
+                >
                   {currentTrack.artist}
                 </span>
               </motion.div>
             </AnimatePresence>
+
+            {/* Animated Heart Button with pop micro-interaction */}
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className={`group/heart p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-90 cursor-pointer shrink-0 ${
-                isLiked ? 'text-[#E8C77A]' : 'text-[#65616F] hover:text-[#E8C77A]'
+              className={`group/heart relative p-2 rounded-full transition-all duration-200 active:scale-75 hover:scale-110 cursor-pointer shrink-0 ${
+                isLiked
+                  ? 'text-[#E8C77A] hover:bg-[#E8C77A]/10'
+                  : 'text-[#65616F] hover:text-[#E8C77A] hover:bg-white/[0.06]'
               }`}
-              title={isLiked ? 'Remove from Liked' : 'Save to Liked'}
-              aria-label={isLiked ? 'Remove from Liked' : 'Save to Liked'}
+              title={isLiked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
+              aria-label={isLiked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
             >
               <AnimatedHeart
                 isLiked={isLiked}
@@ -426,68 +457,79 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             </button>
           </>
         ) : (
-          <div className="flex items-center gap-2.5 text-xs text-[#65616F]">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-[#16151C] border border-[#292731] flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3 text-xs text-[#7E7A8A]">
+            <div className="w-[52px] h-[52px] rounded-xl bg-[#14121B] border border-white/[0.06] flex items-center justify-center shrink-0 shadow-inner">
               <Disc3 className="w-5 h-5 text-[#4B4854]" />
             </div>
-            <span className="text-[11px] truncate">No song selected</span>
+            <div className="flex flex-col">
+              <span className="text-[13px] font-bold text-[#65616F]">No track playing</span>
+              <span className="text-[11px] text-[#4B4854]">Choose a song to start</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* CENTER: Playback Controls & Scrubber */}
-      <div className="flex flex-col items-center gap-1 sm:gap-1.5 flex-1 max-w-xl px-2 sm:px-4 min-w-0">
-        {/* Buttons */}
-        <div className="flex items-center gap-2.5 sm:gap-4 md:gap-5">
+      {/* =========================================================================
+          CENTER COLUMN: Main Playback Controls & High-Precision Scrubber (~540px)
+          ========================================================================= */}
+      <div className="flex-1 max-w-[540px] px-2 sm:px-4 min-w-0 flex flex-col items-center justify-center gap-1.5">
+        {/* Controls Row */}
+        <div className="flex items-center gap-3 sm:gap-4 md:gap-5">
+          {/* Shuffle with active neon dot */}
           <button
             onClick={toggleShuffle}
-            className={`group/shuffle relative p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer ${
-              shuffle ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
+            className={`group/shuffle relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
+              shuffle ? 'text-[#19E6A0]' : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
             }`}
-            title="Shuffle"
+            title={shuffle ? 'Shuffle enabled' : 'Shuffle disabled'}
             aria-label="Shuffle"
           >
-            <AnimatedShuffle active={shuffle} className="w-3.5 h-3.5 discord-icon discord-icon-shuffle" />
-            {shuffle && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#19E6A0] animate-in fade-in zoom-in duration-200" />}
+            <AnimatedShuffle active={shuffle} className="w-4 h-4 discord-icon discord-icon-shuffle" />
+            {shuffle && (
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0] animate-in fade-in zoom-in duration-200" />
+            )}
           </button>
 
+          {/* Previous Track with smooth circular hover scale */}
           <button
             onClick={prevTrack}
-            className="group/prev p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-all duration-200 active:scale-90 cursor-pointer"
+            className="group/prev w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer shrink-0"
             title="Previous (Ctrl+Left)"
             aria-label="Previous Track"
           >
             <AnimatedSkip direction="prev" className="w-4 h-4 discord-icon discord-icon-prev" />
           </button>
 
+          {/* Play/Pause Button: 38x38px with signature emerald gradient & drop shadow */}
           <button
             onClick={togglePlay}
-            className={`group/play w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow transition-all duration-300 hover:scale-[1.06] active:scale-95 cursor-pointer shrink-0 ${
-              isPlaying ? 'animate-breathe-glow' : ''
-            }`}
-            title="Play / Pause (Space)"
-            aria-label="Play or Pause"
+            style={{ background: 'linear-gradient(135deg, #1DB954, #19E6A0)' }}
+            className="w-[38px] h-[38px] rounded-full text-black flex items-center justify-center shadow-[0_2px_12px_rgba(25,230,160,0.35)] hover:shadow-[0_2px_18px_rgba(25,230,160,0.55)] transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0"
+            title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4 fill-black text-black discord-icon discord-icon-pop animate-in zoom-in duration-200" />
+              <Pause className="w-4 h-4 fill-black text-black discord-icon discord-icon-pop animate-in zoom-in duration-150" />
             ) : (
-              <Play className="w-4 h-4 fill-black text-black ml-0.5 discord-icon discord-icon-pop animate-in zoom-in duration-200" />
+              <Play className="w-4 h-4 fill-black text-black ml-0.5 discord-icon discord-icon-pop animate-in zoom-in duration-150" />
             )}
           </button>
 
+          {/* Next Track with smooth circular hover scale */}
           <button
             onClick={nextTrack}
-            className="group/next p-1 sm:p-1.5 rounded-full text-[#B8B4C0] hover:text-[#F4F2F7] transition-all duration-200 active:scale-90 cursor-pointer"
+            className="group/next w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer shrink-0"
             title="Next (Ctrl+Right)"
             aria-label="Next Track"
           >
             <AnimatedSkip direction="next" className="w-4 h-4 discord-icon discord-icon-next" />
           </button>
 
+          {/* Repeat Mode with active badge/dot ('1' or 'all') */}
           <button
             onClick={cycleRepeat}
-            className={`group/repeat relative p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer ${
-              repeatMode !== 'off' ? 'text-[#19E6A0]' : 'text-[#777381] hover:text-[#F4F2F7]'
+            className={`group/repeat relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
+              repeatMode !== 'off' ? 'text-[#19E6A0]' : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
             }`}
             title={`Repeat: ${repeatMode}`}
             aria-label={`Repeat: ${repeatMode}`}
@@ -495,15 +537,24 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <AnimatedRepeat
               mode={repeatMode}
               single={repeatMode === 'one'}
-              className="w-3.5 h-3.5 discord-icon discord-icon-repeat"
+              className="w-4 h-4 discord-icon discord-icon-repeat"
             />
-            {repeatMode !== 'off' && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#19E6A0] animate-in fade-in zoom-in duration-200" />}
+            {repeatMode === 'all' && (
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0] animate-in fade-in zoom-in duration-200" />
+            )}
+            {repeatMode === 'one' && (
+              <span className="absolute -top-0.5 right-0.5 text-[8px] font-mono font-black text-[#19E6A0] leading-none drop-shadow-[0_0_4px_#19E6A0]">
+                1
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Time Scrubber */}
-        <div className="w-full flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] text-[#777381] font-mono">
-          <span ref={currentTimeDisplayRef} className="w-7 sm:w-8 text-right shrink-0">{formatTime(displayedCurrentTime)}</span>
+        {/* Scrubber Row */}
+        <div className="w-full flex items-center gap-2.5 font-mono text-[11px] text-[#7E7A8A]">
+          <span ref={currentTimeDisplayRef} className="w-9 text-right shrink-0 tabular-nums">
+            {formatTime(displayedCurrentTime)}
+          </span>
 
           <div
             ref={progressBarRef}
@@ -520,119 +571,106 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onPointerCancel={handleProgressPointerCancel}
             onPointerLeave={handleProgressPointerLeave}
             onKeyDown={handleProgressKeyDown}
-            className={`relative flex-1 h-3 flex items-center py-1 min-w-[60px] select-none touch-none group outline-none ${
+            className={`relative flex-1 h-5 flex items-center min-w-[80px] select-none touch-none group/scrubber outline-none ${
               isDraggingProgress ? 'cursor-grabbing' : 'cursor-pointer'
             }`}
           >
-            {/* Background Track */}
-            <div className={`w-full bg-[#292731] rounded-full overflow-hidden relative transition-[height] duration-200 ${
-              isDraggingProgress ? 'h-1.5' : 'h-1 group-hover:h-1.5'
-            }`}>
-              {/* Hover line */}
+            {/* Background Track: 4px base interactive track, expands slightly on hover */}
+            <div
+              className={`w-full bg-white/[0.12] rounded-full overflow-hidden relative transition-[height] duration-150 ${
+                isDraggingProgress ? 'h-[5px]' : 'h-[4px] group-hover/scrubber:h-[5px]'
+              }`}
+            >
+              {/* Hover preview line */}
               <div
                 ref={hoverLineRef}
-                className="absolute top-0 bottom-0 bg-white/10 hidden pointer-events-none"
+                className="absolute top-0 bottom-0 left-0 bg-white/20 rounded-full hidden pointer-events-none"
               />
-              {/* Active filled progress */}
+
+              {/* Glowing Emerald Gradient Fill */}
               <div
                 ref={progressFillRef}
-                className={`h-full bg-[#19E6A0] rounded-full relative transition-none ${isPlaying ? 'shadow-[0_0_8px_rgba(25,230,160,0.4)]' : ''}`}
-                style={{ width: `${progressPercent}%` }}
+                style={{
+                  width: `${progressPercent}%`,
+                  background: 'linear-gradient(90deg, #1DB954, #19E6A0)',
+                }}
+                className={`h-full rounded-full relative transition-none ${
+                  isPlaying || isDraggingProgress ? 'shadow-[0_0_10px_rgba(25,230,160,0.4)]' : ''
+                }`}
               />
             </div>
 
-            {/* Scrubber Knob */}
+            {/* Smooth Playhead Knob: expands on hover/drag */}
             <div
               ref={progressKnobRef}
-              className={`absolute w-2.5 h-2.5 bg-[#F4F2F7] rounded-full shadow -translate-x-1/2 pointer-events-none transition-[transform,opacity,box-shadow] duration-150 ${
+              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full ring-2 ring-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.7)] pointer-events-none transition-[width,height,opacity,transform] duration-150 ease-out ${
                 isDraggingProgress
-                  ? 'opacity-100 scale-125 ring-2 ring-[#19E6A0]/60 shadow-[0_0_10px_rgba(25,230,160,0.8)]'
-                  : 'opacity-0 group-hover:opacity-100 group-hover:scale-110'
-              } ${isPlaying ? 'animate-progress-glow ring-2 ring-[#19E6A0]/40' : ''}`}
+                  ? 'w-3 h-3 opacity-100 scale-110 ring-4 ring-[#19E6A0]/50 shadow-[0_0_12px_rgba(25,230,160,0.9)]'
+                  : 'w-0 h-0 opacity-0 group-hover/scrubber:w-3 group-hover/scrubber:h-3 group-hover/scrubber:opacity-100'
+              }`}
               style={{ left: `${progressPercent}%` }}
             />
 
-            {/* Hover Tooltip */}
+            {/* Hover preview timestamp tooltip */}
             <div
               ref={hoverTooltipRef}
-              className="absolute -top-7 px-1.5 py-0.5 rounded bg-[#16151C] border border-[#292731] text-[10px] text-[#F4F2F7] font-mono -translate-x-1/2 shadow hidden pointer-events-none z-30"
+              className="absolute -top-8 px-2 py-0.5 rounded-md bg-[#14121B]/95 backdrop-blur-md border border-white/10 text-[10px] text-white font-mono -translate-x-1/2 shadow-xl hidden pointer-events-none z-30"
             >
               0:00
             </div>
           </div>
 
-          <span className="w-7 sm:w-8 shrink-0">{formatTime(duration)}</span>
+          <span className="w-9 text-left shrink-0 tabular-nums">
+            {formatTime(duration)}
+          </span>
         </div>
       </div>
 
-      {/* RIGHT: Tools & Volume */}
-      <div className="flex items-center justify-end gap-1.5 sm:gap-2 md:gap-3 shrink-0 min-w-fit">
-        {/* Real-time Visualizer Button */}
-        <button
-          onClick={onToggleVisualizer}
-          className={`group/vis p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
-            isVisualizerActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
-          }`}
-          title="Audio Visualizer"
-          aria-label="Toggle Audio Visualizer"
-        >
-          <Radio className="w-4 h-4 discord-icon discord-icon-pop" />
-        </button>
-
-        {/* Live Lyrics Button */}
+      {/* =========================================================================
+          RIGHT COLUMN: Utility Island & Volume Slider
+          ========================================================================= */}
+      <div className="flex-1 min-w-0 max-w-[340px] flex items-center justify-end gap-1 sm:gap-1.5">
+        {/* Live Lyrics button with microphone icon */}
         <button
           onClick={onToggleLyrics}
-          className={`group/lyrics p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
-            isLyricsActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
+            isLyricsActive
+              ? 'text-[#19E6A0] bg-[#19E6A0]/15 ring-1 ring-[#19E6A0]/30 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
+              : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
           }`}
-          title="Lyrics"
+          title={isLyricsActive ? 'Close Lyrics' : 'Live Lyrics'}
           aria-label="Toggle Lyrics"
         >
           <Mic2 className="w-4 h-4 discord-icon discord-icon-pop" />
         </button>
 
-        {/* Equalizer Button */}
-        <button
-          onClick={onToggleEqualizer}
-          className={`group/eq p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
-            isEqualizerActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
-          }`}
-          title="Equalizer"
-          aria-label="Toggle Equalizer"
-        >
-          <AnimatedEqualizer className="w-4 h-4 discord-icon" />
-        </button>
-
-        {/* Queue Button */}
+        {/* Queue drawer toggle with count badge */}
         <button
           onClick={onToggleQueue}
-          className={`group/queue p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer shrink-0 ${
-            isQueueActive ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#777381] hover:text-[#F4F2F7]'
+          className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
+            isQueueActive
+              ? 'text-[#19E6A0] bg-[#19E6A0]/15 ring-1 ring-[#19E6A0]/30 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
+              : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
           }`}
           title="Playing Queue"
           aria-label="Toggle Playing Queue"
         >
           <ListOrdered className="w-4 h-4 discord-icon discord-icon-pop" />
+          {queue && queue.length > 0 && (
+            <span className="absolute -top-1 -right-1 px-1 min-w-[15px] h-3.5 rounded-full bg-[#19E6A0] text-black font-extrabold text-[9px] flex items-center justify-center leading-none shadow-[0_0_6px_rgba(25,230,160,0.6)]">
+              {queue.length > 99 ? '99+' : queue.length}
+            </span>
+          )}
         </button>
 
-        {/* Mini Player Toggle */}
-        <button
-          onClick={toggleMiniPlayer}
-          className="group/mini p-1 sm:p-1.5 rounded-full text-[#777381] hover:text-[#19E6A0] transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
-          title="Floating Mini Player (Ctrl+M)"
-          aria-label="Toggle Floating Mini Player"
-        >
-          <PictureInPicture2 className="w-4 h-4 discord-icon discord-icon-pop" />
-        </button>
-
-        {/* Sleep Timer Menu */}
+        {/* Sleep timer dropdown with moon icon and countdown badge */}
         <div className="relative shrink-0" ref={sleepMenuRef}>
           <button
             onClick={() => setIsSleepMenuOpen((prev) => !prev)}
-            className={`group/sleep p-1 sm:p-1.5 rounded-full transition-all duration-200 active:scale-95 cursor-pointer relative ${
+            className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
               sleepTimerMinutes !== null
-                ? 'text-[#19E6A0] bg-[#19E6A0]/10 shadow-[0_0_10px_rgba(25,230,160,0.2)]'
-                : 'text-[#777381] hover:text-[#F4F2F7]'
+                ? 'text-[#19E6A0] bg-[#19E6A0]/15 ring-1 ring-[#19E6A0]/30 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
+                : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
             }`}
             title={
               sleepTimerRemainingSec !== null
@@ -643,21 +681,20 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           >
             <Moon className="w-4 h-4 discord-icon discord-icon-shuffle" />
             {sleepTimerMinutes !== null && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#19E6A0] animate-pulse" />
+              <span className="absolute -top-1 -right-1 px-1 h-3.5 min-w-[15px] rounded-full bg-[#19E6A0] text-black font-bold text-[9px] font-mono flex items-center justify-center leading-none shadow-[0_0_6px_rgba(25,230,160,0.6)] animate-pulse">
+                {sleepTimerRemainingSec !== null ? `${Math.ceil(sleepTimerRemainingSec / 60)}m` : '✓'}
+              </span>
             )}
           </button>
 
           {/* Sleep Timer Dropdown Popup */}
           {isSleepMenuOpen && (
-            <div
-              className={`absolute bottom-full mb-3 right-0 w-44 rounded-xl ${
-                isGlass
-                  ? 'bg-[#16151C]/90 backdrop-blur-2xl border border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.8)]'
-                  : 'bg-[#16151C] border border-[#292731] shadow-2xl'
-              } p-2 space-y-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 select-none`}
-            >
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#777381] border-b border-[#25232F] mb-1 flex items-center justify-between">
-                <span>Sleep Timer</span>
+            <div className="absolute bottom-full mb-3 right-0 w-48 rounded-2xl bg-[#14141A]/95 backdrop-blur-2xl border border-white/[0.10] shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-2.5 space-y-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 select-none">
+              <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] border-b border-white/[0.08] mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Moon className="w-3 h-3 text-[#19E6A0]" />
+                  Sleep Timer
+                </span>
                 {sleepTimerRemainingSec !== null && (
                   <span className="text-[#19E6A0] font-mono font-bold">
                     {Math.floor(sleepTimerRemainingSec / 60)}m {sleepTimerRemainingSec % 60}s
@@ -672,14 +709,16 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                     setSleepTimer(mins);
                     setIsSleepMenuOpen(false);
                   }}
-                  className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-colors flex items-center justify-between cursor-pointer ${
+                  className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-all flex items-center justify-between cursor-pointer ${
                     sleepTimerMinutes === mins
                       ? 'bg-[#19E6A0]/15 text-[#19E6A0] font-semibold'
-                      : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26]'
+                      : 'text-[#94A3B8] hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
                   <span>{mins} minutes</span>
-                  {sleepTimerMinutes === mins && <div className="w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />}
+                  {sleepTimerMinutes === mins && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0]" />
+                  )}
                 </button>
               ))}
 
@@ -689,17 +728,17 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                     setSleepTimer(-1);
                     setIsSleepMenuOpen(false);
                   }}
-                  className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-colors flex items-center justify-between cursor-pointer ${
+                  className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-all flex items-center justify-between cursor-pointer ${
                     sleepTimerMinutes === -1
                       ? 'bg-[#19E6A0]/15 text-[#19E6A0] font-semibold'
-                      : 'text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26]'
+                      : 'text-[#94A3B8] hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
                   <span>End of track</span>
                   {sleepTimerMinutes === -1 ? (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0]" />
                   ) : (
-                    <span className="text-[10px] font-mono text-[#65616F]">
+                    <span className="text-[10px] font-mono text-[#64748B]">
                       ~{Math.ceil((duration - currentTime) / 60)}m
                     </span>
                   )}
@@ -707,13 +746,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               )}
 
               {sleepTimerMinutes !== null && (
-                <div className="border-t border-[#25232F] pt-1 mt-1">
+                <div className="border-t border-white/[0.08] pt-1.5 mt-1.5">
                   <button
                     onClick={() => {
                       setSleepTimer(null);
                       setIsSleepMenuOpen(false);
                     }}
-                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#FF667A] hover:bg-[#FF667A]/10 transition-colors flex items-center justify-between cursor-pointer font-medium"
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#FF667A] hover:bg-[#FF667A]/15 transition-colors flex items-center justify-between cursor-pointer font-medium"
                   >
                     <span>Turn off timer</span>
                   </button>
@@ -723,11 +762,21 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           )}
         </div>
 
-        {/* Volume Scrubber with drag, hover track expansion, and mousewheel support */}
-        <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-[#292731] shrink-0 group/vol">
+        {/* Mini-player popout button */}
+        <button
+          onClick={toggleMiniPlayer}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-[#7E7A8A] hover:text-white hover:bg-white/[0.08] transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0"
+          title="Floating Mini Player (Ctrl+M)"
+          aria-label="Toggle Floating Mini Player"
+        >
+          <PictureInPicture2 className="w-4 h-4 discord-icon discord-icon-pop" />
+        </button>
+
+        {/* Volume slider */}
+        <div className="flex items-center gap-1.5 sm:gap-2 pl-2 border-l border-white/[0.08] shrink-0 group/vol">
           <button
             onClick={toggleMute}
-            className="group/mute text-[#777381] hover:text-[#F4F2F7] transition-all duration-200 active:scale-90 cursor-pointer p-0.5"
+            className="group/mute text-[#7E7A8A] hover:text-white p-1 rounded-full hover:bg-white/[0.06] transition-all duration-200 active:scale-90 cursor-pointer"
             title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
             aria-label="Toggle Mute"
           >
@@ -735,7 +784,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               volume={volume}
               isMuted={isMuted}
               className={`w-4 h-4 discord-icon ${
-                isMuted || volume === 0 ? 'text-[#FF667A] discord-icon-trash' : 'discord-icon-volume'
+                isMuted || volume === 0 ? 'text-[#FF667A]' : 'discord-icon-volume'
               }`}
             />
           </button>
@@ -759,32 +808,37 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             }}
             onWheel={handleVolumeWheel}
             onKeyDown={handleVolumeKeyDown}
-            className={`relative w-16 sm:w-20 md:w-24 h-4 flex items-center select-none touch-none py-1 group/track outline-none focus-visible:ring-1 focus-visible:ring-[#19E6A0]/50 rounded-full ${
+            className={`relative w-16 sm:w-20 md:w-24 h-5 flex items-center select-none touch-none group/voltrack outline-none focus-visible:ring-1 focus-visible:ring-[#19E6A0]/50 rounded-full ${
               isDraggingVolume ? 'cursor-grabbing' : 'cursor-pointer'
             }`}
             title={`Volume: ${volPercent}% (Scroll or Drag to adjust)`}
           >
-            {/* Background Track */}
-            <div className={`w-full bg-[#292731] rounded-full overflow-hidden relative transition-[height] duration-200 ${
-              isDraggingVolume ? 'h-1.5' : 'h-1 group-hover/vol:h-1.5'
-            }`}>
-              {/* Active filled volume */}
+            {/* Background Track: 4px default, expands smoothly on hover */}
+            <div
+              className={`w-full bg-white/[0.12] rounded-full overflow-hidden relative transition-[height] duration-150 ${
+                isDraggingVolume ? 'h-[5px]' : 'h-[4px] group-hover/voltrack:h-[5px]'
+              }`}
+            >
+              {/* Active filled volume with glowing gradient */}
               <div
                 ref={volumeFillRef}
-                className={`h-full bg-[#19E6A0] rounded-full transition-none ${
-                  isDraggingVolume ? 'shadow-[0_0_8px_rgba(25,230,160,0.5)]' : ''
+                style={{
+                  width: `${volPercent}%`,
+                  background: 'linear-gradient(90deg, #1DB954, #19E6A0)',
+                }}
+                className={`h-full rounded-full transition-none ${
+                  isDraggingVolume || volPercent > 0 ? 'shadow-[0_0_8px_rgba(25,230,160,0.4)]' : ''
                 }`}
-                style={{ width: `${volPercent}%` }}
               />
             </div>
 
-            {/* Volume Scrubber Knob */}
+            {/* Volume Scrubber Knob: expands from 0px to 10px on hover/drag */}
             <div
               ref={volumeKnobRef}
-              className={`absolute w-2.5 h-2.5 bg-[#F4F2F7] rounded-full shadow -translate-x-1/2 pointer-events-none transition-[transform,opacity,box-shadow] duration-150 ${
+              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full ring-2 ring-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.7)] pointer-events-none transition-[width,height,opacity,transform] duration-150 ease-out ${
                 isDraggingVolume
-                  ? 'opacity-100 scale-125 ring-2 ring-[#19E6A0]/50 shadow-[0_0_8px_rgba(25,230,160,0.7)]'
-                  : 'opacity-0 group-hover/vol:opacity-100 group-hover/vol:scale-110'
+                  ? 'w-2.5 h-2.5 opacity-100 scale-110'
+                  : 'w-0 h-0 opacity-0 group-hover/voltrack:w-2.5 group-hover/voltrack:h-2.5 group-hover/voltrack:opacity-100'
               }`}
               style={{ left: `${volPercent}%` }}
             />
@@ -793,7 +847,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             {(showVolumeTooltip || isDraggingVolume) && (
               <div
                 ref={volumeTooltipRef}
-                className="absolute -top-7 px-1.5 py-0.5 rounded bg-[#16151C] border border-[#292731] text-[10px] text-[#F4F2F7] font-mono -translate-x-1/2 shadow pointer-events-none animate-in fade-in duration-100 z-30"
+                className="absolute -top-7 px-1.5 py-0.5 rounded-md bg-[#14121B]/95 backdrop-blur-md border border-white/10 text-[10px] text-white font-mono -translate-x-1/2 shadow-xl pointer-events-none animate-in fade-in duration-100 z-30"
                 style={{ left: `${volPercent}%` }}
               >
                 {volPercent}%

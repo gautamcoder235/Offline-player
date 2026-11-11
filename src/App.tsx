@@ -18,7 +18,7 @@ import { QueueDrawer } from './components/QueueDrawer';
 import { ToastNotification } from './components/ToastNotification';
 import { AmbientGlow } from './components/AmbientGlow';
 import { MiniPlayer } from './components/MiniPlayer';
-import { ViewMode } from './types';
+import { ViewMode, Track } from './types';
 import { matchTrackWithLyrics, TrackMatchResult } from './utils/lyricsSearch';
 import './App.css';
 
@@ -42,6 +42,8 @@ const MainApp: React.FC = () => {
     isMiniPlayer,
     themeAppearance,
     addDroppedTracks,
+    currentTrack,
+    playingPlaylistId,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
   const [currentView, setCurrentView] = useState<ViewMode>('songs');
@@ -130,6 +132,62 @@ const MainApp: React.FC = () => {
     window.addEventListener('focus-search', handleFocusSearch);
     return () => window.removeEventListener('focus-search', handleFocusSearch);
   }, [currentView]);
+
+  // Listen for locate-current-track event from PlayerBar
+  useEffect(() => {
+    const handleLocateCurrentTrack = (e: Event) => {
+      const customEvent = e as CustomEvent<{ track: Track }>;
+      const track = customEvent.detail?.track || currentTrack;
+      if (!track) return;
+
+      const pid = playingPlaylistId;
+
+      if (pid === 'online_search') {
+        setCurrentView('online_search');
+      } else if (pid === 'download') {
+        setCurrentView('download');
+      } else if (pid === 'liked') {
+        setSelectedPlaylistId(null);
+        setCurrentView('liked');
+      } else if (pid === 'top_tracks') {
+        setSelectedPlaylistId(null);
+        setCurrentView('top_tracks');
+      } else if (pid && pid.startsWith('album_')) {
+        setFilterType('albums');
+        setCurrentView('albums');
+      } else if (pid && pid.startsWith('artist_')) {
+        setFilterType('artists');
+        setCurrentView('artists');
+      } else if (pid && playlists.some((p) => p.id === pid)) {
+        setSelectedPlaylistId(pid);
+        setCurrentView('playlist_detail');
+      } else {
+        // Default to All Offline Music
+        setSelectedPlaylistId(null);
+        setFilterType('all');
+        setCurrentView('songs');
+      }
+
+      // Allow the view to render, then trigger smooth scroll & flash highlight
+      const triggerScroll = () => {
+        window.dispatchEvent(
+          new CustomEvent('scroll-to-track', {
+            detail: { trackId: track.id, title: track.title, artist: track.artist },
+          })
+        );
+      };
+
+      const t1 = setTimeout(triggerScroll, 80);
+      const t2 = setTimeout(triggerScroll, 220);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    };
+
+    window.addEventListener('locate-current-track', handleLocateCurrentTrack);
+    return () => window.removeEventListener('locate-current-track', handleLocateCurrentTrack);
+  }, [currentTrack, playingPlaylistId, playlists]);
 
   // Listen for Tray context menu navigation events
   useEffect(() => {
@@ -317,15 +375,15 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden ${isGlass ? 'bg-[#07060A]/85' : 'bg-[#0B0A0F]/85'} text-[#F4F2F7] relative`}>
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#08080B] text-[#F8FAFC] relative">
       {/* Window-wide Drag and Drop Overlay */}
       {isDraggingOver && (
-        <div className="fixed inset-0 z-50 bg-[#0B0A0F]/85 backdrop-blur-md flex flex-col items-center justify-center border-2 border-dashed border-[#19E6A0] pointer-events-none animate-in fade-in duration-150 select-none">
-          <div className="p-6 rounded-2xl bg-[#16151C] border border-[#282631] flex flex-col items-center gap-3 shadow-2xl">
-            <UploadCloud className="w-12 h-12 text-[#19E6A0] animate-bounce" />
+        <div className="fixed inset-0 z-50 bg-[#08080B]/90 backdrop-blur-md flex flex-col items-center justify-center border-2 border-dashed border-[var(--accent)] pointer-events-none animate-in fade-in duration-150 select-none">
+          <div className="p-6 rounded-2xl bg-[#14141A] border border-white/[0.08] flex flex-col items-center gap-3 shadow-2xl">
+            <UploadCloud className="w-12 h-12 text-[var(--accent)] animate-bounce" />
             <div className="text-center">
-              <h3 className="text-base font-bold text-[#F4F2F7]">Drop audio files or folders here</h3>
-              <p className="text-xs text-[#777381] mt-1">Instant addition to your library</p>
+              <h3 className="text-base font-bold text-[#F8FAFC]">Drop audio files or folders here</h3>
+              <p className="text-xs text-[#94A3B8] mt-1">Instant addition to your library</p>
             </div>
           </div>
         </div>
@@ -349,11 +407,11 @@ const MainApp: React.FC = () => {
           onToggle={() => setIsSidebarCollapsed(prev => !prev)}
         />
 
-        {/* Center Main Stage - Rounded Card Canvas with Uniform Decreased Spacing */}
-        <main className={`flex-1 flex flex-col overflow-hidden relative min-h-0 m-1.5 rounded-2xl transition-all duration-300 ${
+        {/* Center Main Stage */}
+        <main className={`flex-1 flex flex-col overflow-hidden relative min-h-0 transition-colors duration-300 ${
           isGlass
-            ? 'bg-[#0F0E15]/45 backdrop-blur-2xl border border-white/[0.08] shadow-2xl'
-            : 'bg-[#100F14]/85 backdrop-blur-md border border-[#292731]/40 shadow-sm'
+            ? 'bg-[#0E0E13]/45 backdrop-blur-2xl'
+            : 'bg-[#0E0E13]'
         }`}>
           <Header 
             filterType={currentView === 'online_search' ? 'online' : currentView === 'top_tracks' ? 'top' : filterType} 
@@ -374,10 +432,10 @@ const MainApp: React.FC = () => {
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentView === 'playlist_detail' ? `playlist_detail_${selectedPlaylistId}` : `${currentView}_${filterType}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12, ease: 'easeOut' }}
                 className="flex-1 overflow-hidden flex flex-col"
               >
                 {renderMainContent()}
@@ -393,10 +451,6 @@ const MainApp: React.FC = () => {
         isLyricsActive={currentView === 'lyrics'}
         onToggleQueue={() => setIsQueueOpen((prev) => !prev)}
         isQueueActive={isQueueOpen}
-        onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
-        isEqualizerActive={isEqualizerOpen}
-        onToggleVisualizer={() => setCurrentView((prev) => (prev === 'visualizer' ? 'songs' : 'visualizer'))}
-        isVisualizerActive={currentView === 'visualizer'}
       />
 
       {/* Modals & Overlays */}

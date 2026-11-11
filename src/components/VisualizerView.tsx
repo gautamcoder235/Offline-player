@@ -27,12 +27,12 @@ const SPEC_BARS = 44; // per side (mirrored from center)
 
 const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
-// Electric Mint -> Violet Aura -> Champagne Gold ramp matching MusicVault palette
+// Pure Analogous Acoustic Ramp: Deep Emerald (152°) -> Electric Mint (160°) -> Acoustic Cyan (186°)
 const ramp = (t: number): [number, number, number] => {
   const stops: [number, number, number][] = [
-    [25, 230, 160], // Electric Mint #19E6A0
-    [127, 90, 240], // Violet Aura #7F5AF0
-    [232, 199, 122], // Champagne Gold #E8C77A
+    [16, 185, 129],  // Deep Emerald #10B981 (Bass resonance)
+    [25, 230, 160],  // Electric Mint #19E6A0 (Core acoustic presence)
+    [0, 229, 255],   // Acoustic Cyan #00E5FF (High frequency shimmer)
   ];
   const p = clamp(t) * 2;
   const i = Math.min(1, Math.floor(p));
@@ -73,7 +73,7 @@ export const VisualizerView: React.FC = () => {
   const isLiked = currentTrack ? likedTrackIds.has(currentTrack.id) : false;
   const trackColor = currentTrack
     ? getTrackColor(currentTrack.title, currentTrack.artist)
-    : { bg: '#16151C', text: '#777381', glow: 'transparent' };
+    : { bg: '#0D0B13', text: '#777381', glow: 'transparent' };
 
   // Evenly distributed sphere points (Fibonacci lattice: no pole clumping like lat/long rings)
   const orb = useMemo(() => {
@@ -388,7 +388,7 @@ export const VisualizerView: React.FC = () => {
       <div className="relative z-10 w-full px-8 pt-6 pb-3 flex items-center justify-between shrink-0 bg-gradient-to-b from-black/20 via-transparent to-transparent">
         {currentTrack ? (
           <div className="flex items-center gap-4">
-            <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#292731] shadow-2xl bg-[#14131B] shrink-0">
+            <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#14131B] shrink-0">
               {currentTrack.cover_art ? (
                 <img src={currentTrack.cover_art} alt={currentTrack.title} className="w-full h-full object-cover" />
               ) : (
@@ -432,7 +432,7 @@ export const VisualizerView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               onClick={prevTrack}
-              className="p-2.5 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]/80 transition-colors cursor-pointer"
+              className="p-2.5 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-white/[0.08] transition-colors cursor-pointer"
               title="Previous Track"
             >
               <AnimatedSkip direction="prev" className="w-4 h-4" />
@@ -450,7 +450,7 @@ export const VisualizerView: React.FC = () => {
             </button>
             <button
               onClick={nextTrack}
-              className="p-2.5 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#16151C]/80 transition-colors cursor-pointer"
+              className="p-2.5 rounded-full text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-white/[0.08] transition-colors cursor-pointer"
               title="Next Track"
             >
               <AnimatedSkip direction="next" className="w-4 h-4" />

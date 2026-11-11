@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize, PhysicalSize } from '@tauri-apps/api/dpi';
-import { Track, RepeatMode, Playlist, ParsedLyrics, ThemeAppearance } from '../types';
+import { Track, RepeatMode, Playlist, ParsedLyrics, ThemeAppearance, AccentColor } from '../types';
 
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
 import { parseLrcLyrics } from '../utils/helpers';
@@ -43,6 +43,7 @@ interface PlayerContextType {
   isLoadingLyrics: boolean;
   activeLyricIndex: number;
   toast: ToastInfo | null;
+  coverMap: Record<string, string>;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   // Controls
@@ -92,6 +93,8 @@ interface PlayerContextType {
   toggleAlwaysOnTop: () => Promise<void>;
   themeAppearance: ThemeAppearance;
   setThemeAppearance: (appearance: ThemeAppearance) => void;
+  accentColor: AccentColor;
+  setAccentColor: (accent: AccentColor) => void;
   sleepTimerMinutes: number | null;
   sleepTimerRemainingSec: number | null;
   setSleepTimer: (minutes: number | null) => void;
@@ -112,25 +115,99 @@ const loadSavedLastPlayed = (): {
     const saved = localStorage.getItem('offline_player_last_played');
     if (!saved) return null;
     const parsed = JSON.parse(saved);
-    if (parsed && parsed.track && typeof parsed.track.id === 'string') {
-      return {
-        trackId: parsed.trackId || parsed.track.id,
-        track: parsed.track,
-        currentTime: typeof parsed.currentTime === 'number' ? parsed.currentTime : 0,
-        duration: typeof parsed.duration === 'number' ? parsed.duration : (parsed.track.duration || 0),
-      };
-    }
-    return null;
+    if (!parsed) return null;
+
+    const trackId = parsed.trackId || parsed.track?.id;
+    if (!trackId || typeof trackId !== 'string') return null;
+
+    const track: Track = parsed.track
+      ? { ...parsed.track, cover_art: undefined }
+      : {
+          id: trackId,
+          file_path: parsed.file_path || '',
+          title: parsed.title || '',
+          artist: parsed.artist || '',
+          album: parsed.album || '',
+          duration: parsed.duration || 0,
+          duration_str: '',
+          size_bytes: 0,
+          cover_art: undefined,
+          is_online: Boolean(parsed.is_online),
+          stream_url: parsed.stream_url || undefined,
+          preview_url: parsed.preview_url || undefined,
+        };
+
+    return {
+      trackId,
+      track,
+      currentTime: typeof parsed.currentTime === 'number' ? parsed.currentTime : 0,
+      duration: typeof parsed.duration === 'number' ? parsed.duration : (track.duration || 0),
+    };
   } catch {
     return null;
   }
 };
 
+const loadInitialTracks = (): Track[] => {
+  try {
+    const saved = localStorage.getItem('offline_player_track_index');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+};
+
+export const ONLINE_STREAM_CACHE = new Map<string, string>();
+const IN_FLIGHT_STREAM_PROMISES = new Map<string, Promise<string>>();
+const ATTEMPTED_COVER_FETCHES = new Set<string>();
+
+export async function resolveOnlineStream(title: string, artist: string): Promise<string> {
+  const cacheKey = `${artist.trim().toLowerCase()} - ${title.trim().toLowerCase()}`;
+  if (ONLINE_STREAM_CACHE.has(cacheKey)) {
+    return ONLINE_STREAM_CACHE.get(cacheKey)!;
+  }
+  if (IN_FLIGHT_STREAM_PROMISES.has(cacheKey)) {
+    return IN_FLIGHT_STREAM_PROMISES.get(cacheKey)!;
+  }
+
+  const promise = (async () => {
+    try {
+      try {
+        const cached = await invoke<string | null>('check_cached_stream_url', { title, artist });
+        if (cached) {
+          ONLINE_STREAM_CACHE.set(cacheKey, cached);
+          return cached;
+        }
+      } catch {}
+
+      const streamUrl = await invoke<string>('get_online_stream_url', { title, artist });
+      if (streamUrl) {
+        ONLINE_STREAM_CACHE.set(cacheKey, streamUrl);
+        return streamUrl;
+      }
+    } catch (err) {
+      console.warn('Failed to resolve online stream url:', err);
+    } finally {
+      IN_FLIGHT_STREAM_PROMISES.delete(cacheKey);
+    }
+    return '';
+  })();
+
+  IN_FLIGHT_STREAM_PROMISES.set(cacheKey, promise);
+  return promise;
+}
+
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Restore last-played track metadata and playback position from localStorage
   const [savedLastPlayed] = useState(loadSavedLastPlayed);
 
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<Track[]>(loadInitialTracks);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(() => savedLastPlayed?.track || null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(() => savedLastPlayed?.currentTime || 0);
@@ -160,7 +237,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
   const [queue, setQueue] = useState<Track[]>([]);
-  const [contextTracks, setContextTracks] = useState<Track[]>([]);
+  const [contextTracks, setContextTracks] = useState<Track[]>(loadInitialTracks);
+  const [coverMap, setCoverMap] = useState<Record<string, string>>({});
   const [likedTrackIds, setLikedTrackIds] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('offline_player_liked');
@@ -458,9 +536,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [themeAppearance, setThemeAppearanceState] = useState<ThemeAppearance>(() => {
     try {
       const saved = localStorage.getItem('offline_player_theme_appearance');
-      return (saved === 'default' || saved === 'aura_glass') ? saved : 'aura_glass';
+      return (saved === 'default' || saved === 'aura_glass') ? saved : 'default';
     } catch {
-      return 'aura_glass';
+      return 'default';
     }
   });
 
@@ -472,6 +550,70 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.warn('Failed to save theme appearance:', e);
     }
   }, []);
+
+  // Luxury Acoustic Accent Harmony: 'emerald' | 'gold' | 'slate' | 'cyan'
+  const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
+    try {
+      const saved = localStorage.getItem('offline_player_accent_color');
+      return (saved === 'emerald' || saved === 'gold' || saved === 'slate' || saved === 'cyan') ? saved : 'emerald';
+    } catch {
+      return 'emerald';
+    }
+  });
+
+  const applyAccentTokens = useCallback((accent: AccentColor) => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    switch (accent) {
+      case 'gold':
+        root.style.setProperty('--accent', '#E5B869');
+        root.style.setProperty('--accent-neon', '#E5B869');
+        root.style.setProperty('--accent-hover', '#FDE68A');
+        root.style.setProperty('--accent-muted', 'rgba(229, 184, 105, 0.14)');
+        root.style.setProperty('--accent-glow', 'rgba(229, 184, 105, 0.25)');
+        root.style.setProperty('--song-accent', '#E5B869');
+        break;
+      case 'slate':
+        root.style.setProperty('--accent', '#F8FAFC');
+        root.style.setProperty('--accent-neon', '#F8FAFC');
+        root.style.setProperty('--accent-hover', '#FFFFFF');
+        root.style.setProperty('--accent-muted', 'rgba(255, 255, 255, 0.12)');
+        root.style.setProperty('--accent-glow', 'rgba(255, 255, 255, 0.20)');
+        root.style.setProperty('--song-accent', '#F8FAFC');
+        break;
+      case 'cyan':
+        root.style.setProperty('--accent', '#06B6D4');
+        root.style.setProperty('--accent-neon', '#06B6D4');
+        root.style.setProperty('--accent-hover', '#38BDF8');
+        root.style.setProperty('--accent-muted', 'rgba(6, 182, 212, 0.14)');
+        root.style.setProperty('--accent-glow', 'rgba(6, 182, 212, 0.25)');
+        root.style.setProperty('--song-accent', '#06B6D4');
+        break;
+      case 'emerald':
+      default:
+        root.style.setProperty('--accent', '#10B981');
+        root.style.setProperty('--accent-neon', '#10B981');
+        root.style.setProperty('--accent-hover', '#34D399');
+        root.style.setProperty('--accent-muted', 'rgba(16, 185, 129, 0.12)');
+        root.style.setProperty('--accent-glow', 'rgba(16, 185, 129, 0.22)');
+        root.style.setProperty('--song-accent', '#10B981');
+        break;
+    }
+  }, []);
+
+  useEffect(() => {
+    applyAccentTokens(accentColor);
+  }, [accentColor, applyAccentTokens]);
+
+  const setAccentColor = useCallback((accent: AccentColor) => {
+    setAccentColorState(accent);
+    applyAccentTokens(accent);
+    try {
+      localStorage.setItem('offline_player_accent_color', accent);
+    } catch (e) {
+      console.warn('Failed to save accent color:', e);
+    }
+  }, [applyAccentTokens]);
 
   // Always-On-Top Floating Mini-Player state
   const [isMiniPlayer, setIsMiniPlayer] = useState<boolean>(false);
@@ -576,6 +718,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isMutedRef = useRef(isMuted);
   isMutedRef.current = isMuted;
   const hasCountedCurrentPlayRef = useRef(false);
+  const prefetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((title: string, subtitle: string, cover?: string | null) => {
     const id = Date.now().toString();
@@ -585,7 +728,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, 4000);
   }, []);
 
-  // Persist last played track and position
+  // Persist last played track and position (stripped of heavy base64 cover_art)
   const saveLastPlayed = useCallback((track: Track | null, time: number, dur: number) => {
     if (!track) return;
     try {
@@ -593,9 +736,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         'offline_player_last_played',
         JSON.stringify({
           trackId: track.id,
-          track,
+          title: track.title,
+          artist: track.artist,
+          album: track.album || '',
+          file_path: track.file_path || '',
           currentTime: Math.max(0, Math.round(time)),
           duration: dur || track.duration || 0,
+          is_online: Boolean(track.is_online),
+          stream_url: track.stream_url || '',
+          preview_url: track.preview_url || '',
         })
       );
     } catch (e) {
@@ -623,6 +772,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem('offline_player_repeat', repeatMode);
   }, [repeatMode]);
+
+  // Save lightweight tracks index to localStorage for frame-1 instant hydration
+  useEffect(() => {
+    if (tracks.length > 0) {
+      try {
+        // Strip heavy text fields (like lyrics) to prevent exceeding localStorage 5MB quota
+        const lightweight = tracks.map(({ lyrics, ...rest }) => rest);
+        localStorage.setItem('offline_player_track_index', JSON.stringify(lightweight));
+      } catch (e) {
+        console.warn('Failed to save track index to localStorage:', e);
+      }
+    }
+  }, [tracks]);
 
   // Set initial volume in audio engine
   useEffect(() => {
@@ -659,8 +821,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // If current track was restored from localStorage, sync its metadata and stream_url with scanned library
       if (currentTrackRef.current) {
+        const cur = currentTrackRef.current;
         const found = scannedTracks.find(
-          (t) => t.id === currentTrackRef.current!.id || t.file_path === currentTrackRef.current!.file_path
+          (t) =>
+            t.id === cur.id ||
+            (cur.file_path && t.file_path === cur.file_path) ||
+            (cur.title && cur.artist && t.title === cur.title && t.artist === cur.artist)
         );
         if (found) {
           setCurrentTrack((prev) => (prev ? { ...prev, ...found } : found));
@@ -674,9 +840,75 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  // Startup sequence: load cached library immediately (2ms) with fresh session ports,
+  // then trigger background delta-scan.
   useEffect(() => {
-    refreshLibrary();
-  }, [refreshLibrary]);
+    let isCancelled = false;
+
+    const initLibrary = async () => {
+      try {
+        const cachedTracks = await invoke<Track[]>('load_cached_library');
+        if (!isCancelled && cachedTracks && cachedTracks.length > 0) {
+          setTracks(cachedTracks);
+          if (contextTracksRef.current.length === 0) {
+            setContextTracks(cachedTracks);
+          }
+          if (currentTrackRef.current) {
+            const cur = currentTrackRef.current;
+            const found = cachedTracks.find(
+              (t) =>
+                t.id === cur.id ||
+                (cur.file_path && t.file_path === cur.file_path) ||
+                (cur.title && cur.artist && t.title === cur.title && t.artist === cur.artist)
+            );
+            if (found) {
+              setCurrentTrack((prev) => (prev ? { ...prev, ...found } : found));
+              if (found.duration && (!durationRef.current || durationRef.current === 0)) {
+                setDuration(found.duration);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load cached library from Rust:', err);
+      }
+
+      try {
+        const scannedTracks = await invoke<Track[]>('scan_library', {
+          directories: null,
+        });
+        if (!isCancelled && scannedTracks) {
+          setTracks(scannedTracks);
+          if (contextTracksRef.current.length === 0) {
+            setContextTracks(scannedTracks);
+          }
+          if (currentTrackRef.current) {
+            const cur = currentTrackRef.current;
+            const found = scannedTracks.find(
+              (t) =>
+                t.id === cur.id ||
+                (cur.file_path && t.file_path === cur.file_path) ||
+                (cur.title && cur.artist && t.title === cur.title && t.artist === cur.artist)
+            );
+            if (found) {
+              setCurrentTrack((prev) => (prev ? { ...prev, ...found } : found));
+              if (found.duration && (!durationRef.current || durationRef.current === 0)) {
+                setDuration(found.duration);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to delta-scan library in background:', e);
+      }
+    };
+
+    initLibrary();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Background cover art auto-fetcher for all offline tracks missing artwork
   useEffect(() => {
@@ -685,33 +917,51 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     let isCancelled = false;
 
     const loadMissingCovers = async () => {
-      // Find tracks that do not have cover art yet
-      const missing = tracks.filter((t) => !t.cover_art);
+      // Find tracks that do not have cover art yet and haven't failed/attempted yet
+      const missing = tracks.filter((t) => !t.cover_art && !coverMap[t.id] && !ATTEMPTED_COVER_FETCHES.has(t.id));
       if (missing.length === 0) return;
+
+      let batch: Record<string, string> = {};
+
+      const flushBatch = () => {
+        const keys = Object.keys(batch);
+        if (keys.length === 0 || isCancelled) return;
+        const updates = { ...batch };
+        batch = {};
+
+        // Update coverMap in separate decoupled state without changing `tracks` array reference.
+        // This eliminates all rowVirtualizer.measure() recalculations, topTracks ranking, and layout thrashing!
+        setCoverMap((prev) => ({ ...prev, ...updates }));
+
+        if (currentTrackRef.current && updates[currentTrackRef.current.id]) {
+          const updated = { ...currentTrackRef.current, cover_art: updates[currentTrackRef.current.id] };
+          setCurrentTrack(updated);
+          saveLastPlayed(updated, currentTimeRef.current, durationRef.current);
+        }
+      };
 
       for (const t of missing) {
         if (isCancelled) break;
+        ATTEMPTED_COVER_FETCHES.add(t.id);
         try {
           const art = await invoke<string | null>('fetch_cover_art', {
             artist: t.artist,
             title: t.title,
           });
           if (art && !isCancelled) {
-            setTracks((prev) =>
-              prev.map((track) => (track.id === t.id ? { ...track, cover_art: art } : track))
-            );
-            if (currentTrackRef.current?.id === t.id) {
-              const updated = { ...currentTrackRef.current, cover_art: art };
-              setCurrentTrack(updated);
-              saveLastPlayed(updated, currentTimeRef.current, durationRef.current);
+            batch[t.id] = art;
+            if (Object.keys(batch).length >= 10) {
+              flushBatch();
             }
           }
         } catch {
           // ignore individual fetch errors
         }
         // Small delay to prevent network throttling
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 60));
       }
+
+      flushBatch();
     };
 
     loadMissingCovers();
@@ -823,6 +1073,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       if (newContextTracks) {
         setContextTracks(newContextTracks);
+        contextTracksRef.current = newContextTracks;
         const idx = newContextTracks.findIndex((t) => t.id === track.id);
         if (idx !== -1) {
           lastContextIndexRef.current = idx;
@@ -835,18 +1086,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       let trackToPlay = track;
-      // Fetch cover art if missing
-      if (!track.cover_art) {
-        try {
-          const art = await invoke<string | null>('fetch_cover_art', { artist: track.artist, title: track.title });
-          if (art) {
-            trackToPlay = { ...track, cover_art: art };
-            setTracks((prev) => prev.map((t) => (t.id === track.id ? { ...t, cover_art: art } : t)));
-            saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
-          }
-        } catch (e) {
-          console.warn('Cover art fetch failed:', e);
-        }
+      const effectiveCover = track.cover_art || coverMap[track.id];
+      if (effectiveCover && !trackToPlay.cover_art) {
+        trackToPlay = { ...trackToPlay, cover_art: effectiveCover };
+      }
+      // Fetch cover art in background if missing (non-blocking for 0ms instant playback)
+      if (!effectiveCover) {
+        invoke<string | null>('fetch_cover_art', { artist: track.artist, title: track.title })
+          .then((art) => {
+            if (art) {
+              setCoverMap((prev) => ({ ...prev, [track.id]: art }));
+              setCurrentTrack((prev) => (prev && prev.id === track.id ? { ...prev, cover_art: art } : prev));
+              saveLastPlayed({ ...track, cover_art: art }, 0, track.duration || 0);
+            }
+          })
+          .catch((e) => {
+            console.warn('Cover art fetch failed:', e);
+          });
       }
 
       setCurrentTrack(trackToPlay);
@@ -883,16 +1139,102 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         audioEngine.resetPreGain();
       }
 
+      let streamUrl = trackToPlay.stream_url;
+      const cacheKey = `${trackToPlay.artist.trim().toLowerCase()} - ${trackToPlay.title.trim().toLowerCase()}`;
+
+      if (trackToPlay.file_path) {
+        // Only invoke get_audio_url if stream_url is not already populated
+        if (!streamUrl) {
+          try {
+            const fresh = await invoke<string>('get_audio_url', { filePath: trackToPlay.file_path });
+            if (fresh) {
+              streamUrl = fresh;
+              trackToPlay = { ...trackToPlay, stream_url: fresh };
+            }
+          } catch (err) {
+            console.warn('Failed to resolve fresh stream url:', err);
+          }
+        }
+      } else {
+        // Online track resolution: Check cache -> instant preview -> resolve full stream in background
+        if (ONLINE_STREAM_CACHE.has(cacheKey)) {
+          streamUrl = ONLINE_STREAM_CACHE.get(cacheKey)!;
+          trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+        } else if (streamUrl && streamUrl !== trackToPlay.preview_url) {
+          // Already has full stream_url provided
+        } else if (trackToPlay.preview_url) {
+          // 0ms INSTANT playback: immediately play high-quality preview stream!
+          streamUrl = trackToPlay.preview_url;
+          trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+          // Resolve full stream in background and seamlessly hot-swap the deck
+          resolveOnlineStream(trackToPlay.title, trackToPlay.artist)
+            .then((resolved) => {
+              if (resolved && currentTrackRef.current?.id === trackToPlay.id) {
+                audioEngine.upgradeActiveStream(resolved);
+              }
+            })
+            .catch(console.warn);
+        } else {
+          try {
+            const resolved = await resolveOnlineStream(trackToPlay.title, trackToPlay.artist);
+            if (resolved) {
+              streamUrl = resolved;
+              trackToPlay = { ...trackToPlay, stream_url: resolved };
+            } else if (trackToPlay.preview_url) {
+              streamUrl = trackToPlay.preview_url;
+              trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+            }
+          } catch (err) {
+            console.warn('Failed to resolve online stream url:', err);
+            if (trackToPlay.preview_url) {
+              streamUrl = trackToPlay.preview_url;
+              trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+            }
+          }
+        }
+      }
+
       try {
-        await audioEngine.loadTrack(trackToPlay.stream_url);
-        await audioEngine.play();
-        setIsPlaying(true);
-        if (crossfadeDurationRef.current > 0) {
-          audioEngine.fadeIn(volumeRef.current, Math.min(2.5, crossfadeDurationRef.current));
+        if (streamUrl) {
+          await audioEngine.loadTrack(streamUrl);
+          await audioEngine.play();
+          setIsPlaying(true);
+          // Zero latency crisp playback: set directly to user's volume without muting fade-in
+          audioEngine.setVolume(volumeRef.current);
         }
       } catch (e) {
         console.error('Failed to play track:', e);
       }
+
+      // Fast background prefetch next track in context playlist after 2s of continuous playback
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+        prefetchTimeoutRef.current = null;
+      }
+      const currentTrackId = trackToPlay.id;
+      prefetchTimeoutRef.current = setTimeout(() => {
+        // Abort/skip prefetch if track changed or playback stopped
+        if (currentTrackRef.current?.id !== currentTrackId || !isPlayingRef.current) {
+          return;
+        }
+
+        let nextTrack: Track | null = null;
+        if (queueRef.current.length > 0) {
+          nextTrack = queueRef.current[0];
+        } else {
+          const nextIdx = lastContextIndexRef.current + 1;
+          if (nextIdx >= 0 && nextIdx < contextTracksRef.current.length) {
+            nextTrack = contextTracksRef.current[nextIdx];
+          }
+        }
+
+        if (nextTrack && !nextTrack.file_path) {
+          const nextKey = `${nextTrack.artist.trim().toLowerCase()} - ${nextTrack.title.trim().toLowerCase()}`;
+          if (!ONLINE_STREAM_CACHE.has(nextKey)) {
+            resolveOnlineStream(nextTrack.title, nextTrack.artist).catch(() => {});
+          }
+        }
+      }, 2000);
     },
     [fetchLyrics, saveLastPlayed, showToast]
   );
@@ -900,17 +1242,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const transitionToTrack = useCallback(
     async (track: Track) => {
       let trackToPlay = track;
-      if (!track.cover_art) {
-        try {
-          const art = await invoke<string | null>('fetch_cover_art', { artist: track.artist, title: track.title });
-          if (art) {
-            trackToPlay = { ...track, cover_art: art };
-            setTracks((prev) => prev.map((t) => (t.id === track.id ? { ...t, cover_art: art } : t)));
-            saveLastPlayed(trackToPlay, 0, trackToPlay.duration || 0);
-          }
-        } catch {
-          // ignore
-        }
+      const effectiveCover = track.cover_art || coverMap[track.id];
+      if (effectiveCover && !trackToPlay.cover_art) {
+        trackToPlay = { ...trackToPlay, cover_art: effectiveCover };
+      }
+      if (!effectiveCover) {
+        invoke<string | null>('fetch_cover_art', { artist: track.artist, title: track.title })
+          .then((art) => {
+            if (art) {
+              setCoverMap((prev) => ({ ...prev, [track.id]: art }));
+              setCurrentTrack((prev) => (prev && prev.id === track.id ? { ...prev, cover_art: art } : prev));
+              saveLastPlayed({ ...track, cover_art: art }, 0, track.duration || 0);
+            }
+          })
+          .catch(() => {});
       }
 
       setCurrentTrack(trackToPlay);
@@ -947,8 +1292,90 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         audioEngine.resetPreGain();
       }
 
-      await audioEngine.transitionTo(trackToPlay.stream_url, crossfadeDurationRef.current);
-      setIsPlaying(true);
+      let streamUrl = trackToPlay.stream_url;
+      const cacheKey = `${trackToPlay.artist.trim().toLowerCase()} - ${trackToPlay.title.trim().toLowerCase()}`;
+
+      if (trackToPlay.file_path) {
+        if (!streamUrl) {
+          try {
+            const fresh = await invoke<string>('get_audio_url', { filePath: trackToPlay.file_path });
+            if (fresh) {
+              streamUrl = fresh;
+              trackToPlay = { ...trackToPlay, stream_url: fresh };
+            }
+          } catch (err) {
+            console.warn('Failed to resolve fresh stream url in transition:', err);
+          }
+        }
+      } else {
+        if (ONLINE_STREAM_CACHE.has(cacheKey)) {
+          streamUrl = ONLINE_STREAM_CACHE.get(cacheKey)!;
+          trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+        } else if (streamUrl && streamUrl !== trackToPlay.preview_url) {
+          // Already has full stream_url
+        } else if (trackToPlay.preview_url) {
+          streamUrl = trackToPlay.preview_url;
+          trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+          resolveOnlineStream(trackToPlay.title, trackToPlay.artist)
+            .then((resolved) => {
+              if (resolved && currentTrackRef.current?.id === trackToPlay.id) {
+                audioEngine.upgradeActiveStream(resolved);
+              }
+            })
+            .catch(console.warn);
+        } else {
+          try {
+            const resolved = await resolveOnlineStream(trackToPlay.title, trackToPlay.artist);
+            if (resolved) {
+              streamUrl = resolved;
+              trackToPlay = { ...trackToPlay, stream_url: resolved };
+            } else if (trackToPlay.preview_url) {
+              streamUrl = trackToPlay.preview_url;
+              trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+            }
+          } catch (err) {
+            console.warn('Failed to resolve online stream url in transition:', err);
+            if (trackToPlay.preview_url) {
+              streamUrl = trackToPlay.preview_url;
+              trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+            }
+          }
+        }
+      }
+
+      if (streamUrl) {
+        await audioEngine.transitionTo(streamUrl, crossfadeDurationRef.current);
+        setIsPlaying(true);
+      }
+
+      // Fast background prefetch next track in context playlist after 2s of continuous playback
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+        prefetchTimeoutRef.current = null;
+      }
+      const transitionedTrackId = trackToPlay.id;
+      prefetchTimeoutRef.current = setTimeout(() => {
+        if (currentTrackRef.current?.id !== transitionedTrackId || !isPlayingRef.current) {
+          return;
+        }
+
+        let nextTrack: Track | null = null;
+        if (queueRef.current.length > 0) {
+          nextTrack = queueRef.current[0];
+        } else {
+          const nextIdx = lastContextIndexRef.current + 1;
+          if (nextIdx >= 0 && nextIdx < contextTracksRef.current.length) {
+            nextTrack = contextTracksRef.current[nextIdx];
+          }
+        }
+
+        if (nextTrack && !nextTrack.file_path) {
+          const nextKey = `${nextTrack.artist.trim().toLowerCase()} - ${nextTrack.title.trim().toLowerCase()}`;
+          if (!ONLINE_STREAM_CACHE.has(nextKey)) {
+            resolveOnlineStream(nextTrack.title, nextTrack.artist).catch(() => {});
+          }
+        }
+      }, 2000);
     },
     [fetchLyrics, saveLastPlayed, showToast]
   );
@@ -1052,19 +1479,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     let lastPersistTime = 0;
     audioEngine.onTimeUpdate = (cTime, dur) => {
       const now = performance.now();
+      const trackMetaDur = currentTrackRef.current?.duration || 0;
+      const effectiveDur = trackMetaDur > 35 ? Math.max(dur || 0, trackMetaDur) : (dur || durationRef.current);
+
       if (now - lastTime >= 250 || cTime === 0) {
         lastTime = now;
         setCurrentTime(cTime);
-        if (dur > 0) setDuration(dur);
+        if (effectiveDur > 0) setDuration(effectiveDur);
       }
-      if (now - lastPersistTime >= 1500) {
+      if (now - lastPersistTime >= 5000) {
         lastPersistTime = now;
         if (currentTrackRef.current) {
-          saveLastPlayed(currentTrackRef.current, cTime, dur || durationRef.current);
+          saveLastPlayed(currentTrackRef.current, cTime, effectiveDur);
         }
       }
 
-      const realDur = dur || durationRef.current;
+      const realDur = effectiveDur;
 
       // Update listening session dwell time
       const session = activeListeningSessionRef.current;
@@ -1119,6 +1549,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
     audioEngine.onPause = () => {
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+        prefetchTimeoutRef.current = null;
+      }
       setIsPlaying(false);
       if (activeListeningSessionRef.current) {
         const timeNow = Date.now();
@@ -1134,6 +1568,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     audioEngine.onEnded = () => {
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+        prefetchTimeoutRef.current = null;
+      }
       finalizeListeningSession(true);
       if (!hasCountedCurrentPlayRef.current && currentTrackRef.current) {
         hasCountedCurrentPlayRef.current = true;
@@ -1174,6 +1612,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const currentlyPlaying = isPlayingRef.current || !audioEngine.isPaused();
 
     if (currentlyPlaying) {
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+        prefetchTimeoutRef.current = null;
+      }
       audioEngine.pause();
       setIsPlaying(false);
       saveLastPlayed(track, currentTimeRef.current, durationRef.current);
@@ -1277,6 +1719,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const seekTo = useCallback((time: number) => {
     audioEngine.seek(time);
     setCurrentTime(time);
+
+    // If seeking past preview length on an online track, prioritize loading full stream!
+    if (currentTrackRef.current?.is_online && audioEngine.getActiveDeckDuration() <= 35 && time > 28) {
+      const cur = currentTrackRef.current;
+      const key = `${cur.artist.trim().toLowerCase()} - ${cur.title.trim().toLowerCase()}`;
+      const cached = ONLINE_STREAM_CACHE.get(key);
+      if (cached) {
+        audioEngine.loadTrack(cached).then(() => {
+          audioEngine.seek(time);
+          if (isPlayingRef.current) audioEngine.play();
+        });
+      } else {
+        resolveOnlineStream(cur.title, cur.artist).then((fullUrl) => {
+          if (fullUrl && currentTrackRef.current?.id === cur.id) {
+            audioEngine.loadTrack(fullUrl).then(() => {
+              audioEngine.seek(time);
+              if (isPlayingRef.current) audioEngine.play();
+            });
+          }
+        });
+      }
+    }
+
     if (currentTrackRef.current) {
       saveLastPlayed(currentTrackRef.current, time, durationRef.current);
       invoke('update_discord_status', {
@@ -1688,6 +2153,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setQueue((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setContextTracks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setCurrentTrack((prev) => (prev?.id === updated.id ? updated : prev));
+    if (updated.cover_art) {
+      setCoverMap((prev) => ({ ...prev, [updated.id]: updated.cover_art! }));
+    }
     showToast('Tags Updated', `${updated.title} by ${updated.artist}`);
   }, [showToast]);
 
@@ -1876,12 +2344,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleAlwaysOnTop,
         themeAppearance,
         setThemeAppearance,
+        accentColor,
+        setAccentColor,
         sleepTimerMinutes,
         sleepTimerRemainingSec,
         setSleepTimer,
         reorderQueue,
         updateTrackMetadata,
         addDroppedTracks,
+        coverMap,
       }}
     >
       {children}

@@ -316,6 +316,160 @@ export class AudioEngine {
     }, dur * 1000);
   }
 
+  /**
+   * Seamlessly upgrade the active deck from a preview stream to a full-length high-bitrate stream
+   * without interrupting playback, causing pops, or restarting playback position.
+   */
+  public async upgradeActiveStream(newStreamUrl: string): Promise<boolean> {
+    if (!newStreamUrl) return false;
+    const currentDeck = this.activeDeck;
+    if (currentDeck.audio.src === newStreamUrl) return true;
+
+    this.initAudioContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+    }
+
+    const currentTransition = this.transitionCounter;
+    const wasPlaying = !currentDeck.audio.paused;
+    const targetDeck = this.idleDeck;
+
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let seekTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        targetDeck.audio.removeEventListener('canplay', onCanPlay);
+        targetDeck.audio.removeEventListener('error', onError);
+        targetDeck.audio.removeEventListener('seeked', onSeeked);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (seekTimeoutId) {
+          clearTimeout(seekTimeoutId);
+          seekTimeoutId = null;
+        }
+      };
+
+      const finishUpgrade = async () => {
+        if (settled) return;
+        if (this.transitionCounter !== currentTransition) {
+          settled = true;
+          cleanup();
+          resolve(false);
+          return;
+        }
+
+        settled = true;
+        cleanup();
+
+        if (wasPlaying && !currentDeck.audio.paused) {
+          const now = this.audioCtx ? this.audioCtx.currentTime : 0;
+          const crossSec = 0.15; // 150ms smooth micro-crossfade
+
+          // Sync timestamp once more to ensure accurate transient alignment
+          const finalLivePos = currentDeck.audio.currentTime || 0;
+          if (Math.abs(targetDeck.audio.currentTime - finalLivePos) > 0.15) {
+            try {
+              targetDeck.audio.currentTime = finalLivePos;
+            } catch {}
+          }
+
+          if (this.audioCtx && targetDeck.gainNode && currentDeck.gainNode) {
+            const currentGainVal = currentDeck.gainNode.gain.value;
+            targetDeck.gainNode.gain.cancelScheduledValues(now);
+            targetDeck.gainNode.gain.setValueAtTime(0.0001, now);
+            targetDeck.gainNode.gain.linearRampToValueAtTime(1.0, now + crossSec);
+
+            currentDeck.gainNode.gain.cancelScheduledValues(now);
+            currentDeck.gainNode.gain.setValueAtTime(Math.max(0.0001, currentGainVal), now);
+            currentDeck.gainNode.gain.linearRampToValueAtTime(0.0001, now + crossSec);
+          }
+
+          this.activeDeckId = targetDeck.id;
+          try {
+            await targetDeck.audio.play();
+          } catch (err) {
+            console.warn('Failed to play upgraded deck:', err);
+          }
+
+          setTimeout(() => {
+            if (this.transitionCounter !== currentTransition) return;
+            currentDeck.audio.pause();
+            if (currentDeck.gainNode && this.audioCtx) {
+              currentDeck.gainNode.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
+            }
+          }, crossSec * 1000 + 50);
+        } else {
+          this.activeDeckId = targetDeck.id;
+        }
+
+        resolve(true);
+      };
+
+      const onSeeked = () => {
+        targetDeck.audio.removeEventListener('seeked', onSeeked);
+        if (seekTimeoutId) {
+          clearTimeout(seekTimeoutId);
+          seekTimeoutId = null;
+        }
+        finishUpgrade();
+      };
+
+      const onCanPlay = async () => {
+        if (settled) return;
+        if (this.transitionCounter !== currentTransition) {
+          settled = true;
+          cleanup();
+          resolve(false);
+          return;
+        }
+
+        // Live timestamp synchronization with seek readiness
+        const livePos = currentDeck.audio.currentTime || 0;
+        if (livePos > 0.05 && livePos < (targetDeck.audio.duration || Infinity)) {
+          try {
+            targetDeck.audio.currentTime = livePos;
+          } catch (e) {
+            console.warn('Could not sync upgraded stream position:', e);
+          }
+
+          if (targetDeck.audio.seeking) {
+            targetDeck.audio.addEventListener('seeked', onSeeked, { once: true });
+            seekTimeoutId = setTimeout(() => {
+              onSeeked();
+            }, 600);
+            return;
+          }
+        }
+
+        finishUpgrade();
+      };
+
+      const onError = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(false);
+      };
+
+      targetDeck.audio.addEventListener('canplay', onCanPlay, { once: true });
+      targetDeck.audio.addEventListener('error', onError, { once: true });
+      targetDeck.audio.src = newStreamUrl;
+      targetDeck.audio.load();
+
+      timeoutId = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          resolve(false);
+        }
+      }, 9000);
+    });
+  }
+
   public async loadTrack(streamUrl: string): Promise<void> {
     this.initAudioContext();
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
@@ -365,9 +519,21 @@ export class AudioEngine {
     return this.activeDeck.audio.paused;
   }
 
+  public getActiveDeckDuration(): number {
+    return this.activeDeck.audio.duration || 0;
+  }
+
   public seek(timeInSeconds: number): void {
     if (!isNaN(timeInSeconds) && isFinite(timeInSeconds)) {
-      this.activeDeck.audio.currentTime = timeInSeconds;
+      const activeAudio = this.activeDeck.audio;
+      const dur = activeAudio.duration;
+      if (dur && isFinite(dur) && dur > 0) {
+        // Clamp to avoid premature ended event if dragging seek bar on a preview stream
+        const clamped = Math.max(0, Math.min(timeInSeconds, Math.max(0, dur - 0.25)));
+        activeAudio.currentTime = clamped;
+      } else {
+        activeAudio.currentTime = Math.max(0, timeInSeconds);
+      }
     }
   }
 
