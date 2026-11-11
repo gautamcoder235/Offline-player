@@ -188,6 +188,7 @@ export const TrackList: React.FC<TrackListProps> = ({
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
   const [newPlaylistColor, setNewPlaylistColor] = useState(PRESET_COLORS[0]);
   const [flashingTrackId, setFlashingTrackId] = useState<string | null>(null);
+  const [isScrolledHeader, setIsScrolledHeader] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -219,10 +220,10 @@ export const TrackList: React.FC<TrackListProps> = ({
   }, []);
 
   const rowVirtualizer = useVirtualizer({
-    count: tracks.length,
+    count: displayTracks.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (index: number) => {
-      const track = tracks[index];
+      const track = displayTracks[index];
       if (!track) return 48;
       const hasSnippet =
         track.matchingLyricSnippet !== undefined
@@ -234,13 +235,13 @@ export const TrackList: React.FC<TrackListProps> = ({
     },
     overscan: 12,
     scrollMargin,
-    getItemKey: (index) => tracks[index]?.id ?? index,
+    getItemKey: (index) => displayTracks[index]?.id ?? index,
   });
 
   // Re-measure virtual rows dynamically when search query or track list changes
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [searchQuery, tracks]);
+  }, [searchQuery, displayTracks]);
 
   const [actionFeedback, setActionFeedback] = useState<{
     trackId: string;
@@ -295,9 +296,18 @@ export const TrackList: React.FC<TrackListProps> = ({
         rowVirtualizer.scrollToIndex(idx, { align: 'center', behavior: 'smooth' });
         const matchedId = displayTracks[idx].id;
         setFlashingTrackId(matchedId);
+
+        // Backup DOM query alignment once virtual node mounts
+        setTimeout(() => {
+          const rowEl = scrollContainerRef.current?.querySelector(`[data-track-id="${matchedId}"]`) as HTMLElement | null;
+          if (rowEl) {
+            rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 50);
+
         setTimeout(() => {
           setFlashingTrackId((prev) => (prev === matchedId ? null : prev));
-        }, 1500);
+        }, 1800);
       }
     };
 
@@ -671,6 +681,14 @@ export const TrackList: React.FC<TrackListProps> = ({
       {/* Scrollable Track Content */}
       <div
         ref={scrollContainerRef}
+        onScroll={(e) => {
+          const st = (e.currentTarget as HTMLElement).scrollTop;
+          const threshold = scrollMargin > 0 ? Math.max(20, scrollMargin - 12) : (title ? 180 : 20);
+          const shouldBeScrolled = st > threshold;
+          if (shouldBeScrolled !== isScrolledHeader) {
+            setIsScrolledHeader(shouldBeScrolled);
+          }
+        }}
         className="flex-1 overflow-y-auto overflow-x-hidden pb-24 select-none relative"
         onClick={(e) => {
           // Deselect when clicking empty space (not on rows or buttons)
@@ -924,13 +942,17 @@ export const TrackList: React.FC<TrackListProps> = ({
           ) : (
             <div className="w-full text-xs">
               {/* Seamless Sticky Table Header (No Black Box) */}
-              <div className={`sticky top-0 z-20 backdrop-blur-xl ${
-                isGlass ? 'bg-[#0E0E13]/35' : 'bg-[#0E0E13]/90'
+              <div className={`sticky top-0 z-20 transition-all duration-200 ${
+                isScrolledHeader
+                  ? isGlass
+                    ? 'bg-[#0E0E13]/40 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.3)]'
+                    : 'bg-[#0E0E13]/60 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.3)]'
+                  : 'bg-transparent border-b border-white/[0.06]'
               } grid ${
                 hasMultiDisc
                   ? 'grid-cols-[48px_minmax(0,1fr)_80px_40px] md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
                   : 'grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
-              } items-center px-3 py-2.5 border-b border-white/[0.06] text-[#8E8A98] uppercase tracking-wider font-semibold text-[10px] select-none`}>
+              } items-center px-3 py-2.5 text-[#8E8A98] uppercase tracking-wider font-semibold text-[10px] select-none`}>
                 {/* Index / Select All Checkbox Header */}
                 <div className="text-center flex items-center justify-center">
                   {selectedTrackIds.size > 0 ? (
@@ -1049,6 +1071,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                     >
                       <div
                         data-track-row="true"
+                        data-track-id={track.id}
                         onClick={(e) => handleRowClick(e, track, idx)}
                       onDoubleClick={(e) => {
                         e.stopPropagation();

@@ -44,3 +44,4 @@ ALL_APP_VISUAL_DESIGNS.tsx
 *.njsproj
 *.sln
 *.sw?
+.agents/

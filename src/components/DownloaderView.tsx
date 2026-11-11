@@ -636,34 +636,48 @@ export const DownloaderView: React.FC = () => {
       <div className="flex-1 min-h-0 flex flex-col">
         {/* Navigation Segments Bar */}
         <div className="px-6 pt-1 pb-2 flex items-center justify-between shrink-0">
-          <div className="h-[34px] flex items-center gap-1 bg-[#121118]/80 backdrop-blur-xl p-0.5 rounded-xl border border-white/[0.08] shadow-sm">
+          <div className="h-[34px] flex items-center gap-1 bg-[#121118]/80 backdrop-blur-xl p-0.5 rounded-xl border border-white/[0.08] shadow-sm relative">
             <button
               onClick={() => setActiveTab('all')}
-              className={`flex items-center gap-2 h-full px-3 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center gap-2 h-full px-3 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                 activeTab === 'all'
-                  ? 'bg-white/[0.08] text-[#F4F2F7] shadow-sm border border-white/[0.08]'
-                  : 'text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.04]'
+                  ? 'text-[#F4F2F7]'
+                  : 'text-[#8E8A98] hover:text-[#F4F2F7]'
               }`}
             >
-              <Music2 className="w-3.5 h-3.5 text-[#19E6A0]" />
-              <span>Downloaded Tracks</span>
-              <span className="text-[10px] font-mono text-[#8E8A98] bg-white/[0.06] px-1.5 py-0.2 rounded-full">
+              {activeTab === 'all' && (
+                <motion.div
+                  layoutId="downloader-active-tab-indicator"
+                  className="absolute inset-0 bg-white/[0.08] rounded-lg border border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] pointer-events-none"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <Music2 className="relative z-10 w-3.5 h-3.5 text-[#19E6A0]" />
+              <span className="relative z-10">Downloaded Tracks</span>
+              <span className="relative z-10 text-[10px] font-mono text-[#8E8A98] bg-white/[0.06] px-1.5 py-0.2 rounded-full">
                 {downloadedTracks.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('session')}
-              className={`flex items-center gap-2 h-full px-3 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center gap-2 h-full px-3 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                 activeTab === 'session'
-                  ? 'bg-white/[0.08] text-[#F4F2F7] shadow-sm border border-white/[0.08]'
-                  : 'text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.04]'
+                  ? 'text-[#F4F2F7]'
+                  : 'text-[#8E8A98] hover:text-[#F4F2F7]'
               }`}
             >
-              <ArrowDownToLine className="w-3.5 h-3.5 text-[#19E6A0]" />
-              <span>Session Queue</span>
+              {activeTab === 'session' && (
+                <motion.div
+                  layoutId="downloader-active-tab-indicator"
+                  className="absolute inset-0 bg-white/[0.08] rounded-lg border border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] pointer-events-none"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <ArrowDownToLine className="relative z-10 w-3.5 h-3.5 text-[#19E6A0]" />
+              <span className="relative z-10">Session Queue</span>
               {sessionTracks.length > 0 && (
-                <span className="text-[10px] font-mono text-[#19E6A0] bg-[#19E6A0]/15 px-1.5 py-0.2 rounded-full">
+                <span className="relative z-10 text-[10px] font-mono text-[#19E6A0] bg-[#19E6A0]/15 px-1.5 py-0.2 rounded-full">
                   {sessionTracks.length}
                 </span>
               )}
@@ -678,20 +692,53 @@ export const DownloaderView: React.FC = () => {
           )}
         </div>
 
-        {/* Content View: TrackList or Empty State */}
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {currentDisplayTracks.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
-                <ArrowDownToLine className="w-6 h-6 text-[#19E6A0]" />
-              </div>
-              <h3 className="text-sm font-semibold text-[#8E8A98]">
-                {activeTab === 'session' ? 'Paste a link above to start downloading' : 'No offline tracks in download folder'}
-              </h3>
-            </div>
-          ) : (
-            <TrackList tracks={currentDisplayTracks} />
-          )}
+        {/* Content View: TrackList or Empty State with silky spatial elevation transition */}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{
+                opacity: 0,
+                y: activeTab === 'session' ? 12 : -12,
+                scale: 0.992,
+                filter: 'blur(3px)',
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                filter: 'blur(0px)',
+                transition: {
+                  duration: 0.22,
+                  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+                },
+              }}
+              exit={{
+                opacity: 0,
+                y: activeTab === 'session' ? -8 : 8,
+                scale: 0.996,
+                filter: 'blur(2px)',
+                transition: {
+                  duration: 0.12,
+                  ease: [0.4, 0, 1, 1] as [number, number, number, number],
+                },
+              }}
+              className="flex-1 min-h-0 flex flex-col will-change-[transform,opacity,filter]"
+            >
+              {currentDisplayTracks.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
+                    <ArrowDownToLine className="w-6 h-6 text-[#19E6A0]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#8E8A98]">
+                    {activeTab === 'session' ? 'Paste a link above to start downloading' : 'No offline tracks in download folder'}
+                  </h3>
+                </div>
+              ) : (
+                <TrackList tracks={currentDisplayTracks} />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

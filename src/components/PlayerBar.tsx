@@ -474,11 +474,12 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           ========================================================================= */}
       <div className="flex-1 max-w-[540px] px-2 sm:px-4 min-w-0 flex flex-col items-center justify-center gap-1.5">
         {/* Controls Row */}
-        <div className="flex items-center gap-3 sm:gap-4 md:gap-5">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 md:gap-4">
           {/* Shuffle with active neon dot */}
           <button
+            type="button"
             onClick={toggleShuffle}
-            className={`group/shuffle relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
+            className={`group/shuffle relative w-8 h-8 aspect-square rounded-full flex items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0 ${
               shuffle ? 'text-[#19E6A0]' : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
             }`}
             title={shuffle ? 'Shuffle enabled' : 'Shuffle disabled'}
@@ -490,10 +491,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             )}
           </button>
 
-          {/* Previous Track with smooth circular hover scale */}
+          {/* Previous Track with perfect circular geometry & centered icon */}
           <button
+            type="button"
             onClick={prevTrack}
-            className="group/prev w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer shrink-0"
+            className="group/prev relative w-8 h-8 aspect-square rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] active:bg-white/[0.14] transition-all duration-200 hover:scale-108 active:scale-92 cursor-pointer shrink-0 shadow-none hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"
             title="Previous (Ctrl+Left)"
             aria-label="Previous Track"
           >
@@ -502,9 +504,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           {/* Play/Pause Button: 38x38px with signature emerald gradient & drop shadow */}
           <button
+            type="button"
             onClick={togglePlay}
             style={{ background: 'linear-gradient(135deg, #1DB954, #19E6A0)' }}
-            className="w-[38px] h-[38px] rounded-full text-black flex items-center justify-center shadow-[0_2px_12px_rgba(25,230,160,0.35)] hover:shadow-[0_2px_18px_rgba(25,230,160,0.55)] transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0"
+            className="w-[38px] h-[38px] aspect-square rounded-full text-black flex items-center justify-center shadow-[0_2px_14px_rgba(25,230,160,0.38)] hover:shadow-[0_2px_20px_rgba(25,230,160,0.6)] transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0"
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
@@ -515,10 +518,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             )}
           </button>
 
-          {/* Next Track with smooth circular hover scale */}
+          {/* Next Track with perfect circular geometry & centered icon */}
           <button
+            type="button"
             onClick={nextTrack}
-            className="group/next w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer shrink-0"
+            className="group/next relative w-8 h-8 aspect-square rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] active:bg-white/[0.14] transition-all duration-200 hover:scale-108 active:scale-92 cursor-pointer shrink-0 shadow-none hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"
             title="Next (Ctrl+Right)"
             aria-label="Next Track"
           >
@@ -527,8 +531,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           {/* Repeat Mode with active badge/dot ('1' or 'all') */}
           <button
+            type="button"
             onClick={cycleRepeat}
-            className={`group/repeat relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
+            className={`group/repeat relative w-8 h-8 aspect-square rounded-full flex items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0 ${
               repeatMode !== 'off' ? 'text-[#19E6A0]' : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
             }`}
             title={`Repeat: ${repeatMode}`}

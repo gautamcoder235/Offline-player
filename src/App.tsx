@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { listen } from '@tauri-apps/api/event';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { UpdateProvider } from './context/UpdateContext';
@@ -31,6 +31,58 @@ import { TrayPopup } from './components/TrayPopup';
 import { AlbumsView } from './components/AlbumsView';
 import { ArtistsView } from './components/ArtistsView';
 
+const VIEW_INDEX_MAP: Record<string, number> = {
+  songs: 0,
+  online_search: 1,
+  liked: 2,
+  top_tracks: 3,
+  download: 4,
+  playlists: 5,
+  playlist_detail: 5.5,
+  albums: 5.6,
+  artists: 5.7,
+  visualizer: 6,
+  lyrics: 7,
+  settings: 8,
+};
+
+const FILTER_INDEX_MAP: Record<string, number> = {
+  all: 0,
+  artists: 1,
+  albums: 2,
+  top: 3,
+  online: 4,
+};
+
+const tabVariants: Variants = {
+  initial: (dir: number) => ({
+    opacity: 0,
+    y: dir >= 0 ? 14 : -14,
+    scale: 0.992,
+    filter: 'blur(4px)',
+  }),
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.24,
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+    },
+  },
+  exit: (dir: number) => ({
+    opacity: 0,
+    y: dir >= 0 ? -10 : 10,
+    scale: 0.995,
+    filter: 'blur(2px)',
+    transition: {
+      duration: 0.12,
+      ease: [0.4, 0, 1, 1] as [number, number, number, number],
+    },
+  }),
+};
+
 const MainApp: React.FC = () => {
   const {
     tracks,
@@ -50,6 +102,31 @@ const MainApp: React.FC = () => {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'artists' | 'albums' | 'top'>('all');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  const prevViewRef = useRef<ViewMode>(currentView);
+  const prevFilterRef = useRef<string>(filterType);
+  const prevPlaylistIdRef = useRef<string | null>(selectedPlaylistId);
+  const [navDirection, setNavDirection] = useState<number>(1);
+
+  // Directional navigation tracker for spatial tab transition glide
+  useEffect(() => {
+    let dir = 1;
+    if (currentView !== prevViewRef.current) {
+      const prevIdx = VIEW_INDEX_MAP[prevViewRef.current] ?? 0;
+      const curIdx = VIEW_INDEX_MAP[currentView] ?? 0;
+      dir = curIdx >= prevIdx ? 1 : -1;
+      prevViewRef.current = currentView;
+    } else if (filterType !== prevFilterRef.current) {
+      const prevIdx = FILTER_INDEX_MAP[prevFilterRef.current] ?? 0;
+      const curIdx = FILTER_INDEX_MAP[filterType] ?? 0;
+      dir = curIdx >= prevIdx ? 1 : -1;
+      prevFilterRef.current = filterType;
+    } else if (selectedPlaylistId !== prevPlaylistIdRef.current) {
+      dir = selectedPlaylistId ? 1 : -1;
+      prevPlaylistIdRef.current = selectedPlaylistId;
+    }
+    setNavDirection(dir);
+  }, [currentView, filterType, selectedPlaylistId]);
 
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
@@ -142,7 +219,8 @@ const MainApp: React.FC = () => {
 
       const pid = playingPlaylistId;
 
-      if (pid === 'online_search') {
+      // Smart routing: determine destination view based on origin or track metadata
+      if (pid === 'online_search' || track.id.startsWith('online_') || track.is_online || (!track.file_path && track.stream_url)) {
         setCurrentView('online_search');
       } else if (pid === 'download') {
         setCurrentView('download');
@@ -168,7 +246,7 @@ const MainApp: React.FC = () => {
         setCurrentView('songs');
       }
 
-      // Allow the view to render, then trigger smooth scroll & flash highlight
+      // Allow the view to render, then trigger smooth scroll & flash highlight across Framer Motion transitions
       const triggerScroll = () => {
         window.dispatchEvent(
           new CustomEvent('scroll-to-track', {
@@ -177,11 +255,19 @@ const MainApp: React.FC = () => {
         );
       };
 
-      const t1 = setTimeout(triggerScroll, 80);
-      const t2 = setTimeout(triggerScroll, 220);
+      // Staggered triggers:
+      // 40ms: Instant highlight if already on target view
+      // 160ms: Target view mounted
+      // 340ms: Framer Motion spatial tab animation complete
+      // 520ms: Final safety alignment once virtual list settles
+      const timers = [
+        setTimeout(triggerScroll, 40),
+        setTimeout(triggerScroll, 160),
+        setTimeout(triggerScroll, 340),
+        setTimeout(triggerScroll, 520),
+      ];
       return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
+        timers.forEach(clearTimeout);
       };
     };
 
@@ -428,15 +514,16 @@ const MainApp: React.FC = () => {
             currentView={currentView}
             onViewChange={setCurrentView}
           />
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <AnimatePresence mode="wait">
+          <div className="flex-1 overflow-hidden flex flex-col relative">
+            <AnimatePresence mode="wait" custom={navDirection}>
               <motion.div
                 key={currentView === 'playlist_detail' ? `playlist_detail_${selectedPlaylistId}` : `${currentView}_${filterType}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.12, ease: 'easeOut' }}
-                className="flex-1 overflow-hidden flex flex-col"
+                custom={navDirection}
+                variants={tabVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex-1 overflow-hidden flex flex-col will-change-[transform,opacity,filter]"
               >
                 {renderMainContent()}
               </motion.div>
