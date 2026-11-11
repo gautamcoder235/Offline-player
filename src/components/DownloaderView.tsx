@@ -434,7 +434,7 @@ export const DownloaderView: React.FC = () => {
       {/* Top Compact Controls & Input Bar */}
       <div className="px-6 pt-5 pb-3 flex flex-col gap-2.5 shrink-0">
         <form onSubmit={handleStartDownload} className="flex items-center gap-2.5">
-          <div className="relative flex-1 flex items-center bg-[#121118]/80 backdrop-blur-xl rounded-xl border border-white/[0.08] focus-within:border-[#19E6A0]/50 focus-within:ring-2 focus-within:ring-[#19E6A0]/15 transition-all h-[44px] shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+          <div className="relative flex-1 flex items-center bg-[#121118]/80 backdrop-blur-xl rounded-xl border border-white/[0.08] focus-within:border-[var(--accent)]/50 focus-within:ring-2 focus-within:ring-[var(--accent)]/15 transition-all h-[44px] shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
             <Link2 className="w-4 h-4 ml-3.5 text-[#65616F] shrink-0" />
             <input
               type="text"
@@ -464,7 +464,7 @@ export const DownloaderView: React.FC = () => {
                 type="button"
                 onClick={handlePaste}
                 disabled={isDownloading}
-                className="p-1.5 rounded-lg text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.06] transition-all duration-150 active:scale-90 cursor-pointer"
+                className="p-1.5 rounded-lg text-[#777381] hover:text-[var(--accent)] hover:bg-white/[0.06] transition-all duration-150 active:scale-90 cursor-pointer"
                 title="Paste from clipboard"
                 aria-label="Paste from clipboard"
               >
@@ -486,7 +486,7 @@ export const DownloaderView: React.FC = () => {
             <button
               type="submit"
               disabled={!url.trim()}
-              className="h-[44px] flex items-center gap-2 px-5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-[#1A1922] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer shadow-[0_2px_14px_rgba(25,230,160,0.3)] disabled:shadow-none"
+              className="h-[44px] flex items-center gap-2 px-5 rounded-xl bg-[var(--accent)] hover:opacity-95 disabled:bg-[#1A1922] disabled:text-[#65616F] text-[var(--accent-contrast,#000000)] font-semibold text-xs transition-all duration-150 active:scale-95 shrink-0 cursor-pointer shadow-[0_2px_14px_var(--accent-glow)] disabled:shadow-none"
             >
               <Download className="w-4 h-4" />
               <span>Download</span>
@@ -497,11 +497,11 @@ export const DownloaderView: React.FC = () => {
         {/* Minimal Meta Row: Target Folder & Activity Logs Toggle */}
         <div className="flex items-center justify-between text-[11px] text-[#777381] px-1">
           <div className="flex items-center gap-1.5 truncate">
-            <Folder className="w-3.5 h-3.5 text-[#19E6A0] shrink-0" />
+            <Folder className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
             <span>Save to:</span>
             <span
               onClick={() => openInExplorer(downloadDir)}
-              className="text-[#AAA6B2] hover:text-[#19E6A0] cursor-pointer truncate transition-colors font-mono text-[10.5px]"
+              className="text-[#AAA6B2] hover:text-[var(--accent)] cursor-pointer truncate transition-colors font-mono text-[10.5px]"
               title="Click to reveal folder in Explorer"
             >
               {downloadDir || 'Configuring folder...'}
@@ -521,7 +521,7 @@ export const DownloaderView: React.FC = () => {
             onClick={() => setShowLogs((prev) => !prev)}
             className="flex items-center gap-1.5 text-[11px] text-[#777381] hover:text-[#AAA6B2] hover:bg-white/[0.04] px-2 py-0.5 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer shrink-0 ml-2"
           >
-            <Terminal className="w-3 h-3 text-[#19E6A0]" />
+            <Terminal className="w-3 h-3 text-[var(--accent)]" />
             <span>Activity Log {logs.length > 0 ? `(${logs.length})` : ''}</span>
             {showLogs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
@@ -540,14 +540,14 @@ export const DownloaderView: React.FC = () => {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   {isDownloading ? (
-                    <Loader2 className="w-4 h-4 text-[#19E6A0] animate-spin shrink-0" />
+                    <Loader2 className="w-4 h-4 text-[var(--accent)] animate-spin shrink-0" />
                   ) : summary ? (
                     <motion.div
                       animate={{ scale: [1, 1.25, 1] }}
                       transition={{ duration: 0.4, ease: 'easeOut' }}
                       className="shrink-0"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-[#19E6A0]" />
+                      <CheckCircle2 className="w-4 h-4 text-[var(--accent)]" />
                     </motion.div>
                   ) : null}
                   <div className="flex items-center gap-2 min-w-0">
@@ -559,14 +559,14 @@ export const DownloaderView: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <span className="text-xs font-mono font-semibold text-[#19E6A0] bg-[#19E6A0]/10 px-2 py-0.5 rounded-full shrink-0">
+                <span className="text-xs font-mono font-semibold text-[var(--accent)] bg-[var(--accent-muted)] px-2 py-0.5 rounded-full shrink-0">
                   {progressPercent}%
                 </span>
               </div>
 
               <div className="w-full h-1.5 rounded-full bg-[#201F2B] overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#19E6A0] to-[#35F0B1] rounded-full transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-neon,var(--accent))] rounded-full transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -578,7 +578,7 @@ export const DownloaderView: React.FC = () => {
                   transition={{ duration: 0.2 }}
                   className="pt-0.5 flex items-center gap-4 text-xs font-medium"
                 >
-                  <span className="text-[#19E6A0]">✓ {summary.succeeded} downloaded</span>
+                  <span className="text-[var(--accent)]">✓ {summary.succeeded} downloaded</span>
                   {summary.failed > 0 && (
                     <span className="text-[#FF667A]">✗ {summary.failed} failed</span>
                   )}
@@ -621,7 +621,7 @@ export const DownloaderView: React.FC = () => {
                         log.includes('[ERROR]') || log.includes('failed')
                           ? 'text-[#FF667A]'
                           : log.includes('Downloaded') || log.includes('Completed')
-                          ? 'text-[#19E6A0]'
+                          ? 'text-[var(--accent)]'
                           : 'text-[#777381]'
                       }`}
                     >
@@ -656,7 +656,7 @@ export const DownloaderView: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
-              <Music2 className="relative z-10 w-3.5 h-3.5 text-[#19E6A0]" />
+              <Music2 className="relative z-10 w-3.5 h-3.5 text-[var(--accent)]" />
               <span className="relative z-10">Downloaded Tracks</span>
               <span className="relative z-10 text-[10px] font-mono text-[#8E8A98] bg-white/[0.06] px-1.5 py-0.2 rounded-full">
                 {downloadedTracks.length}
@@ -678,10 +678,10 @@ export const DownloaderView: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
-              <ArrowDownToLine className="relative z-10 w-3.5 h-3.5 text-[#19E6A0]" />
+              <ArrowDownToLine className="relative z-10 w-3.5 h-3.5 text-[var(--accent)]" />
               <span className="relative z-10">Session Queue</span>
               {sessionTracks.length > 0 && (
-                <span className="relative z-10 text-[10px] font-mono text-[#19E6A0] bg-[#19E6A0]/15 px-1.5 py-0.2 rounded-full">
+                <span className="relative z-10 text-[10px] font-mono text-[var(--accent)] bg-[var(--accent-muted)] px-1.5 py-0.2 rounded-full">
                   {sessionTracks.length}
                 </span>
               )}
@@ -689,7 +689,7 @@ export const DownloaderView: React.FC = () => {
           </div>
 
           {isDownloading && (
-            <span className="text-[11px] text-[#19E6A0] flex items-center gap-1.5 font-medium animate-pulse">
+            <span className="text-[11px] text-[var(--accent)] flex items-center gap-1.5 font-medium animate-pulse">
               <Loader2 className="w-3 h-3 animate-spin" />
               <span>Downloading active queue...</span>
             </span>
@@ -732,7 +732,7 @@ export const DownloaderView: React.FC = () => {
               {currentDisplayTracks.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none">
                   <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
-                    <ArrowDownToLine className="w-6 h-6 text-[#19E6A0]" />
+                    <ArrowDownToLine className="w-6 h-6 text-[var(--accent)]" />
                   </div>
                   <h3 className="text-sm font-semibold text-[#8E8A98]">
                     {activeTab === 'session' ? 'Paste a link above to start downloading' : 'No offline tracks in download folder'}

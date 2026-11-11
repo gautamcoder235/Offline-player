@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Trash2, AlertTriangle, X, Music, HardDrive, Library } from 'lucide-react';
@@ -18,6 +18,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
   onConfirm,
 }) => {
   const [deleteFromDisk, setDeleteFromDisk] = useState<boolean>(true);
+  const isBackdropMouseDownRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -28,6 +29,17 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    isBackdropMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const modalContent = (
     <AnimatePresence>
       {isOpen && track && (
@@ -37,7 +49,8 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 select-none"
-          onClick={onClose}
+          onMouseDown={handleBackdropMouseDown}
+          onClick={handleBackdropClick}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -45,6 +58,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
             className="w-full max-w-md rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.85)] p-6 space-y-5 text-left"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -122,11 +136,11 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
             onClick={() => setDeleteFromDisk(false)}
             className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
               !deleteFromDisk
-                ? 'bg-[#19E6A0]/10 border-[#19E6A0]/40 text-[#F4F2F7]'
+                ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[#F4F2F7]'
                 : 'bg-[#07060A]/80 border-white/[0.08] text-[#AAA6B2] hover:bg-white/[0.04]'
             }`}
           >
-            <div className={`mt-0.5 p-1 rounded-lg ${!deleteFromDisk ? 'bg-[#19E6A0]/20 text-[#19E6A0]' : 'text-[#65616F]'}`}>
+            <div className={`mt-0.5 p-1 rounded-lg ${!deleteFromDisk ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'text-[#65616F]'}`}>
               <Library className="w-4 h-4" />
             </div>
             <div className="flex-1 text-xs">
@@ -137,7 +151,7 @@ export const DeleteTrackModal: React.FC<DeleteTrackModalProps> = ({
                   name="deleteType"
                   checked={!deleteFromDisk}
                   onChange={() => setDeleteFromDisk(false)}
-                  className="accent-[#19E6A0] cursor-pointer"
+                  className="accent-[var(--accent)] cursor-pointer"
                 />
               </div>
               <p className="text-[11px] text-[#8E8A98] mt-0.5">

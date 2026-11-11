@@ -4,6 +4,10 @@ export interface Track {
   title: string;
   artist: string;
   album: string;
+  album_artist?: string | null;
+  file_format?: string | null;
+  date_added?: number | null;
+  last_played?: number | null;
   duration: number;
   duration_str: string;
   year?: number | null;
@@ -118,4 +122,37 @@ export interface DownloadLogEvent {
   tracks?: Array<{ title: string; artists: string[]; album: string }>;
   playlist_name?: string | null;
   is_collection?: boolean;
+}
+
+export interface SmartPlaybackSettings {
+  enabled: boolean;
+  auto_pause: boolean;
+  auto_resume: boolean;
+  resume_delay_ms: number;
+  min_audio_duration_ms: number;
+  activity_threshold: number;
+  excluded_applications: string[];
+}
+
+export interface AudioSessionInfo {
+  session_id: string;
+  pid: number;
+  process_name: string;
+  display_name: string;
+  state: string;
+  peak_level: number;
+  is_producing_audio: boolean;
+  is_excluded: boolean;
+  is_self: boolean;
+}
+
+export interface SmartPlaybackStatus {
+  enabled: boolean;
+  is_monitoring: boolean;
+  is_external_audio_active: boolean;
+  current_state: string;
+  is_paused_by_external_audio: boolean;
+  interrupting_app: string | null;
+  resume_countdown_ms: number | null;
+  active_sessions: AudioSessionInfo[];
 }

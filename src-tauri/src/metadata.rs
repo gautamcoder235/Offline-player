@@ -14,6 +14,16 @@ pub struct TrackMetadata {
     pub title: String,
     pub artist: String,
     pub album: String,
+    #[serde(default)]
+    pub album_artist: Option<String>,
+    #[serde(default)]
+    pub file_format: Option<String>,
+    #[serde(default)]
+    pub date_added: Option<u64>,
+    #[serde(default)]
+    pub play_count: u32,
+    #[serde(default)]
+    pub last_played: Option<u64>,
     pub duration: f64,
     pub duration_str: String,
     pub year: Option<u32>,
@@ -161,12 +171,19 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                     None
                 }
             };
+            let file_format = file_path.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase());
+            let date_added = metadata.created().or_else(|_| metadata.modified()).ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs());
             return Some(TrackMetadata {
                 id: deterministic_id(&file_path_str),
                 file_path: file_path_str,
                 title: default_title,
                 artist: default_artist,
                 album: "Offline Music".to_string(),
+                album_artist: None,
+                file_format,
+                date_added,
+                play_count: 0,
+                last_played: None,
                 duration: 0.0,
                 duration_str: "0:00".to_string(),
                 year: None,
@@ -191,6 +208,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     let mut title = None;
     let mut artist = None;
     let mut album = None;
+    let mut album_artist = None;
     let mut year = None;
     let mut has_embedded_art = false;
     let mut lyrics = None;
@@ -245,6 +263,14 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
                 let trimmed = al.trim();
                 if !trimmed.is_empty() {
                     album = Some(trimmed.to_string());
+                }
+            }
+        }
+        if album_artist.is_none() {
+            if let Some(aa) = tag.get_string(&ItemKey::AlbumArtist) {
+                let trimmed = aa.trim();
+                if !trimmed.is_empty() {
+                    album_artist = Some(trimmed.to_string());
                 }
             }
         }
@@ -366,6 +392,8 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
     };
 
     let stream_url = crate::streamer::get_stream_url(&file_path_str);
+    let file_format = file_path.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase());
+    let date_added = metadata.created().or_else(|_| metadata.modified()).ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs());
 
     Some(TrackMetadata {
         id: track_id,
@@ -373,6 +401,11 @@ pub fn extract_metadata(file_path: &Path) -> Option<TrackMetadata> {
         title,
         artist,
         album,
+        album_artist,
+        file_format,
+        date_added,
+        play_count: 0,
+        last_played: None,
         duration,
         duration_str,
         year,

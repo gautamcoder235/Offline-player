@@ -59,6 +59,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     setSleepTimer,
     coverMap,
     themeAppearance,
+    isPausedBySmartPlayback,
+    smartPlaybackInterruptingApp,
+    smartPlaybackStatus,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
 
@@ -472,7 +475,32 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
       {/* =========================================================================
           CENTER COLUMN: Main Playback Controls & High-Precision Scrubber (~540px)
           ========================================================================= */}
-      <div className="flex-1 max-w-[540px] px-2 sm:px-4 min-w-0 flex flex-col items-center justify-center gap-1.5">
+      <div className="flex-1 max-w-[540px] px-2 sm:px-4 min-w-0 flex flex-col items-center justify-center gap-1.5 relative">
+        <AnimatePresence>
+          {isPausedBySmartPlayback && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 4 }}
+              className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)] shadow-[0_4px_16px_rgba(0,0,0,0.6)] backdrop-blur-md z-30 pointer-events-auto whitespace-nowrap"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+              <span>
+                {smartPlaybackStatus?.resume_countdown_ms && smartPlaybackStatus.resume_countdown_ms > 0
+                  ? `Resuming in ${(smartPlaybackStatus.resume_countdown_ms / 1000).toFixed(1)}s`
+                  : `Paused for ${smartPlaybackInterruptingApp || 'External Audio'}`}
+              </span>
+              <button
+                type="button"
+                onClick={togglePlay}
+                className="ml-1 text-[10px] underline hover:text-white cursor-pointer font-bold"
+                title="Resume music now"
+              >
+                Resume
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Controls Row */}
         <div className="flex items-center gap-2.5 sm:gap-3.5 md:gap-4">
           {/* Shuffle with active neon dot */}
@@ -480,14 +508,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             type="button"
             onClick={toggleShuffle}
             className={`group/shuffle relative w-8 h-8 aspect-square rounded-full flex items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0 ${
-              shuffle ? 'text-[#19E6A0]' : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
+              shuffle ? 'text-[var(--accent)]' : 'text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08]'
             }`}
             title={shuffle ? 'Shuffle enabled' : 'Shuffle disabled'}
             aria-label="Shuffle"
           >
             <AnimatedShuffle active={shuffle} className="w-4 h-4 discord-icon discord-icon-shuffle" />
             {shuffle && (
-              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0] animate-in fade-in zoom-in duration-200" />
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent)] animate-in fade-in zoom-in duration-200" />
             )}
           </button>
 
@@ -495,26 +523,30 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           <button
             type="button"
             onClick={prevTrack}
-            className="group/prev relative w-8 h-8 aspect-square rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] active:bg-white/[0.14] transition-all duration-200 hover:scale-108 active:scale-92 cursor-pointer shrink-0 shadow-none hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"
+            className="group/prev relative w-8 h-8 aspect-square rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08] active:bg-white/[0.14] transition-all duration-200 hover:scale-108 active:scale-92 cursor-pointer shrink-0 shadow-none hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"
             title="Previous (Ctrl+Left)"
             aria-label="Previous Track"
           >
             <AnimatedSkip direction="prev" className="w-4 h-4 discord-icon discord-icon-prev" />
           </button>
 
-          {/* Play/Pause Button: 38x38px with signature emerald gradient & drop shadow */}
+          {/* Play/Pause Button: 38x38px with signature dynamic accent gradient & drop shadow */}
           <button
             type="button"
             onClick={togglePlay}
-            style={{ background: 'linear-gradient(135deg, #1DB954, #19E6A0)' }}
-            className="w-[38px] h-[38px] aspect-square rounded-full text-black flex items-center justify-center shadow-[0_2px_14px_rgba(25,230,160,0.38)] hover:shadow-[0_2px_20px_rgba(25,230,160,0.6)] transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0"
+            style={{
+              background: 'var(--accent-gradient, linear-gradient(135deg, #1DB954, #19E6A0))',
+              color: 'var(--accent-contrast, #000000)',
+              boxShadow: '0 2px 14px var(--accent-glow, rgba(25,230,160,0.38))',
+            }}
+            className="w-[38px] h-[38px] aspect-square rounded-full flex items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0"
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4 fill-black text-black discord-icon discord-icon-pop animate-in zoom-in duration-150" />
+              <Pause className="w-4 h-4 fill-current currentColor discord-icon discord-icon-pop animate-in zoom-in duration-150" />
             ) : (
-              <Play className="w-4 h-4 fill-black text-black ml-0.5 discord-icon discord-icon-pop animate-in zoom-in duration-150" />
+              <Play className="w-4 h-4 fill-current currentColor ml-0.5 discord-icon discord-icon-pop animate-in zoom-in duration-150" />
             )}
           </button>
 
@@ -522,7 +554,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           <button
             type="button"
             onClick={nextTrack}
-            className="group/next relative w-8 h-8 aspect-square rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08] active:bg-white/[0.14] transition-all duration-200 hover:scale-108 active:scale-92 cursor-pointer shrink-0 shadow-none hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"
+            className="group/next relative w-8 h-8 aspect-square rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08] active:bg-white/[0.14] transition-all duration-200 hover:scale-108 active:scale-92 cursor-pointer shrink-0 shadow-none hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"
             title="Next (Ctrl+Right)"
             aria-label="Next Track"
           >
@@ -534,7 +566,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             type="button"
             onClick={cycleRepeat}
             className={`group/repeat relative w-8 h-8 aspect-square rounded-full flex items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer shrink-0 ${
-              repeatMode !== 'off' ? 'text-[#19E6A0]' : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
+              repeatMode !== 'off' ? 'text-[var(--accent)]' : 'text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08]'
             }`}
             title={`Repeat: ${repeatMode}`}
             aria-label={`Repeat: ${repeatMode}`}
@@ -545,10 +577,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               className="w-4 h-4 discord-icon discord-icon-repeat"
             />
             {repeatMode === 'all' && (
-              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0] animate-in fade-in zoom-in duration-200" />
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent)] animate-in fade-in zoom-in duration-200" />
             )}
             {repeatMode === 'one' && (
-              <span className="absolute -top-0.5 right-0.5 text-[8px] font-mono font-black text-[#19E6A0] leading-none drop-shadow-[0_0_4px_#19E6A0]">
+              <span className="absolute -top-0.5 right-0.5 text-[8px] font-mono font-black text-[var(--accent)] leading-none drop-shadow-[0_0_4px_var(--accent)]">
                 1
               </span>
             )}
@@ -592,15 +624,15 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 className="absolute top-0 bottom-0 left-0 bg-white/20 rounded-full hidden pointer-events-none"
               />
 
-              {/* Glowing Emerald Gradient Fill */}
+              {/* Glowing Dynamic Accent Gradient Fill */}
               <div
                 ref={progressFillRef}
                 style={{
                   width: `${progressPercent}%`,
-                  background: 'linear-gradient(90deg, #1DB954, #19E6A0)',
+                  background: 'var(--accent-gradient-h, linear-gradient(90deg, #1DB954, #19E6A0))',
                 }}
                 className={`h-full rounded-full relative transition-none ${
-                  isPlaying || isDraggingProgress ? 'shadow-[0_0_10px_rgba(25,230,160,0.4)]' : ''
+                  isPlaying || isDraggingProgress ? 'shadow-[0_0_10px_var(--accent-glow)]' : ''
                 }`}
               />
             </div>
@@ -608,9 +640,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             {/* Smooth Playhead Knob: expands on hover/drag */}
             <div
               ref={progressKnobRef}
-              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full ring-2 ring-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.7)] pointer-events-none transition-[width,height,opacity,transform] duration-150 ease-out ${
+              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full ring-2 ring-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)] pointer-events-none transition-[width,height,opacity,transform] duration-150 ease-out ${
                 isDraggingProgress
-                  ? 'w-3 h-3 opacity-100 scale-110 ring-4 ring-[#19E6A0]/50 shadow-[0_0_12px_rgba(25,230,160,0.9)]'
+                  ? 'w-3 h-3 opacity-100 scale-110 ring-4 ring-[var(--accent)]/50 shadow-[0_0_12px_var(--accent-glow)]'
                   : 'w-0 h-0 opacity-0 group-hover/scrubber:w-3 group-hover/scrubber:h-3 group-hover/scrubber:opacity-100'
               }`}
               style={{ left: `${progressPercent}%` }}
@@ -640,8 +672,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           onClick={onToggleLyrics}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
             isLyricsActive
-              ? 'text-[#19E6A0] bg-[#19E6A0]/15 ring-1 ring-[#19E6A0]/30 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
-              : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
+              ? 'text-[var(--accent)] bg-[var(--accent-muted)] ring-1 ring-[var(--accent-border)] shadow-[0_0_10px_var(--accent-glow)]'
+              : 'text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08]'
           }`}
           title={isLyricsActive ? 'Close Lyrics' : 'Live Lyrics'}
           aria-label="Toggle Lyrics"
@@ -654,15 +686,15 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           onClick={onToggleQueue}
           className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
             isQueueActive
-              ? 'text-[#19E6A0] bg-[#19E6A0]/15 ring-1 ring-[#19E6A0]/30 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
-              : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
+              ? 'text-[var(--accent)] bg-[var(--accent-muted)] ring-1 ring-[var(--accent-border)] shadow-[0_0_10px_var(--accent-glow)]'
+              : 'text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08]'
           }`}
           title="Playing Queue"
           aria-label="Toggle Playing Queue"
         >
           <ListOrdered className="w-4 h-4 discord-icon discord-icon-pop" />
           {queue && queue.length > 0 && (
-            <span className="absolute -top-1 -right-1 px-1 min-w-[15px] h-3.5 rounded-full bg-[#19E6A0] text-black font-extrabold text-[9px] flex items-center justify-center leading-none shadow-[0_0_6px_rgba(25,230,160,0.6)]">
+            <span className="absolute -top-1 -right-1 px-1 min-w-[15px] h-3.5 rounded-full bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-extrabold text-[9px] flex items-center justify-center leading-none shadow-[0_0_6px_var(--accent-glow)]">
               {queue.length > 99 ? '99+' : queue.length}
             </span>
           )}
@@ -674,8 +706,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onClick={() => setIsSleepMenuOpen((prev) => !prev)}
             className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer shrink-0 ${
               sleepTimerMinutes !== null
-                ? 'text-[#19E6A0] bg-[#19E6A0]/15 ring-1 ring-[#19E6A0]/30 shadow-[0_0_10px_rgba(25,230,160,0.25)]'
-                : 'text-[#94A3B8] hover:text-[#19E6A0] hover:bg-white/[0.08]'
+                ? 'text-[var(--accent)] bg-[var(--accent-muted)] ring-1 ring-[var(--accent-border)] shadow-[0_0_10px_var(--accent-glow)]'
+                : 'text-[#94A3B8] hover:text-[var(--accent)] hover:bg-white/[0.08]'
             }`}
             title={
               sleepTimerRemainingSec !== null
@@ -686,7 +718,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           >
             <Moon className="w-4 h-4 discord-icon discord-icon-shuffle" />
             {sleepTimerMinutes !== null && (
-              <span className="absolute -top-1 -right-1 px-1 h-3.5 min-w-[15px] rounded-full bg-[#19E6A0] text-black font-bold text-[9px] font-mono flex items-center justify-center leading-none shadow-[0_0_6px_rgba(25,230,160,0.6)] animate-pulse">
+              <span className="absolute -top-1 -right-1 px-1 h-3.5 min-w-[15px] rounded-full bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-bold text-[9px] font-mono flex items-center justify-center leading-none shadow-[0_0_6px_var(--accent-glow)] animate-pulse">
                 {sleepTimerRemainingSec !== null ? `${Math.ceil(sleepTimerRemainingSec / 60)}m` : '✓'}
               </span>
             )}
@@ -697,11 +729,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <div className="absolute bottom-full mb-3 right-0 w-48 rounded-2xl bg-[#14141A]/95 backdrop-blur-2xl border border-white/[0.10] shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-2.5 space-y-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 select-none">
               <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] border-b border-white/[0.08] mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <Moon className="w-3 h-3 text-[#19E6A0]" />
+                  <Moon className="w-3 h-3 text-[var(--accent)]" />
                   Sleep Timer
                 </span>
                 {sleepTimerRemainingSec !== null && (
-                  <span className="text-[#19E6A0] font-mono font-bold">
+                  <span className="text-[var(--accent)] font-mono font-bold">
                     {Math.floor(sleepTimerRemainingSec / 60)}m {sleepTimerRemainingSec % 60}s
                   </span>
                 )}
@@ -716,13 +748,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                   }}
                   className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-all flex items-center justify-between cursor-pointer ${
                     sleepTimerMinutes === mins
-                      ? 'bg-[#19E6A0]/15 text-[#19E6A0] font-semibold'
+                      ? 'bg-[var(--accent-muted)] text-[var(--accent)] font-semibold'
                       : 'text-[#94A3B8] hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
                   <span>{mins} minutes</span>
                   {sleepTimerMinutes === mins && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent)]" />
                   )}
                 </button>
               ))}
@@ -735,13 +767,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                   }}
                   className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-all flex items-center justify-between cursor-pointer ${
                     sleepTimerMinutes === -1
-                      ? 'bg-[#19E6A0]/15 text-[#19E6A0] font-semibold'
+                      ? 'bg-[var(--accent-muted)] text-[var(--accent)] font-semibold'
                       : 'text-[#94A3B8] hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
                   <span>End of track</span>
                   {sleepTimerMinutes === -1 ? (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#19E6A0] shadow-[0_0_6px_#19E6A0]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent)]" />
                   ) : (
                     <span className="text-[10px] font-mono text-[#64748B]">
                       ~{Math.ceil((duration - currentTime) / 60)}m
@@ -813,7 +845,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             }}
             onWheel={handleVolumeWheel}
             onKeyDown={handleVolumeKeyDown}
-            className={`relative w-16 sm:w-20 md:w-24 h-5 flex items-center select-none touch-none group/voltrack outline-none focus-visible:ring-1 focus-visible:ring-[#19E6A0]/50 rounded-full ${
+            className={`relative w-16 sm:w-20 md:w-24 h-5 flex items-center select-none touch-none group/voltrack outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]/50 rounded-full ${
               isDraggingVolume ? 'cursor-grabbing' : 'cursor-pointer'
             }`}
             title={`Volume: ${volPercent}% (Scroll or Drag to adjust)`}
@@ -829,10 +861,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 ref={volumeFillRef}
                 style={{
                   width: `${volPercent}%`,
-                  background: 'linear-gradient(90deg, #1DB954, #19E6A0)',
+                  background: 'var(--accent-gradient-h, linear-gradient(90deg, #1DB954, #19E6A0))',
                 }}
                 className={`h-full rounded-full transition-none ${
-                  isDraggingVolume || volPercent > 0 ? 'shadow-[0_0_8px_rgba(25,230,160,0.4)]' : ''
+                  isDraggingVolume || volPercent > 0 ? 'shadow-[0_0_8px_var(--accent-glow)]' : ''
                 }`}
               />
             </div>
@@ -840,7 +872,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             {/* Volume Scrubber Knob: expands from 0px to 10px on hover/drag */}
             <div
               ref={volumeKnobRef}
-              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full ring-2 ring-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.7)] pointer-events-none transition-[width,height,opacity,transform] duration-150 ease-out ${
+              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full ring-2 ring-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)] pointer-events-none transition-[width,height,opacity,transform] duration-150 ease-out ${
                 isDraggingVolume
                   ? 'w-2.5 h-2.5 opacity-100 scale-110'
                   : 'w-0 h-0 opacity-0 group-hover/voltrack:w-2.5 group-hover/voltrack:h-2.5 group-hover/voltrack:opacity-100'

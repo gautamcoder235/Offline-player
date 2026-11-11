@@ -75,7 +75,7 @@ export const LyricsView: React.FC = () => {
             <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight truncate">
               {currentTrack.title}
             </h2>
-            <p className="text-xs text-[#19E6A0] font-medium truncate">
+            <p className="text-xs text-[var(--accent)] font-medium truncate">
               {currentTrack.artist}
             </p>
           </div>
@@ -83,7 +83,7 @@ export const LyricsView: React.FC = () => {
 
         <div className="flex items-center gap-2 shrink-0">
           {currentLyrics?.isSynced && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#19E6A0]/10 text-[#19E6A0] text-[11px] font-medium border border-[#19E6A0]/25 shadow-[0_0_10px_rgba(25,230,160,0.15)]">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--accent-muted)] text-[var(--accent)] text-[11px] font-medium border border-[var(--accent-border)] shadow-[0_0_10px_var(--accent-glow)]">
               <Check className="w-3 h-3" />
               <span>Synced Lyrics</span>
             </span>
@@ -92,7 +92,7 @@ export const LyricsView: React.FC = () => {
           {isEditing ? (
             <button
               onClick={handleSaveEdit}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold transition-all duration-150 active:scale-95 cursor-pointer shadow-md"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] text-xs font-semibold transition-all duration-150 active:scale-95 cursor-pointer shadow-md"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Save</span>
@@ -115,7 +115,7 @@ export const LyricsView: React.FC = () => {
         className="flex-1 overflow-y-auto px-8 py-16 flex flex-col items-center justify-start text-center"
       >
         {isLoadingLyrics ? (
-          <div className="my-auto flex flex-col items-center gap-2 text-[#19E6A0]">
+          <div className="my-auto flex flex-col items-center gap-2 text-[var(--accent)]">
             <Mic2 className="w-6 h-6 animate-pulse" />
             <p className="text-xs font-medium">Fetching & Synchronizing Lyrics...</p>
           </div>
@@ -128,7 +128,7 @@ export const LyricsView: React.FC = () => {
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
               placeholder="[00:10.00] First lyric line&#10;[00:14.50] Second lyric line..."
-              className="flex-1 w-full p-4 rounded-xl bg-[#07060A]/80 border border-white/[0.08] font-mono text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 resize-none"
+              className="flex-1 w-full p-4 rounded-xl bg-[#07060A]/80 border border-white/[0.08] font-mono text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/50 resize-none"
             />
           </div>
         ) : !currentLyrics || currentLyrics.lines.length === 0 ? (

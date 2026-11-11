@@ -27,13 +27,17 @@
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
 
-    /* Precision Lossless Studio Accent: Tailored Emerald (#10B981) */
-    --accent: #10B981;
-    --accent-neon: #10B981;
-    --accent-cyan: #06B6D4;
+    /* Precision Lossless Studio Accent: Tailored Emerald (#19E6A0) */
+    --accent: #19E6A0;
+    --accent-neon: #19E6A0;
+    --accent-cyan: #00C2FF;
     --accent-hover: #34D399;
-    --accent-muted: rgba(16, 185, 129, 0.12);
-    --accent-glow: rgba(16, 185, 129, 0.22);
+    --accent-contrast: #000000;
+    --accent-muted: rgba(25, 230, 160, 0.15);
+    --accent-border: rgba(25, 230, 160, 0.30);
+    --accent-glow: rgba(25, 230, 160, 0.45);
+    --accent-gradient: linear-gradient(135deg, #1DB954, #19E6A0);
+    --accent-gradient-h: linear-gradient(90deg, #1DB954, #19E6A0);
 
     /* Champagne Gold VIP & Top Track Accents */
     --gold: #E5B869;
@@ -118,13 +122,13 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(25, 230, 160, 0.55);
-  box-shadow: 0 0 8px rgba(25, 230, 160, 0.35);
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: #19E6A0;
-  box-shadow: 0 0 12px rgba(25, 230, 160, 0.65), 0 0 4px rgba(0, 242, 254, 0.4);
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 /* Tray popup window scrollbars */
@@ -269,17 +273,17 @@ html.tray-popup-mode ::-webkit-scrollbar-thumb:hover {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #19E6A0;
+  background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(25, 230, 160, 0.4);
+  box-shadow: 0 0 6px var(--accent-glow);
   transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .slider-track:hover::-webkit-slider-thumb,
 .slider-track::-webkit-slider-thumb:hover {
   transform: scale(1.25);
-  background: #35F0B1;
-  box-shadow: 0 0 8px rgba(25, 230, 160, 0.6);
+  background: var(--accent-hover, var(--accent));
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* Premium Dropdown & Micro-interactions */

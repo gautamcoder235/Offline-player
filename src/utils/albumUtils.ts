@@ -16,7 +16,7 @@ export interface AlbumGroup {
  * Common generic album names that should be qualified by the primary artist
  * so different artists' "Greatest Hits" or "Live" albums don't collide.
  */
-const GENERIC_ALBUM_NAMES = new Set([
+export const GENERIC_ALBUM_NAMES = new Set([
   'greatest hits',
   'live',
   'ep',
@@ -162,15 +162,33 @@ export function groupTracksIntoAlbums(tracks: Track[]): AlbumGroup[] {
 
   for (const track of tracks) {
     const albumName = resolveTrackAlbumName(track);
-    const normalizedName = normalizeAlbumKey(albumName);
+    const normalizedAlbum = normalizeAlbumKey(albumName);
 
-    // If it's a generic album name like "Greatest Hits" or "Live", qualify with primary artist
-    let groupKey = normalizedName;
-    if (GENERIC_ALBUM_NAMES.has(normalizedName)) {
+    // Check if album is explicitly or inherently a compilation/soundtrack
+    const lowerAlbum = albumName.toLowerCase();
+    const rawAlbumArtist = track.album_artist?.trim() || '';
+    const lowerAlbumArtist = rawAlbumArtist.toLowerCase();
+
+    const isCompilationOrSoundtrack =
+      lowerAlbumArtist === 'various artists' ||
+      lowerAlbumArtist === 'various' ||
+      lowerAlbumArtist === 'soundtrack' ||
+      lowerAlbum.includes('soundtrack') ||
+      lowerAlbum.includes('original motion picture') ||
+      lowerAlbum.includes(' ost');
+
+    let albumArtistKey: string;
+    if (isCompilationOrSoundtrack) {
+      albumArtistKey = '__compilation__';
+    } else if (rawAlbumArtist) {
+      albumArtistKey = normalizeArtistKey(rawAlbumArtist);
+    } else {
       const parts = splitArtistString(track.artist || '');
-      const primary = normalizeArtistKey(parts[0] || 'Unknown Artist');
-      groupKey = `${normalizedName}___${primary}`;
+      albumArtistKey = normalizeArtistKey(parts[0] || 'Unknown Artist');
     }
+
+    // Composite key strictly prevents collision between different artists with same album name
+    const groupKey = `${albumArtistKey}___${normalizedAlbum}`;
 
     if (!map.has(groupKey)) {
       map.set(groupKey, {

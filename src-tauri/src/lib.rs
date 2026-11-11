@@ -5,6 +5,13 @@ pub mod metadata;
 pub mod streamer;
 #[cfg(windows)]
 pub mod taskbar;
+pub mod audio_session;
+pub mod smart_settings;
+pub mod playback_state;
+#[cfg(windows)]
+pub mod audio_monitor;
+pub mod smart_playback;
+pub mod db;
 
 use base64::Engine;
 use downloader::{run_download, stop_download, DownloaderState};
@@ -48,6 +55,7 @@ pub struct AppState {
     pub settings: Mutex<AppSettings>,
     pub tray_playlists: Mutex<Vec<TrayPlaylist>>,
     pub discord: discord_rpc::DiscordRpcManager,
+    pub db: Mutex<rusqlite::Connection>,
 }
 
 fn get_settings_file_path() -> PathBuf {
@@ -297,6 +305,14 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
 
         // Save updated cache atomically
         save_library_cache_to_disk(&cache);
+
+        // Sync scanned cache entries into SQLite database
+        if let Ok(conn) = db::init_db() {
+            let cached_tracks: Vec<TrackMetadata> = cache.entries.values().map(|e| e.track.clone()).collect();
+            let _ = db::upsert_tracks(&conn, &cached_tracks);
+            let active_paths: Vec<String> = cache.entries.keys().cloned().collect();
+            let _ = db::prune_deleted_tracks(&conn, &active_paths);
+        }
 
         // Sort by artist, then title
         tracks.sort_by(|a, b| {
@@ -599,6 +615,41 @@ fn open_tray_folder(app: AppHandle, state: State<'_, AppState>) {
 #[tauri::command]
 fn quit_app(app: AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+fn get_smart_playback_settings() -> smart_settings::SmartPlaybackSettings {
+    smart_playback::get_smart_playback_manager().get_settings()
+}
+
+#[tauri::command]
+fn update_smart_playback_settings(settings: smart_settings::SmartPlaybackSettings) {
+    smart_playback::get_smart_playback_manager().update_settings(settings);
+}
+
+#[tauri::command]
+fn set_smart_playback_enabled(enabled: bool) {
+    smart_playback::get_smart_playback_manager().set_enabled(enabled);
+}
+
+#[tauri::command]
+fn update_excluded_applications(apps: Vec<String>) {
+    smart_playback::get_smart_playback_manager().update_excluded_applications(apps);
+}
+
+#[tauri::command]
+fn get_audio_monitor_status() -> smart_playback::SmartPlaybackStatus {
+    smart_playback::get_smart_playback_manager().get_status()
+}
+
+#[tauri::command]
+fn get_active_audio_sessions() -> Vec<audio_session::AudioSessionInfo> {
+    smart_playback::get_smart_playback_manager().get_active_sessions()
+}
+
+#[tauri::command]
+fn report_user_playback_action(action: playback_state::UserAction) {
+    smart_playback::get_smart_playback_manager().handle_user_action(action);
 }
 
 fn update_cache_cover_for_track(artist: &str, title: &str, cover_url: &str) {
@@ -1059,6 +1110,171 @@ async fn get_online_stream_url(
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn db_get_library(state: State<'_, AppState>) -> Result<Vec<TrackMetadata>, String> {
+    let mut tracks = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        db::get_all_tracks(&conn).map_err(|e| e.to_string())?
+    };
+
+    if tracks.is_empty() {
+        let cache = load_library_cache_from_disk();
+        if !cache.entries.is_empty() {
+            let cached_tracks: Vec<TrackMetadata> = cache.entries.into_values().map(|e| e.track).collect();
+            let conn = state.db.lock().map_err(|e| e.to_string())?;
+            let _ = db::upsert_tracks(&conn, &cached_tracks);
+            tracks = cached_tracks;
+        }
+    }
+
+    for track in &mut tracks {
+        update_track_session_urls(track);
+    }
+
+    Ok(tracks)
+}
+
+#[tauri::command]
+async fn db_record_playback_session(
+    state: State<'_, AppState>,
+    session: db::PlaybackSessionInput,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::record_playback_session(&conn, &session).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_get_top_tracks(
+    state: State<'_, AppState>,
+    time_range: String,
+    limit: Option<u32>,
+) -> Result<Vec<TrackMetadata>, String> {
+    let mut tracks = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        db::get_top_tracks(&conn, &time_range, limit.unwrap_or(50)).map_err(|e| e.to_string())?
+    };
+
+    for track in &mut tracks {
+        update_track_session_urls(track);
+    }
+
+    Ok(tracks)
+}
+
+#[tauri::command]
+async fn db_get_playlists(state: State<'_, AppState>) -> Result<Vec<db::DbPlaylist>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::get_all_playlists(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_create_playlist(
+    state: State<'_, AppState>,
+    name: String,
+    description: Option<String>,
+    cover_color: Option<String>,
+    cover_art: Option<String>,
+    initial_track_ids: Option<Vec<String>>,
+    is_smart: Option<bool>,
+    smart_rules: Option<String>,
+) -> Result<db::DbPlaylist, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let id = format!("pl_{}", now_ms);
+    let tracks = initial_track_ids.unwrap_or_default();
+
+    db::create_playlist(
+        &conn,
+        &id,
+        &name,
+        description.as_deref(),
+        cover_art.as_deref(),
+        cover_color.as_deref(),
+        is_smart.unwrap_or(false),
+        smart_rules.as_deref(),
+        &tracks,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_get_playlist_tracks(
+    state: State<'_, AppState>,
+    playlist_id: String,
+) -> Result<Vec<TrackMetadata>, String> {
+    let mut tracks = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        db::get_playlist_tracks(&conn, &playlist_id).map_err(|e| e.to_string())?
+    };
+
+    for track in &mut tracks {
+        update_track_session_urls(track);
+    }
+
+    Ok(tracks)
+}
+
+#[tauri::command]
+async fn db_add_tracks_to_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    track_ids: Vec<String>,
+) -> Result<usize, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::add_tracks_to_playlist(&conn, &playlist_id, &track_ids).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_remove_track_from_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    track_id: String,
+    position: Option<i32>,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::remove_track_from_playlist(&conn, &playlist_id, &track_id, position).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_reorder_playlist_tracks(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    ordered_track_ids: Vec<String>,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::reorder_playlist_tracks(&conn, &playlist_id, &ordered_track_ids).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_update_playlist(
+    state: State<'_, AppState>,
+    id: String,
+    name: Option<String>,
+    description: Option<String>,
+    cover_color: Option<String>,
+    cover_art: Option<String>,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::update_playlist(
+        &conn,
+        &id,
+        name.as_deref(),
+        description.as_deref(),
+        cover_color.as_deref(),
+        cover_art.as_deref(),
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_delete_playlist(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::delete_playlist(&conn, &id).map_err(|e| e.to_string())
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -1066,11 +1282,19 @@ pub fn run() {
     println!("MusicVault local audio streaming server started on 127.0.0.1:{}", port);
 
     let initial_settings = load_persisted_settings();
+    let db_conn = match db::init_db() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Warning: Failed to initialize SQLite database: {}", e);
+            rusqlite::Connection::open_in_memory().unwrap()
+        }
+    };
     let app_state = AppState {
         downloader: DownloaderState::default(),
         settings: Mutex::new(initial_settings),
         tray_playlists: Mutex::new(Vec::new()),
         discord: discord_rpc::DiscordRpcManager::new(),
+        db: Mutex::new(db_conn),
     };
 
     tauri::Builder::default()
@@ -1132,6 +1356,7 @@ pub fn run() {
                     if let Ok(hwnd) = window.hwnd() {
                         taskbar::init_taskbar(app.handle().clone(), hwnd);
                     }
+                    smart_playback::get_smart_playback_manager().init(app.handle().clone());
 
                     #[cfg(target_os = "windows")]
                     {
@@ -1270,6 +1495,24 @@ pub fn run() {
             search_spotify,
             check_cached_stream_url,
             get_online_stream_url,
+            get_smart_playback_settings,
+            update_smart_playback_settings,
+            set_smart_playback_enabled,
+            update_excluded_applications,
+            get_audio_monitor_status,
+            get_active_audio_sessions,
+            report_user_playback_action,
+            db_get_library,
+            db_record_playback_session,
+            db_get_top_tracks,
+            db_get_playlists,
+            db_create_playlist,
+            db_get_playlist_tracks,
+            db_add_tracks_to_playlist,
+            db_remove_track_from_playlist,
+            db_reorder_playlist_tracks,
+            db_update_playlist,
+            db_delete_playlist,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1397,7 +1640,8 @@ mod tests {
         update_track_session_urls(&mut track);
         assert!(track.cover_art.is_some());
         let cover = track.cover_art.unwrap();
-        assert!(cover.starts_with("http://127.0.0.1:49200/cover?id="));
+        let port = streamer::SERVER_PORT.load(Ordering::SeqCst);
+        assert!(cover.starts_with(&format!("http://127.0.0.1:{}/cover?id=", port)));
         assert!(cover.contains(&hash));
 
         // Cleanup

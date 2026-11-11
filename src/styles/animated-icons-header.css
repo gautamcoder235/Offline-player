@@ -111,7 +111,7 @@
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 180° Concentric orbital chase when hovered */
+/* 180ï¿½ Concentric orbital chase when hovered */
 .group:hover .animated-refresh-icon:not(.is-spinning) .refresh-arm-top,
 .animated-refresh-icon:hover:not(.is-spinning) .refresh-arm-top {
   animation: refreshOrbitalChaseTop 0.85s cubic-bezier(0.34, 1.25, 0.64, 1) infinite;
@@ -151,9 +151,9 @@
   animation: refreshInfiniteSpin 0.75s linear infinite !important;
   transform-origin: 50% 50% !important;
   transform-box: fill-box !important;
-  color: #19E6A0 !important;
-  stroke: #19E6A0 !important;
-  filter: drop-shadow(0 0 6px rgba(25, 230, 160, 0.6));
+  color: var(--accent) !important;
+  stroke: var(--accent) !important;
+  filter: drop-shadow(0 0 6px var(--accent-glow));
 }
 
 .animated-refresh-icon.is-spinning * {

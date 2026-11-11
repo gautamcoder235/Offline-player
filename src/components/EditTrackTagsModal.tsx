@@ -60,6 +60,18 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isBackdropMouseDownRef = useRef(false);
+
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    isBackdropMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
 
   useEffect(() => {
     if (track) {
@@ -124,7 +136,8 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none animate-in fade-in duration-200"
-      onClick={onClose}
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -132,12 +145,13 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
         className="w-full max-w-lg bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-2.5">
-            <Music className="w-4 h-4 text-[#19E6A0]" />
+            <Music className="w-4 h-4 text-[var(--accent)]" />
             <h2 className="text-sm font-bold text-[#F4F2F7]">Edit Track Tags & Artwork</h2>
           </div>
           <button
@@ -162,13 +176,13 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
             <div className="flex flex-col items-center gap-2 shrink-0">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="group relative w-32 h-32 rounded-xl border-2 border-dashed border-white/[0.1] hover:border-[#19E6A0]/60 bg-[#12111A] overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 shadow-md"
+                className="group relative w-32 h-32 rounded-xl border-2 border-dashed border-white/[0.1] hover:border-[var(--accent)]/60 bg-[#12111A] overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 shadow-md"
                 title="Click to replace album artwork"
               >
                 {coverArt ? (
                   <img src={coverArt} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center text-[#65616F] group-hover:text-[#19E6A0] transition-colors">
+                  <div className="flex flex-col items-center text-[#65616F] group-hover:text-[var(--accent)] transition-colors">
                     <Camera className="w-7 h-7 mb-1" />
                     <span className="text-[10px] font-medium">Add Artwork</span>
                   </div>
@@ -194,7 +208,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[11px] text-[#19E6A0] hover:underline cursor-pointer"
+                className="text-[11px] text-[var(--accent)] hover:underline cursor-pointer"
               >
                 Choose Image...
               </button>
@@ -212,7 +226,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Bohemian Rhapsody"
                   required
-                  className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
+                  className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all"
                 />
               </div>
 
@@ -225,7 +239,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                   value={artist}
                   onChange={(e) => setArtist(e.target.value)}
                   placeholder="e.g. Queen"
-                  className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
+                  className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all"
                 />
               </div>
 
@@ -239,7 +253,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                     value={album}
                     onChange={(e) => setAlbum(e.target.value)}
                     placeholder="e.g. A Night at the Opera"
-                    className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
+                    className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all"
                   />
                 </div>
                 <div>
@@ -251,7 +265,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
                     placeholder="1975"
-                    className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
+                    className="w-full px-3 h-9 text-xs bg-[#07060A]/80 border border-white/[0.08] rounded-xl text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all"
                   />
                 </div>
               </div>
@@ -275,7 +289,7 @@ export const EditTrackTagsModal: React.FC<EditTrackTagsModalProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="h-9 flex items-center gap-1.5 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black text-xs font-semibold shadow-lg shadow-[#19E6A0]/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              className="h-9 flex items-center gap-1.5 px-4 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] text-xs font-semibold shadow-lg shadow-[var(--accent-glow)] transition-all cursor-pointer active:scale-95 disabled:opacity-50"
             >
               {isSaving ? (
                 <>

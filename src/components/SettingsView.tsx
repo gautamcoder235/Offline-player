@@ -19,6 +19,8 @@ import {
   Sliders,
   Layers,
   Palette,
+  Radio,
+  X,
 } from 'lucide-react';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -40,6 +42,12 @@ export const SettingsView: React.FC = () => {
     setThemeAppearance,
     accentColor,
     setAccentColor,
+    smartPlaybackSettings,
+    smartPlaybackStatus,
+    updateSmartPlaybackSettings,
+    setSmartPlaybackEnabled,
+    updateExcludedApplications,
+    refreshSmartPlaybackStatus,
   } = usePlayer();
   const isGlass = themeAppearance === 'aura_glass';
   const {
@@ -64,6 +72,73 @@ export const SettingsView: React.FC = () => {
   const [downloadDirInput, setDownloadDirInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Smart Playback states & handlers
+  const [newExcludedAppInput, setNewExcludedAppInput] = useState('');
+
+  const handleToggleSmartPlayback = async () => {
+    if (!smartPlaybackSettings) return;
+    await setSmartPlaybackEnabled(!smartPlaybackSettings.enabled);
+  };
+
+  const handleToggleAutoPause = async () => {
+    if (!smartPlaybackSettings) return;
+    await updateSmartPlaybackSettings({
+      ...smartPlaybackSettings,
+      auto_pause: !smartPlaybackSettings.auto_pause,
+    });
+  };
+
+  const handleToggleAutoResume = async () => {
+    if (!smartPlaybackSettings) return;
+    await updateSmartPlaybackSettings({
+      ...smartPlaybackSettings,
+      auto_resume: !smartPlaybackSettings.auto_resume,
+    });
+  };
+
+  const handleResumeDelayChange = async (ms: number) => {
+    if (!smartPlaybackSettings) return;
+    await updateSmartPlaybackSettings({
+      ...smartPlaybackSettings,
+      resume_delay_ms: ms,
+    });
+  };
+
+  const handleMinDurationChange = async (ms: number) => {
+    if (!smartPlaybackSettings) return;
+    await updateSmartPlaybackSettings({
+      ...smartPlaybackSettings,
+      min_audio_duration_ms: ms,
+    });
+  };
+
+  const handleSensitivityChange = async (threshold: number) => {
+    if (!smartPlaybackSettings) return;
+    await updateSmartPlaybackSettings({
+      ...smartPlaybackSettings,
+      activity_threshold: threshold,
+    });
+  };
+
+  const handleAddExcludedApp = async (appToAdd?: string) => {
+    const target = (appToAdd || newExcludedAppInput).trim();
+    if (!target || !smartPlaybackSettings) return;
+    const clean = target.toLowerCase().endsWith('.exe') ? target.toLowerCase() : `${target.toLowerCase()}.exe`;
+    if (!smartPlaybackSettings.excluded_applications.map((a) => a.toLowerCase()).includes(clean)) {
+      const updated = [...smartPlaybackSettings.excluded_applications, clean];
+      await updateExcludedApplications(updated);
+    }
+    if (!appToAdd) setNewExcludedAppInput('');
+  };
+
+  const handleRemoveExcludedApp = async (appToRemove: string) => {
+    if (!smartPlaybackSettings) return;
+    const updated = smartPlaybackSettings.excluded_applications.filter(
+      (a) => a.toLowerCase() !== appToRemove.toLowerCase()
+    );
+    await updateExcludedApplications(updated);
+  };
 
   // Audio output devices
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -238,7 +313,7 @@ export const SettingsView: React.FC = () => {
         </div>
 
         {saveSuccess && (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#19E6A0]/10 text-[#19E6A0] text-xs font-semibold border border-[#19E6A0]/25 animate-in fade-in zoom-in-95 duration-200">
+          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-muted)] text-[var(--accent)] text-xs font-semibold border border-[var(--accent-border)] animate-in fade-in zoom-in-95 duration-200">
             <Check className="w-3.5 h-3.5" />
             <span>Saved</span>
           </span>
@@ -270,7 +345,7 @@ export const SettingsView: React.FC = () => {
           >
             <RefreshCw
               className={`w-3.5 h-3.5 text-[#AAA6B2] transition-transform duration-300 ${
-                isScanning ? 'animate-spin text-[#19E6A0]' : 'group-hover:rotate-90'
+                isScanning ? 'animate-spin text-[var(--accent)]' : 'group-hover:rotate-90'
               }`}
             />
             <span>Rescan Library</span>
@@ -315,7 +390,7 @@ export const SettingsView: React.FC = () => {
 
         {/* Add custom folder input */}
         <div className="flex gap-2.5 pt-1">
-          <div className="relative flex-1 flex items-center bg-[#07060A]/80 rounded-xl border border-white/[0.08] focus-within:border-[#19E6A0]/50 h-10 transition-colors">
+          <div className="relative flex-1 flex items-center bg-[#07060A]/80 rounded-xl border border-white/[0.08] focus-within:border-[var(--accent)]/50 h-10 transition-colors">
             <Folder className="w-4 h-4 ml-3.5 text-[#65616F] shrink-0" />
             <input
               type="text"
@@ -343,7 +418,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleAddDirectory}
             disabled={!newDirInput.trim()}
-            className="h-10 flex items-center gap-1.5 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-white/[0.04] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            className="h-10 flex items-center gap-1.5 px-4 rounded-xl bg-[var(--accent)] hover:opacity-95 disabled:bg-white/[0.04] disabled:text-[#65616F] text-[var(--accent-contrast,#000000)] font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Folder</span>
@@ -358,12 +433,12 @@ export const SettingsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
-              <Palette className="w-4 h-4 text-[#19E6A0]" />
+              <Palette className="w-4 h-4 text-[var(--accent)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Theme & Background Appearance</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#19E6A0] font-semibold">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[var(--accent)] font-semibold">
                   {isGlass ? 'Transparent Front Panels' : 'Classic Obsidian'}
                 </span>
               </div>
@@ -551,7 +626,7 @@ export const SettingsView: React.FC = () => {
         </div>
 
         <div className="flex gap-2.5">
-          <div className="relative flex-1 flex items-center bg-[#07060A]/80 rounded-xl border border-white/[0.08] focus-within:border-[#19E6A0]/50 h-10 transition-colors">
+          <div className="relative flex-1 flex items-center bg-[#07060A]/80 rounded-xl border border-white/[0.08] focus-within:border-[var(--accent)]/50 h-10 transition-colors">
             <input
               type="text"
               value={downloadDirInput}
@@ -578,7 +653,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={handleSaveDownloadDir}
             disabled={!downloadDirInput.trim() || downloadDirInput === settings.download_directory}
-            className="h-10 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:bg-white/[0.04] disabled:text-[#65616F] text-black font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
+            className="h-10 px-4 rounded-xl bg-[var(--accent)] hover:opacity-95 disabled:bg-white/[0.04] disabled:text-[#65616F] text-[var(--accent-contrast,#000000)] font-semibold text-xs transition-all duration-150 shrink-0 cursor-pointer active:scale-95"
           >
             Save Target
           </button>
@@ -592,12 +667,12 @@ export const SettingsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
-              <Sliders className="w-4 h-4 text-[#19E6A0]" />
+              <Sliders className="w-4 h-4 text-[var(--accent)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Smooth Crossfade</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#19E6A0] font-semibold">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[var(--accent)] font-semibold">
                   {crossfadeDuration === 0 ? 'Off' : `${crossfadeDuration}s`}
                 </span>
               </div>
@@ -620,7 +695,7 @@ export const SettingsView: React.FC = () => {
               onClick={() => setCrossfadeDuration(crossfadeDuration === 0 ? 3 : crossfadeDuration)}
               className={`h-[34px] px-3 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 ${
                 crossfadeDuration > 0
-                  ? 'bg-[#19E6A0]/15 border-[#19E6A0]/30 text-[#19E6A0]'
+                  ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
                   : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7]'
               }`}
             >
@@ -670,12 +745,12 @@ export const SettingsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
-              <Volume2 className="w-4 h-4 text-[#19E6A0]" />
+              <Volume2 className="w-4 h-4 text-[var(--accent)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold text-[#F4F2F7]">Audio Output Device</h3>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[#19E6A0] font-semibold">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[var(--accent)] font-semibold">
                   {audioDevices.length > 0 ? `${audioDevices.length} Available` : 'System Default'}
                 </span>
               </div>
@@ -690,7 +765,7 @@ export const SettingsView: React.FC = () => {
           <select
             value={selectedAudioDevice}
             onChange={(e) => handleDeviceChange(e.target.value)}
-            className="w-full sm:w-80 h-10 px-3.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] focus:outline-none focus:border-[#19E6A0]/50 transition-all cursor-pointer"
+            className="w-full sm:w-80 h-10 px-3.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] focus:outline-none focus:border-[var(--accent)]/50 transition-all cursor-pointer"
           >
             <option value="default">Default Audio Device</option>
             {audioDevices.map((dev) => (
@@ -702,6 +777,381 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
+      {/* =========================================================================
+          Smart Playback (System-Aware Audio) Section
+          ========================================================================= */}
+      <div className={`p-5 rounded-2xl border space-y-5 shadow-sm transition-colors duration-200 ${
+        isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
+      }`}>
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1C1B24] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
+              <Radio className={`w-4 h-4 ${smartPlaybackSettings?.enabled ? 'text-[var(--accent)]' : 'text-[#777381]'}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-[#F4F2F7]">Smart Playback (System-Aware Audio)</h3>
+                <span className={`font-mono text-[10px] px-2 py-0.5 rounded-md border font-semibold ${
+                  smartPlaybackSettings?.enabled
+                    ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                    : 'bg-white/[0.04] border-white/[0.08] text-[#777381]'
+                }`}>
+                  {smartPlaybackSettings?.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+                {smartPlaybackStatus?.is_external_audio_active && (
+                  <span className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-md bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[var(--accent)] font-semibold animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                    <span>External Audio Active</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Automatically pauses music when other Windows applications produce audio (e.g. YouTube, Twitch, Discord calls) and resumes when they stop
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleToggleSmartPlayback}
+              className={`h-[34px] px-4 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 ${
+                smartPlaybackSettings?.enabled
+                  ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                  : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7]'
+              }`}
+            >
+              {smartPlaybackSettings?.enabled ? 'Enabled' : 'Enable Smart Playback'}
+            </button>
+          </div>
+        </div>
+
+        {smartPlaybackSettings && (
+          <div className="space-y-5">
+            {/* Playback Automation Toggles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Auto Pause Toggle */}
+              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between gap-3">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-xs font-medium text-[#F4F2F7]">Auto-Pause Music</div>
+                  <div className="text-[11px] text-[#777381]">Pause playback when external apps start making sound</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleAutoPause}
+                  className={`h-[30px] px-3 rounded-lg text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 shrink-0 ${
+                    smartPlaybackSettings.auto_pause
+                      ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                      : 'bg-white/[0.04] border-white/[0.08] text-[#777381] hover:text-[#AAA6B2]'
+                  }`}
+                >
+                  {smartPlaybackSettings.auto_pause ? 'Active' : 'Disabled'}
+                </button>
+              </div>
+
+              {/* Auto Resume Toggle */}
+              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between gap-3">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-xs font-medium text-[#F4F2F7]">Auto-Resume Music</div>
+                  <div className="text-[11px] text-[#777381]">Resume music when all external audio sessions stop</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleAutoResume}
+                  className={`h-[30px] px-3 rounded-lg text-xs font-medium border transition-all duration-150 cursor-pointer active:scale-95 shrink-0 ${
+                    smartPlaybackSettings.auto_resume
+                      ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                      : 'bg-white/[0.04] border-white/[0.08] text-[#777381] hover:text-[#AAA6B2]'
+                  }`}
+                >
+                  {smartPlaybackSettings.auto_resume ? 'Active' : 'Disabled'}
+                </button>
+              </div>
+            </div>
+
+            {/* Resume Delay Slider */}
+            <div className="space-y-2 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between text-[11px] text-[#777381]">
+                <span className="text-xs font-medium text-[#F4F2F7]">Resume Delay</span>
+                <span className="font-mono text-[var(--accent)] font-semibold">
+                  {(smartPlaybackSettings.resume_delay_ms / 1000).toFixed(1)}s
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Grace period after external audio stops before resuming music. Avoids unwanted music bursts during short pauses in YouTube videos or dialogue.
+              </p>
+              <div className="pt-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="6000"
+                  step="250"
+                  value={smartPlaybackSettings.resume_delay_ms}
+                  onChange={(e) => handleResumeDelayChange(Number(e.target.value))}
+                  className="w-full h-1.5 bg-white/[0.08] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                />
+                <div className="flex justify-between text-[9px] font-mono text-[#555260] pt-1">
+                  <span>Instant (0s)</span>
+                  <span>1.0s</span>
+                  <span>2.0s (Default)</span>
+                  <span>4.0s</span>
+                  <span>6.0s</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Minimum Audio Duration Slider */}
+            <div className="space-y-2 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between text-[11px] text-[#777381]">
+                <span className="text-xs font-medium text-[#F4F2F7]">Minimum Audio Duration (Notification Filter)</span>
+                <span className="font-mono text-[var(--accent)] font-semibold">
+                  {smartPlaybackSettings.min_audio_duration_ms} ms
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Requires external audio to play continuously for this duration before pausing music. Prevents Windows notification chimes, clicks, or short alert beeps from interrupting songs.
+              </p>
+              <div className="pt-1">
+                <input
+                  type="range"
+                  min="200"
+                  max="2000"
+                  step="100"
+                  value={smartPlaybackSettings.min_audio_duration_ms}
+                  onChange={(e) => handleMinDurationChange(Number(e.target.value))}
+                  className="w-full h-1.5 bg-white/[0.08] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                />
+                <div className="flex justify-between text-[9px] font-mono text-[#555260] pt-1">
+                  <span>200ms</span>
+                  <span>500ms</span>
+                  <span>800ms (Default)</span>
+                  <span>1400ms</span>
+                  <span>2000ms</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Audio Sensitivity Threshold */}
+            <div className="space-y-2 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between text-[11px] text-[#777381]">
+                <span className="text-xs font-medium text-[#F4F2F7]">Audio Peak Sensitivity</span>
+                <span className="font-mono text-[var(--accent)] font-semibold">
+                  {smartPlaybackSettings.activity_threshold <= 0.003
+                    ? 'High Sensitivity (0.002)'
+                    : smartPlaybackSettings.activity_threshold < 0.01
+                    ? 'Normal (0.005)'
+                    : 'Low Sensitivity (0.015)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#777381]">
+                Peak volume level required for Windows sessions to be counted as audible. Ignores applications that create silent audio sessions.
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleSensitivityChange(0.002)}
+                  className={`h-8 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                    smartPlaybackSettings.activity_threshold <= 0.003
+                      ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                      : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7]'
+                  }`}
+                >
+                  High (Soft audio)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSensitivityChange(0.005)}
+                  className={`h-8 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                    smartPlaybackSettings.activity_threshold > 0.003 && smartPlaybackSettings.activity_threshold < 0.01
+                      ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                      : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7]'
+                  }`}
+                >
+                  Normal (Recommended)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSensitivityChange(0.015)}
+                  className={`h-8 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                    smartPlaybackSettings.activity_threshold >= 0.01
+                      ? 'bg-[var(--accent-muted)] border-[var(--accent-border)] text-[var(--accent)]'
+                      : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7]'
+                  }`}
+                >
+                  Low (Loud audio only)
+                </button>
+              </div>
+            </div>
+
+            {/* Excluded Applications Management */}
+            <div className="space-y-3 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div>
+                <h4 className="text-xs font-medium text-[#F4F2F7]">Excluded Applications</h4>
+                <p className="text-[11px] text-[#777381]">
+                  Audio from these applications will never automatically pause your music.
+                </p>
+              </div>
+
+              {/* Quick Add Suggestions */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="text-[#777381]">Quick Add:</span>
+                {['discord.exe', 'obs64.exe', 'steam.exe', 'ms-teams.exe'].map((quickApp) => {
+                  const isAlreadyExcluded = smartPlaybackSettings.excluded_applications
+                    .map((a) => a.toLowerCase())
+                    .includes(quickApp.toLowerCase());
+                  return (
+                    <button
+                      key={quickApp}
+                      type="button"
+                      onClick={() => handleAddExcludedApp(quickApp)}
+                      disabled={isAlreadyExcluded}
+                      className={`px-2 py-0.5 rounded-md border text-[10px] font-mono transition-all cursor-pointer ${
+                        isAlreadyExcluded
+                          ? 'bg-white/[0.02] border-white/[0.04] text-[#555260] cursor-not-allowed'
+                          : 'bg-white/[0.04] border-white/[0.08] text-[#AAA6B2] hover:text-[var(--accent)] hover:border-[var(--accent-border)]'
+                      }`}
+                    >
+                      +{quickApp}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Add Custom App Input */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. game.exe, telegram.exe"
+                  value={newExcludedAppInput}
+                  onChange={(e) => setNewExcludedAppInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddExcludedApp();
+                  }}
+                  className="flex-1 h-9 px-3 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#555260] focus:outline-none focus:border-[var(--accent)]/50 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddExcludedApp()}
+                  disabled={!newExcludedAppInput.trim()}
+                  className="h-9 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-40 text-xs font-medium text-[#AAA6B2] hover:text-[#F4F2F7] border border-white/[0.08] transition-all cursor-pointer active:scale-95"
+                >
+                  Add
+                </button>
+              </div>
+
+              {/* Excluded Apps Tags List */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {smartPlaybackSettings.excluded_applications.length === 0 ? (
+                  <span className="text-[11px] text-[#555260] italic">No applications currently excluded</span>
+                ) : (
+                  smartPlaybackSettings.excluded_applications.map((app) => (
+                    <span
+                      key={app}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-[#AAA6B2]"
+                    >
+                      <span>{app}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExcludedApp(app)}
+                        className="text-[#777381] hover:text-[#FF667A] transition-colors cursor-pointer"
+                        title={`Remove ${app} from exclusions`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Live Windows Audio Sessions Monitor */}
+            <div className="space-y-3 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-medium text-[#F4F2F7]">Live Windows Audio Sessions</h4>
+                  <p className="text-[11px] text-[#777381]">
+                    Real-time Core Audio sessions detected on your system.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refreshSmartPlaybackStatus()}
+                  className="flex items-center gap-1 text-[11px] text-[#777381] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {smartPlaybackStatus?.active_sessions && smartPlaybackStatus.active_sessions.length > 0 ? (
+                  smartPlaybackStatus.active_sessions.map((sess) => {
+                    const isExcluded = smartPlaybackSettings.excluded_applications
+                      .map((a) => a.toLowerCase())
+                      .includes(sess.process_name.toLowerCase());
+                    return (
+                      <div
+                        key={`${sess.pid}_${sess.session_id}`}
+                        className={`flex items-center justify-between p-2 rounded-lg border text-xs transition-colors ${
+                          sess.is_producing_audio
+                            ? 'bg-[var(--accent-muted)]/50 border-[var(--accent-border)] text-[#F4F2F7]'
+                            : 'bg-white/[0.01] border-white/[0.04] text-[#888594]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${
+                            sess.is_producing_audio
+                              ? 'bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]'
+                              : sess.state === 'Active'
+                              ? 'bg-[#E8C77A]'
+                              : 'bg-[#555260]'
+                          }`} />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate text-[#F4F2F7]">{sess.display_name}</span>
+                            <span className="text-[10px] font-mono text-[#555260] truncate">
+                              {sess.process_name} (PID: {sess.pid})
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          {/* Mini Peak Meter */}
+                          <div className="w-16 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                            <div
+                              className="h-full bg-[var(--accent)] transition-all duration-100"
+                              style={{ width: `${Math.min(100, Math.round(sess.peak_level * 100))}%` }}
+                            />
+                          </div>
+
+                          {isExcluded ? (
+                            <span className="text-[10px] font-mono text-[#E8C77A] px-2 py-0.5 rounded bg-[#E8C77A]/10 border border-[#E8C77A]/20">
+                              Excluded
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddExcludedApp(sess.process_name)}
+                              className="text-[10px] px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-[#AAA6B2] hover:text-[#F4F2F7] border border-white/[0.08] transition-colors cursor-pointer"
+                            >
+                              Exclude
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-[11px] text-[#555260] italic py-2">
+                    No active external audio sessions detected
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Application Updates Section */}
       <div className={`p-5 rounded-2xl border space-y-4 shadow-sm transition-colors duration-200 ${
         isGlass ? 'bg-[#121118]/50 backdrop-blur-xl border-white/[0.08]' : 'bg-[#121118]/90 backdrop-blur-md border-white/[0.06]'
@@ -709,7 +1159,7 @@ export const SettingsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#AAA6B2] shadow-sm">
-              <Sparkles className="w-4 h-4 text-[#19E6A0]" />
+              <Sparkles className="w-4 h-4 text-[var(--accent)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -728,18 +1178,18 @@ export const SettingsView: React.FC = () => {
             {/* Status indicator pill */}
             {updateStatus === 'checking' && (
               <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] font-medium text-[#AAA6B2]">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#19E6A0]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)]" />
                 <span>Checking...</span>
               </span>
             )}
             {updateStatus === 'up-to-date' && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/25 text-[11px] font-medium text-[#19E6A0]">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)]">
                 <Check className="w-3.5 h-3.5" />
                 <span>Up to date</span>
               </span>
             )}
             {updateStatus === 'completed' && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/25 text-[11px] font-medium text-[#19E6A0]">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)]">
                 <Check className="w-3.5 h-3.5" />
                 <span>Ready to restart</span>
               </span>
@@ -754,7 +1204,7 @@ export const SettingsView: React.FC = () => {
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 text-[#AAA6B2] ${
-                  updateStatus === 'checking' ? 'animate-spin text-[#19E6A0]' : ''
+                  updateStatus === 'checking' ? 'animate-spin text-[var(--accent)]' : ''
                 }`}
               />
               <span>{updateStatus === 'checking' ? 'Checking...' : 'Check for Updates'}</span>
@@ -772,7 +1222,7 @@ export const SettingsView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => void downloadAndInstall()}
-                  className="h-[34px] flex items-center gap-1.5 px-4 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95"
+                  className="h-[34px] flex items-center gap-1.5 px-4 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95"
                 >
                   <ArrowDownCircle className="w-3.5 h-3.5" />
                   <span>Update to v{updateInfo?.version}</span>
@@ -784,7 +1234,7 @@ export const SettingsView: React.FC = () => {
             {updateStatus === 'completed' && (
               <button
                 onClick={() => void restartApp()}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95 animate-in fade-in zoom-in-95 duration-200"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer active:scale-95 animate-in fade-in zoom-in-95 duration-200"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Restart to Apply</span>
@@ -810,7 +1260,7 @@ export const SettingsView: React.FC = () => {
                   </>
                 )}
               </span>
-              <span className="font-mono text-[#19E6A0] font-semibold">
+              <span className="font-mono text-[var(--accent)] font-semibold">
                 {updateProgress.percent > 0 ? `${updateProgress.percent}%` : ''}
                 {updateProgress.totalBytes > 0 ? (
                   <span className="text-[#65616F] font-normal ml-2">
@@ -826,7 +1276,7 @@ export const SettingsView: React.FC = () => {
 
             <div className="w-full h-2 rounded-full bg-[#1C1B24] overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-[#19E6A0] to-[#35F0B1] transition-all duration-200 rounded-full"
+                className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-neon,var(--accent))] transition-all duration-200 rounded-full"
                 style={{ width: `${Math.max(5, updateProgress.percent)}%` }}
               />
             </div>
@@ -835,11 +1285,11 @@ export const SettingsView: React.FC = () => {
 
         {/* Completed / Ready to Apply Banner */}
         {updateStatus === 'completed' && updateInfo && (
-          <div className="p-3.5 rounded-xl bg-[#19E6A0]/10 border border-[#19E6A0]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+          <div className="p-3.5 rounded-xl bg-[var(--accent-muted)] border border-[var(--accent-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
             <div className="flex items-center gap-2.5 min-w-0">
-              <Check className="w-4 h-4 text-[#19E6A0] shrink-0" />
+              <Check className="w-4 h-4 text-[var(--accent)] shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-[#19E6A0]">
+                <p className="text-xs font-semibold text-[var(--accent)]">
                   MusicVault v{updateInfo.version} is ready to install
                 </p>
                 <p className="text-[11px] text-[#AAA6B2] mt-0.5">
@@ -849,7 +1299,7 @@ export const SettingsView: React.FC = () => {
             </div>
             <button
               onClick={() => void restartApp()}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] text-black font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer shrink-0 active:scale-95"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] font-semibold text-xs transition-all duration-150 shadow-sm cursor-pointer shrink-0 active:scale-95"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Restart Now</span>
@@ -871,7 +1321,7 @@ export const SettingsView: React.FC = () => {
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-mono text-[#19E6A0]">Available Now</span>
+              <span className="text-[10px] font-mono text-[var(--accent)]">Available Now</span>
             </div>
             {updateInfo.body ? (
               <div className="text-xs text-[#AAA6B2] bg-[#07060A] p-3 rounded-lg border border-white/[0.08] whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto no-scrollbar">
@@ -961,7 +1411,7 @@ export const SettingsView: React.FC = () => {
               className="flex items-center justify-between p-3 rounded-xl bg-[#07060A]/80 border border-white/[0.08] hover:border-white/[0.12] transition-colors"
             >
               <span className="text-xs text-[#AAA6B2]">{sc.desc}</span>
-              <kbd className="px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.08] font-mono text-[11px] text-[#19E6A0] font-semibold shadow-sm">
+              <kbd className="px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.08] font-mono text-[11px] text-[var(--accent)] font-semibold shadow-sm">
                 {sc.key}
               </kbd>
             </div>

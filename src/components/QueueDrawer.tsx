@@ -63,7 +63,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2.5">
-                <ListOrdered className="w-4 h-4 text-[#19E6A0]" />
+                <ListOrdered className="w-4 h-4 text-[var(--accent)]" />
                 <h2 className="text-sm font-bold text-[#F4F2F7] tracking-tight">Play Queue</h2>
                 <span className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[10px] text-[#AAA6B2] font-mono border border-white/[0.08]">
                   {queue.length}
@@ -96,7 +96,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             <span className="text-[10px] font-semibold text-[#777381] uppercase tracking-wider">
               Now Playing
             </span>
-            <div className="p-2.5 rounded-xl bg-[#13111C] border-l-2 border-[#19E6A0] border-y border-r border-white/[0.07] flex items-center gap-3 shadow-md">
+            <div className="p-2.5 rounded-xl bg-[#13111C] border-l-2 border-[var(--accent)] border-y border-r border-white/[0.07] flex items-center gap-3 shadow-md">
               <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-white/[0.08] bg-[#07060A]">
                 {(() => {
                   const nowCover = coverMap[currentTrack.id] || currentTrack.cover_art;
@@ -121,7 +121,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                 <span className="text-xs font-semibold text-[#F4F2F7] truncate">
                   {currentTrack.title}
                 </span>
-                <span className="text-[11px] text-[#19E6A0] truncate">
+                <span className="text-[11px] text-[var(--accent)] truncate">
                   {currentTrack.artist}
                 </span>
               </div>
@@ -175,7 +175,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                         </div>
 
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-medium text-[#F4F2F7] truncate group-hover:text-[#19E6A0] transition-colors duration-150">
+                          <span className="text-xs font-medium text-[#F4F2F7] truncate group-hover:text-[var(--accent)] transition-colors duration-150">
                             {track.title}
                           </span>
                           <span className="text-[10px] text-[#777381] truncate">{track.artist}</span>
@@ -193,7 +193,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                                 e.stopPropagation();
                                 moveQueueItem(idx, idx - 1);
                               }}
-                              className="group/up p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
+                              className="group/up p-1 text-[#777381] hover:text-[var(--accent)] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
                               title="Move track up"
                               aria-label="Move track up"
                             >
@@ -206,7 +206,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                                 e.stopPropagation();
                                 moveQueueItem(idx, idx + 1);
                               }}
-                              className="group/down p-1 text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
+                              className="group/down p-1 text-[#777381] hover:text-[var(--accent)] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
                               title="Move track down"
                               aria-label="Move track down"
                             >
@@ -268,7 +268,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                       </div>
 
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-medium text-[#F4F2F7] truncate group-hover:text-[#19E6A0] transition-colors duration-150">
+                        <span className="text-xs font-medium text-[#F4F2F7] truncate group-hover:text-[var(--accent)] transition-colors duration-150">
                           {track.title}
                         </span>
                         <span className="text-[10px] text-[#777381] truncate">{track.artist}</span>
@@ -284,7 +284,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                           e.stopPropagation();
                           addToQueue(track);
                         }}
-                        className="group/add p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[#19E6A0] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
+                        className="group/add p-1 opacity-0 group-hover:opacity-100 text-[#777381] hover:text-[var(--accent)] hover:bg-white/[0.08] rounded transition-all duration-200 active:scale-90 cursor-pointer"
                         title="Add to queue"
                         aria-label="Add to queue"
                       >

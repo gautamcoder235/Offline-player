@@ -92,14 +92,19 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
   const [coverArt, setCoverArt] = useState<string | undefined>(undefined);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isBackdropMouseDownRef = useRef(false);
+  const prevOpenRef = useRef(false);
+  const prevPlaylistIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (playlist && isOpen) {
+    if (playlist && isOpen && (!prevOpenRef.current || prevPlaylistIdRef.current !== playlist.id)) {
       setName(playlist.name || '');
       setDescription(playlist.description || '');
       setCoverColor(playlist.coverColor || PRESET_COLORS[0]);
       setCoverArt(playlist.cover_art || undefined);
+      prevPlaylistIdRef.current = playlist.id;
     }
+    prevOpenRef.current = isOpen;
   }, [playlist, isOpen]);
 
   useEffect(() => {
@@ -112,6 +117,17 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    isBackdropMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
 
   // Find tracks belonging to this playlist
   const playlistTracks = playlist ? tracks.filter((t) => playlist.track_ids.includes(t.id)) : [];
@@ -170,7 +186,8 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 select-none overflow-y-auto"
-          onClick={onClose}
+          onMouseDown={handleBackdropMouseDown}
+          onClick={handleBackdropClick}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -178,6 +195,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
             className="w-full max-w-lg rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.85)] p-6 space-y-5 text-left my-8 relative overflow-hidden"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -248,12 +266,12 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
 
                 {/* Hover overlay with camera icon */}
                 <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-white">
-                  <Camera className="w-5 h-5 text-[#19E6A0]" />
+                  <Camera className="w-5 h-5 text-[var(--accent)]" />
                   <span className="text-[10px] font-medium">Change Art</span>
                 </div>
 
                 {isProcessingImage && (
-                  <div className="absolute inset-0 bg-black/75 flex items-center justify-center text-xs text-[#19E6A0]">
+                  <div className="absolute inset-0 bg-black/75 flex items-center justify-center text-xs text-[var(--accent)]">
                     Processing...
                   </div>
                 )}
@@ -275,7 +293,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                     onClick={() => fileInputRef.current?.click()}
                     className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-[#F4F2F7] border border-white/[0.08] transition-colors cursor-pointer active:scale-95"
                   >
-                    <Upload className="w-3.5 h-3.5 text-[#19E6A0]" />
+                    <Upload className="w-3.5 h-3.5 text-[var(--accent)]" />
                     <span>Upload Image</span>
                   </button>
 
@@ -310,7 +328,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                           onClick={() => setCoverArt(art)}
                           className={`w-7 h-7 rounded-md overflow-hidden border shrink-0 transition-all cursor-pointer ${
                             coverArt === art
-                              ? 'border-[#19E6A0] scale-110 shadow-sm'
+                              ? 'border-[var(--accent)] scale-110 shadow-sm'
                               : 'border-white/10 opacity-70 hover:opacity-100 hover:scale-105'
                           }`}
                           title="Use this album artwork"
@@ -336,7 +354,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Playlist title"
-              className="w-full px-3.5 h-10 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all"
+              className="w-full px-3.5 h-10 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all"
             />
           </div>
 
@@ -350,7 +368,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Give your playlist a mood or description..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/60 focus:ring-1 focus:ring-[#19E6A0]/20 transition-all resize-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#07060A]/80 border border-white/[0.08] text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all resize-none"
             />
           </div>
 
@@ -398,7 +416,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onExport(playlist.id)}
-                    className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#AAA6B2] hover:text-[#19E6A0] border border-white/[0.08] transition-colors cursor-pointer active:scale-95"
+                    className="h-8 flex items-center gap-1.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#AAA6B2] hover:text-[var(--accent)] border border-white/[0.08] transition-colors cursor-pointer active:scale-95"
                     title="Export playlist as .m3u8"
                   >
                     <FileDown className="w-3.5 h-3.5" />

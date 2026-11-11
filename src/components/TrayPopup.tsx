@@ -113,7 +113,7 @@ export const TrayPopup: React.FC = () => {
           title="Open MusicVault"
         >
           <img src="/app-icon.png" alt="" className="w-4 h-4 rounded-full object-contain shrink-0 group-hover:scale-110 transition-transform duration-200" />
-          <span className="text-[11.5px] font-bold tracking-tight text-white group-hover:text-[#19E6A0] transition-colors">MusicVault</span>
+          <span className="text-[11.5px] font-bold tracking-tight text-white group-hover:text-[var(--accent)] transition-colors">MusicVault</span>
         </div>
       </div>
 

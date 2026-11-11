@@ -332,7 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="w-5 h-5 rounded-md object-contain shrink-0 select-none shadow-sm"
             />
             <div className="flex items-center gap-2">
-              <span className="inline-flex rounded-full h-2 w-2 bg-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.6)]" />
+              <span className="inline-flex rounded-full h-2 w-2 bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]" />
               <span className="text-[14px] font-bold text-[#F4F2F7] tracking-tight leading-none select-none">
                 MusicVault
               </span>
@@ -396,22 +396,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {isActive && (
                     <motion.div
                       layoutId="sidebar-active-capsule-collapsed"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                       transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                     />
                   )}
                   <Icon
                     className={`w-[18px] h-[18px] shrink-0 transition-colors ${
                       isPlayingThis
-                        ? 'text-[#19E6A0]'
+                        ? 'text-[var(--accent)]'
                         : isActive
-                        ? 'text-[#19E6A0]'
-                        : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                        ? 'text-[var(--accent)]'
+                        : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
                     }`}
                     strokeWidth={1.5}
                   />
                   {isPlayingThis && (
-                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
                   )}
                 </button>
               );
@@ -426,7 +426,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }}
                 className={`group relative w-full h-[42px] flex items-center justify-between px-3.5 rounded-xl text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                   isPlayingThis && !isActive
-                    ? 'bg-[#19E6A0]/10 text-[#19E6A0] border border-[#19E6A0]/25'
+                    ? 'bg-[var(--accent-muted)] text-[var(--accent)] border border-[var(--accent-border)]'
                     : isActive
                     ? 'text-[#F4F2F7]'
                     : 'text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.04]'
@@ -441,27 +441,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 <div className="relative z-10 flex items-center gap-3 min-w-0">
-                  {/* Smooth active capsule indicator with emerald neon glow */}
+                  {/* Smooth active capsule indicator with dynamic accent neon glow */}
                   {isActive && (
                     <motion.div
                       layoutId="sidebar-active-capsule"
-                      className="w-1 h-4 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                      className="w-1 h-4 rounded-full bg-[var(--accent)] -ml-1 mr-0.5 shrink-0 shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                       transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                     />
                   )}
                   <Icon
                     className={`w-[18px] h-[18px] shrink-0 transition-colors ${
                       isPlayingThis
-                        ? 'text-[#19E6A0]'
+                        ? 'text-[var(--accent)]'
                         : isActive
-                        ? 'text-[#19E6A0]'
-                        : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                        ? 'text-[var(--accent)]'
+                        : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
                     }`}
                     strokeWidth={1.5}
                   />
                   <span
                     className={`truncate transition-colors ${
-                      isPlayingThis ? 'text-[#19E6A0] font-semibold' : isActive ? 'text-[#F4F2F7] font-medium' : 'text-[#8E8A98]'
+                      isPlayingThis ? 'text-[var(--accent)] font-semibold' : isActive ? 'text-[#F4F2F7] font-medium' : 'text-[#8E8A98]'
                     }`}
                   >
                     {item.label}
@@ -477,15 +477,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       title={isPlaying ? 'Playing' : 'Paused'}
                     >
                       <span
-                        className="w-[2px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1 shadow-[0_0_4px_rgba(25,230,160,0.6)]"
+                        className="w-[2px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-1 shadow-[0_0_4px_var(--accent-glow)]"
                         style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                       />
                       <span
-                        className="w-[2px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2 shadow-[0_0_4px_rgba(25,230,160,0.6)]"
+                        className="w-[2px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-2 shadow-[0_0_4px_var(--accent-glow)]"
                         style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                       />
                       <span
-                        className="w-[2px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3 shadow-[0_0_4px_rgba(25,230,160,0.6)]"
+                        className="w-[2px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-3 shadow-[0_0_4px_var(--accent-glow)]"
                         style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                       />
                     </div>
@@ -532,13 +532,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {isActive && (
                       <motion.div
                         layoutId="sidebar-active-capsule-collapsed"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                         transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                       />
                     )}
                     <Icon
                       className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                        isActive ? 'text-[#19E6A0]' : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                        isActive ? 'text-[var(--accent)]' : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
                       }`}
                       strokeWidth={1.5}
                     />
@@ -565,13 +565,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {isActive && (
                       <motion.div
                         layoutId="sidebar-active-capsule"
-                        className="w-1 h-4 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                        className="w-1 h-4 rounded-full bg-[var(--accent)] -ml-1 mr-0.5 shrink-0 shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                         transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                       />
                     )}
                     <Icon
                       className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                        isActive ? 'text-[#19E6A0]' : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                        isActive ? 'text-[var(--accent)]' : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
                       }`}
                       strokeWidth={1.5}
                     />
@@ -606,13 +606,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {currentView === 'playlists' && (
                 <motion.div
                   layoutId="sidebar-active-capsule-collapsed"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
               <ListMusic
                 className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                  currentView === 'playlists' ? 'text-[#19E6A0]' : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                  currentView === 'playlists' ? 'text-[var(--accent)]' : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
                 }`}
                 strokeWidth={1.5}
               />
@@ -621,13 +621,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Add Playlist Icon Button with Sleek Random Mix Generator */}
             <button
               onClick={handleCreateRandomPlaylist}
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-[#8E8A98] hover:text-[#19E6A0] hover:bg-[#19E6A0]/10 border border-transparent hover:border-[#19E6A0]/30 transition-all duration-200 active:scale-90 cursor-pointer group"
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-[#8E8A98] hover:text-[var(--accent)] hover:bg-[var(--accent-muted)] border border-transparent hover:border-[var(--accent-border)] transition-all duration-200 active:scale-90 cursor-pointer group"
               title="Add Playlist (Random Mix)"
               aria-label="Add Playlist"
             >
               <AnimatedDices
                 className={`w-[18px] h-[18px] transition-colors ${
-                  isRollingDice ? 'text-[#19E6A0]' : ''
+                  isRollingDice ? 'text-[var(--accent)]' : ''
                 }`}
                 isRolling={isRollingDice}
                 strokeWidth={1.5}
@@ -650,7 +650,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }}
                       className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer group ${
                         isPlPlaying
-                          ? 'shadow-md ring-1 ring-[#19E6A0]/40'
+                          ? 'shadow-md ring-1 ring-[var(--accent)]/40'
                           : isPlActive
                           ? 'bg-white/[0.08] border border-white/[0.1] text-[#F4F2F7]'
                           : 'text-[#8E8A98] hover:text-[#F4F2F7] hover:bg-white/[0.05]'
@@ -725,7 +725,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
               <button
                 onClick={() => setIsCreatingPlaylist(!isCreatingPlaylist)}
-                className="group p-1.5 rounded-lg text-[#8E8A98] hover:text-[#19E6A0] hover:bg-white/[0.05] transition-all duration-150 active:scale-95 cursor-pointer"
+                className="group p-1.5 rounded-lg text-[#8E8A98] hover:text-[var(--accent)] hover:bg-white/[0.05] transition-all duration-150 active:scale-95 cursor-pointer"
                 title="Create New Playlist"
                 aria-label="Create Playlist"
               >
@@ -744,7 +744,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onBlur={() => {
                     if (!newPlaylistName.trim()) setIsCreatingPlaylist(false);
                   }}
-                  className="w-full px-3 py-1.5 text-xs bg-[#13111A]/90 border border-white/[0.1] focus:border-[#19E6A0]/60 rounded-xl text-[#F4F2F7] placeholder-[#65616F] outline-none shadow-inner transition-colors"
+                  className="w-full px-3 py-1.5 text-xs bg-[#13111A]/90 border border-white/[0.1] focus:border-[var(--accent)]/60 rounded-xl text-[#F4F2F7] placeholder-[#65616F] outline-none shadow-inner transition-colors"
                 />
               </form>
             )}
@@ -755,7 +755,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <p className="text-xs text-[#8E8A98] font-medium">No custom playlists</p>
                 <button
                   onClick={handleCreateRandomPlaylist}
-                  className="mt-2 text-xs text-[#19E6A0] hover:underline cursor-pointer transition-all duration-200 active:scale-95 font-medium"
+                  className="mt-2 text-xs text-[var(--accent)] hover:underline cursor-pointer transition-all duration-200 active:scale-95 font-medium"
                 >
                   + Create random playlist
                 </button>
@@ -850,7 +850,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             e.stopPropagation();
                             setPlaylistToEdit(pl);
                           }}
-                          className="p-1 rounded-lg text-[#8E8A98] hover:text-[#19E6A0] hover:bg-white/[0.08] hover:scale-110 active:scale-90 transition-all duration-150 cursor-pointer"
+                          className="p-1 rounded-lg text-[#8E8A98] hover:text-[var(--accent)] hover:bg-white/[0.08] hover:scale-110 active:scale-90 transition-all duration-150 cursor-pointer"
                           aria-label="Edit playlist"
                           title="Edit"
                         >
@@ -861,7 +861,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             e.stopPropagation();
                             exportPlaylistM3U(pl.id);
                           }}
-                          className="p-1 rounded-lg text-[#8E8A98] hover:text-[#19E6A0] hover:bg-white/[0.08] hover:scale-110 active:scale-90 transition-all duration-150 cursor-pointer"
+                          className="p-1 rounded-lg text-[#8E8A98] hover:text-[var(--accent)] hover:bg-white/[0.08] hover:scale-110 active:scale-90 transition-all duration-150 cursor-pointer"
                           aria-label="Export playlist (.m3u8)"
                           title="Export (.m3u8)"
                         >
@@ -917,18 +917,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {currentView === 'settings' && (
               <motion.div
                 layoutId="sidebar-active-capsule-collapsed"
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[#19E6A0] shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                 transition={{ type: 'spring', stiffness: 450, damping: 35 }}
               />
             )}
             <AnimatedSettings
               className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                currentView === 'settings' ? 'text-[var(--accent)]' : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
               }`}
               strokeWidth={1.5}
             />
             {hasUpdateNotification && (
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
             )}
           </button>
         ) : (
@@ -954,13 +954,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {currentView === 'settings' && (
                 <motion.div
                   layoutId="sidebar-active-capsule"
-                  className="w-1 h-4 rounded-full bg-[#19E6A0] -ml-1 mr-0.5 shrink-0 shadow-[0_0_8px_rgba(25,230,160,0.8),0_0_16px_rgba(25,230,160,0.4)]"
+                  className="w-1 h-4 rounded-full bg-[var(--accent)] -ml-1 mr-0.5 shrink-0 shadow-[0_0_8px_var(--accent-glow),0_0_16px_var(--accent-muted)]"
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
               <AnimatedSettings
                 className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                  currentView === 'settings' ? 'text-[#19E6A0]' : 'text-[#8E8A98] group-hover:text-[#19E6A0]'
+                  currentView === 'settings' ? 'text-[var(--accent)]' : 'text-[#8E8A98] group-hover:text-[var(--accent)]'
                 }`}
                 strokeWidth={1.5}
               />
@@ -968,8 +968,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {hasUpdateNotification && (
-              <span className="relative z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/25 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#19E6A0]" />
+              <span className="relative z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-muted)] text-[var(--accent)] border border-[var(--accent-border)] shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
                 <span>Update</span>
               </span>
             )}

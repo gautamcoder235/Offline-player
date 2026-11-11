@@ -297,7 +297,7 @@ export const MiniPlayer: React.FC = () => {
               }`}>
                 <div
                   ref={miniVolumeFillRef}
-                  className="h-full bg-[#19E6A0] rounded-full transition-none"
+                  className="h-full bg-[var(--accent)] rounded-full transition-none"
                   style={{ width: `${volPercent}%` }}
                 />
               </div>
@@ -305,7 +305,7 @@ export const MiniPlayer: React.FC = () => {
                 ref={miniVolumeKnobRef}
                 className={`absolute w-2 h-2 bg-white rounded-full shadow -translate-x-1/2 pointer-events-none transition-[transform,opacity] duration-150 ${
                   isDraggingVolume
-                    ? 'opacity-100 scale-125 ring-2 ring-[#19E6A0]/50'
+                    ? 'opacity-100 scale-125 ring-2 ring-[var(--accent)]/50'
                     : 'opacity-0 group-hover/minivol:opacity-100'
                 }`}
                 style={{ left: `${volPercent}%` }}
@@ -316,7 +316,7 @@ export const MiniPlayer: React.FC = () => {
           {/* Expand to Full App */}
           <button
             onClick={toggleMiniPlayer}
-            className="group/exp p-1.5 rounded-lg text-[#777381] hover:text-[#19E6A0] hover:bg-white/5 transition-colors duration-150 cursor-pointer"
+            className="group/exp p-1.5 rounded-lg text-[#777381] hover:text-[var(--accent)] hover:bg-white/5 transition-colors duration-150 cursor-pointer"
             title="Expand to Full Player (Ctrl+M)"
             aria-label="Expand Player"
           >
@@ -339,7 +339,7 @@ export const MiniPlayer: React.FC = () => {
       <div className="flex items-center gap-3.5 px-1 py-0.5 min-w-0" onMouseDown={(e) => e.stopPropagation()}>
         {/* Cover Artwork */}
         <div className={`w-16 h-16 rounded-xl overflow-hidden bg-[#0D0B13] border border-white/[0.08] shrink-0 shadow-lg flex items-center justify-center relative group transition-all duration-500 ${
-          isPlaying ? 'shadow-[0_0_18px_rgba(25,230,160,0.3)] border-[#19E6A0]/40' : ''
+          isPlaying ? 'shadow-[0_0_18px_var(--accent-glow)] border-[var(--accent-border)]' : ''
         }`}>
           {(() => {
             const miniCover = currentTrack ? (coverMap[currentTrack.id] || currentTrack.cover_art) : null;
@@ -426,7 +426,7 @@ export const MiniPlayer: React.FC = () => {
             }`}>
               <div
                 ref={progressFillRef}
-                className={`h-full bg-[#19E6A0] rounded-full transition-none ${isPlaying ? 'shadow-[0_0_8px_rgba(25,230,160,0.5)]' : ''}`}
+                className={`h-full bg-[var(--accent)] rounded-full transition-none ${isPlaying ? 'shadow-[0_0_8px_var(--accent-glow)]' : ''}`}
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -434,9 +434,9 @@ export const MiniPlayer: React.FC = () => {
               ref={progressKnobRef}
               className={`absolute w-2.5 h-2.5 bg-white rounded-full shadow -translate-x-1/2 pointer-events-none transition-[transform,opacity] duration-150 ${
                 isDraggingProgress
-                  ? 'opacity-100 scale-125 ring-2 ring-[#19E6A0]/60 shadow-[0_0_8px_rgba(25,230,160,0.7)]'
+                  ? 'opacity-100 scale-125 ring-2 ring-[var(--accent)]/60 shadow-[0_0_8px_var(--accent-glow)]'
                   : 'opacity-0 group-hover:opacity-100'
-              } ${isPlaying ? 'animate-progress-glow ring-2 ring-[#19E6A0]/40' : ''}`}
+              } ${isPlaying ? 'animate-progress-glow ring-2 ring-[var(--accent)]/40' : ''}`}
               style={{ left: `${progressPercent}%` }}
             />
           </div>
@@ -448,7 +448,7 @@ export const MiniPlayer: React.FC = () => {
           <button
             onClick={toggleShuffle}
             className={`group/shuffle p-1.5 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer ${
-              shuffle ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#65616F] hover:text-[#AAA6B2]'
+              shuffle ? 'text-[var(--accent)] bg-[var(--accent-muted)]' : 'text-[#65616F] hover:text-[#AAA6B2]'
             }`}
             title={shuffle ? 'Shuffle On' : 'Shuffle Off'}
             aria-label="Toggle Shuffle"
@@ -467,7 +467,7 @@ export const MiniPlayer: React.FC = () => {
 
           <button
             onClick={togglePlay}
-            className={`group/play w-9 h-9 aspect-square rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shrink-0 ${
+            className={`group/play w-9 h-9 aspect-square rounded-full bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shrink-0 ${
               isPlaying ? 'animate-breathe-glow' : ''
             }`}
             title="Play / Pause"
@@ -492,7 +492,7 @@ export const MiniPlayer: React.FC = () => {
           <button
             onClick={cycleRepeat}
             className={`group/repeat w-7 h-7 aspect-square rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shrink-0 ${
-              repeatMode !== 'off' ? 'text-[#19E6A0] bg-[#19E6A0]/10' : 'text-[#65616F] hover:text-[#AAA6B2] hover:bg-white/[0.08]'
+              repeatMode !== 'off' ? 'text-[var(--accent)] bg-[var(--accent-muted)]' : 'text-[#65616F] hover:text-[#AAA6B2] hover:bg-white/[0.08]'
             }`}
             title={`Repeat: ${repeatMode}`}
             aria-label="Cycle Repeat Mode"

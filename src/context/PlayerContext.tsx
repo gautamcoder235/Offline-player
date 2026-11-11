@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize, PhysicalSize } from '@tauri-apps/api/dpi';
-import { Track, RepeatMode, Playlist, ParsedLyrics, ThemeAppearance, AccentColor } from '../types';
+import { Track, RepeatMode, Playlist, ParsedLyrics, ThemeAppearance, AccentColor, SmartPlaybackSettings, AudioSessionInfo, SmartPlaybackStatus } from '../types';
 
 import { audioEngine, EQUALIZER_PRESETS } from '../services/audioEngine';
 import { parseLrcLyrics } from '../utils/helpers';
@@ -101,6 +101,14 @@ interface PlayerContextType {
   reorderQueue: (newQueue: Track[]) => void;
   updateTrackMetadata: (updated: Track) => void;
   addDroppedTracks: (newTracks: Track[]) => void;
+  smartPlaybackSettings: SmartPlaybackSettings | null;
+  smartPlaybackStatus: SmartPlaybackStatus | null;
+  isPausedBySmartPlayback: boolean;
+  smartPlaybackInterruptingApp: string | null;
+  updateSmartPlaybackSettings: (settings: SmartPlaybackSettings) => Promise<void>;
+  setSmartPlaybackEnabled: (enabled: boolean) => Promise<void>;
+  updateExcludedApplications: (apps: string[]) => Promise<void>;
+  refreshSmartPlaybackStatus: () => Promise<void>;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -336,6 +344,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return next;
     });
+
+    // Record session into persistent SQLite database with ACID consistency
+    invoke('db_record_playback_session', {
+      session: {
+        track_id: session.trackId,
+        duration_played: dur,
+        track_duration: session.trackDuration,
+        completed: isFullyCompleted,
+        was_replay: session.wasReplay,
+      },
+    }).catch((err) => {
+      console.warn('Failed to record playback session to SQLite:', err);
+    });
   }, []);
 
   useEffect(() => {
@@ -567,36 +588,52 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     switch (accent) {
       case 'gold':
         root.style.setProperty('--accent', '#E5B869');
-        root.style.setProperty('--accent-neon', '#E5B869');
+        root.style.setProperty('--accent-neon', '#FBBF24');
         root.style.setProperty('--accent-hover', '#FDE68A');
-        root.style.setProperty('--accent-muted', 'rgba(229, 184, 105, 0.14)');
-        root.style.setProperty('--accent-glow', 'rgba(229, 184, 105, 0.25)');
+        root.style.setProperty('--accent-contrast', '#000000');
+        root.style.setProperty('--accent-muted', 'rgba(229, 184, 105, 0.16)');
+        root.style.setProperty('--accent-border', 'rgba(229, 184, 105, 0.32)');
+        root.style.setProperty('--accent-glow', 'rgba(229, 184, 105, 0.45)');
+        root.style.setProperty('--accent-gradient', 'linear-gradient(135deg, #D97706, #E5B869)');
+        root.style.setProperty('--accent-gradient-h', 'linear-gradient(90deg, #D97706, #E5B869)');
         root.style.setProperty('--song-accent', '#E5B869');
         break;
       case 'slate':
         root.style.setProperty('--accent', '#F8FAFC');
-        root.style.setProperty('--accent-neon', '#F8FAFC');
-        root.style.setProperty('--accent-hover', '#FFFFFF');
-        root.style.setProperty('--accent-muted', 'rgba(255, 255, 255, 0.12)');
-        root.style.setProperty('--accent-glow', 'rgba(255, 255, 255, 0.20)');
+        root.style.setProperty('--accent-neon', '#FFFFFF');
+        root.style.setProperty('--accent-hover', '#E2E8F0');
+        root.style.setProperty('--accent-contrast', '#000000');
+        root.style.setProperty('--accent-muted', 'rgba(248, 250, 252, 0.15)');
+        root.style.setProperty('--accent-border', 'rgba(248, 250, 252, 0.30)');
+        root.style.setProperty('--accent-glow', 'rgba(255, 255, 255, 0.35)');
+        root.style.setProperty('--accent-gradient', 'linear-gradient(135deg, #CBD5E1, #FFFFFF)');
+        root.style.setProperty('--accent-gradient-h', 'linear-gradient(90deg, #94A3B8, #F8FAFC)');
         root.style.setProperty('--song-accent', '#F8FAFC');
         break;
       case 'cyan':
-        root.style.setProperty('--accent', '#06B6D4');
-        root.style.setProperty('--accent-neon', '#06B6D4');
+        root.style.setProperty('--accent', '#00C2FF');
+        root.style.setProperty('--accent-neon', '#00F2FE');
         root.style.setProperty('--accent-hover', '#38BDF8');
-        root.style.setProperty('--accent-muted', 'rgba(6, 182, 212, 0.14)');
-        root.style.setProperty('--accent-glow', 'rgba(6, 182, 212, 0.25)');
-        root.style.setProperty('--song-accent', '#06B6D4');
+        root.style.setProperty('--accent-contrast', '#000000');
+        root.style.setProperty('--accent-muted', 'rgba(0, 194, 255, 0.15)');
+        root.style.setProperty('--accent-border', 'rgba(0, 194, 255, 0.30)');
+        root.style.setProperty('--accent-glow', 'rgba(0, 194, 255, 0.45)');
+        root.style.setProperty('--accent-gradient', 'linear-gradient(135deg, #0284C7, #00C2FF)');
+        root.style.setProperty('--accent-gradient-h', 'linear-gradient(90deg, #0284C7, #00C2FF)');
+        root.style.setProperty('--song-accent', '#00C2FF');
         break;
       case 'emerald':
       default:
-        root.style.setProperty('--accent', '#10B981');
-        root.style.setProperty('--accent-neon', '#10B981');
+        root.style.setProperty('--accent', '#19E6A0');
+        root.style.setProperty('--accent-neon', '#19E6A0');
         root.style.setProperty('--accent-hover', '#34D399');
-        root.style.setProperty('--accent-muted', 'rgba(16, 185, 129, 0.12)');
-        root.style.setProperty('--accent-glow', 'rgba(16, 185, 129, 0.22)');
-        root.style.setProperty('--song-accent', '#10B981');
+        root.style.setProperty('--accent-contrast', '#000000');
+        root.style.setProperty('--accent-muted', 'rgba(25, 230, 160, 0.15)');
+        root.style.setProperty('--accent-border', 'rgba(25, 230, 160, 0.30)');
+        root.style.setProperty('--accent-glow', 'rgba(25, 230, 160, 0.45)');
+        root.style.setProperty('--accent-gradient', 'linear-gradient(135deg, #1DB954, #19E6A0)');
+        root.style.setProperty('--accent-gradient-h', 'linear-gradient(90deg, #1DB954, #19E6A0)');
+        root.style.setProperty('--song-accent', '#19E6A0');
         break;
     }
   }, []);
@@ -692,6 +729,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.warn('Failed to toggle always on top:', e);
     }
   }, [isAlwaysOnTop]);
+
+  // Smart Playback states
+  const [smartPlaybackSettings, setSmartPlaybackSettings] = useState<SmartPlaybackSettings | null>(null);
+  const [smartPlaybackStatus, setSmartPlaybackStatus] = useState<SmartPlaybackStatus | null>(null);
+  const [isPausedBySmartPlayback, setIsPausedBySmartPlayback] = useState<boolean>(false);
+  const [smartPlaybackInterruptingApp, setSmartPlaybackInterruptingApp] = useState<string | null>(null);
+  const isPausedBySmartPlaybackRef = useRef(isPausedBySmartPlayback);
+  isPausedBySmartPlaybackRef.current = isPausedBySmartPlayback;
 
   // Refs for audio engine callbacks to avoid stale closures
   const isPlayingRef = useRef(isPlaying);
@@ -1196,11 +1241,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       try {
         if (streamUrl) {
+          setIsPausedBySmartPlayback(false);
+          setSmartPlaybackInterruptingApp(null);
+          invoke('report_user_playback_action', { action: 'Play' }).catch(console.warn);
           await audioEngine.loadTrack(streamUrl);
-          await audioEngine.play();
+          await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
           setIsPlaying(true);
-          // Zero latency crisp playback: set directly to user's volume without muting fade-in
-          audioEngine.setVolume(volumeRef.current);
         }
       } catch (e) {
         console.error('Failed to play track:', e);
@@ -1394,6 +1440,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Next Track Logic: User Queue first, then context playlist with dual-deck crossfade support
   const handleNextTrack = useCallback((isCrossfadeTransition: boolean = false) => {
+    invoke('report_user_playback_action', { action: 'TrackChange' }).catch(console.warn);
     // 1. First priority: Play from user explicit queue
     const q = queueRef.current;
     if (q.length > 0) {
@@ -1449,6 +1496,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [playTrack, transitionToTrack]);
 
   const handlePrevTrack = useCallback(() => {
+    invoke('report_user_playback_action', { action: 'TrackChange' }).catch(console.warn);
     if (currentTimeRef.current > 3) {
       audioEngine.seek(0);
       setCurrentTime(0);
@@ -1616,10 +1664,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearTimeout(prefetchTimeoutRef.current);
         prefetchTimeoutRef.current = null;
       }
+      setIsPausedBySmartPlayback(false);
+      setSmartPlaybackInterruptingApp(null);
+      invoke('report_user_playback_action', { action: 'Pause' }).catch(console.warn);
       audioEngine.pause();
       setIsPlaying(false);
       saveLastPlayed(track, currentTimeRef.current, durationRef.current);
     } else {
+      setIsPausedBySmartPlayback(false);
+      setSmartPlaybackInterruptingApp(null);
+      invoke('report_user_playback_action', { action: 'Play' }).catch(console.warn);
+
       // Audio might not be loaded yet into HTMLAudioElement if freshly restored from previous session
       const currentSrc = audioEngine.getCurrentSrc();
       const needsLoad = !currentSrc || (audioEngine.isPaused() && currentSrc === '');
@@ -1643,7 +1698,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (currentTimeRef.current > 0) {
             audioEngine.seek(currentTimeRef.current);
           }
-          await audioEngine.play();
+          await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
           setIsPlaying(true);
           return;
         } catch (e) {
@@ -1651,7 +1706,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
-      await audioEngine.play();
+      await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
       setIsPlaying(true);
     }
   }, [playTrack, saveLastPlayed]);
@@ -1838,6 +1893,159 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (unlistenRepeat) unlistenRepeat();
     };
   }, []);
+
+  const refreshSmartPlaybackStatus = useCallback(async () => {
+    try {
+      const status = await invoke<SmartPlaybackStatus>('get_audio_monitor_status');
+      setSmartPlaybackStatus(status);
+      if (status.is_paused_by_external_audio && !isPausedBySmartPlaybackRef.current) {
+        setIsPausedBySmartPlayback(true);
+        setSmartPlaybackInterruptingApp(status.interrupting_app);
+      }
+    } catch (err) {
+      console.warn('Failed to get smart playback status:', err);
+    }
+  }, []);
+
+  const updateSmartPlaybackSettings = useCallback(async (newSettings: SmartPlaybackSettings) => {
+    try {
+      await invoke('update_smart_playback_settings', { settings: newSettings });
+      setSmartPlaybackSettings(newSettings);
+      await refreshSmartPlaybackStatus();
+    } catch (err) {
+      console.error('Failed to update smart playback settings:', err);
+    }
+  }, [refreshSmartPlaybackStatus]);
+
+  const setSmartPlaybackEnabled = useCallback(async (enabled: boolean) => {
+    try {
+      await invoke('set_smart_playback_enabled', { enabled });
+      setSmartPlaybackSettings((prev) => (prev ? { ...prev, enabled } : null));
+      await refreshSmartPlaybackStatus();
+    } catch (err) {
+      console.error('Failed to set smart playback enabled:', err);
+    }
+  }, [refreshSmartPlaybackStatus]);
+
+  const updateExcludedApplications = useCallback(async (apps: string[]) => {
+    try {
+      await invoke('update_excluded_applications', { apps });
+      setSmartPlaybackSettings((prev) => (prev ? { ...prev, excluded_applications: apps } : null));
+      await refreshSmartPlaybackStatus();
+    } catch (err) {
+      console.error('Failed to update excluded applications:', err);
+    }
+  }, [refreshSmartPlaybackStatus]);
+
+  // Smart Playback listener setup & status synchronization
+  useEffect(() => {
+    let isMounted = true;
+    let unlistenSmartPause: (() => void) | undefined;
+    let unlistenSmartResume: (() => void) | undefined;
+    let unlistenExtStart: (() => void) | undefined;
+    let unlistenExtStop: (() => void) | undefined;
+    let unlistenSessions: (() => void) | undefined;
+
+    invoke<SmartPlaybackSettings>('get_smart_playback_settings')
+      .then((s) => {
+        if (isMounted && s) setSmartPlaybackSettings(s);
+      })
+      .catch(console.warn);
+
+    invoke<SmartPlaybackStatus>('get_audio_monitor_status')
+      .then((st) => {
+        if (isMounted && st) {
+          setSmartPlaybackStatus(st);
+          if (st.is_paused_by_external_audio) {
+            setIsPausedBySmartPlayback(true);
+            setSmartPlaybackInterruptingApp(st.interrupting_app);
+          }
+        }
+      })
+      .catch(console.warn);
+
+    const setupSmartListeners = async () => {
+      const u1 = await listen<{ reason: string; app_name: string }>('smart-playback-paused', async (event) => {
+        if (isPlayingRef.current) {
+          if (prefetchTimeoutRef.current) {
+            clearTimeout(prefetchTimeoutRef.current);
+            prefetchTimeoutRef.current = null;
+          }
+          await audioEngine.pauseWithFadeOut(0.18);
+          setIsPlaying(false);
+          setIsPausedBySmartPlayback(true);
+          setSmartPlaybackInterruptingApp(event.payload.app_name);
+          if (currentTrackRef.current) {
+            saveLastPlayed(currentTrackRef.current, currentTimeRef.current, durationRef.current);
+          }
+        }
+      });
+
+      const u2 = await listen('smart-playback-resumed', () => {
+        if (isPausedBySmartPlaybackRef.current && currentTrackRef.current) {
+          setIsPausedBySmartPlayback(false);
+          setSmartPlaybackInterruptingApp(null);
+          audioEngine.playWithFadeIn(volumeRef.current, 0.8).catch(console.warn);
+          setIsPlaying(true);
+        }
+      });
+
+      const u3 = await listen<{ app_name: string; pid: number }>('external-audio-started', (event) => {
+        setSmartPlaybackStatus((prev) => (prev ? {
+          ...prev,
+          is_external_audio_active: true,
+          interrupting_app: event.payload.app_name,
+        } : null));
+      });
+
+      const u4 = await listen('external-audio-stopped', () => {
+        setSmartPlaybackStatus((prev) => (prev ? {
+          ...prev,
+          is_external_audio_active: false,
+        } : null));
+      });
+
+      const u5 = await listen<AudioSessionInfo[]>('audio-session-updated', (event) => {
+        setSmartPlaybackStatus((prev) => (prev ? {
+          ...prev,
+          active_sessions: event.payload,
+        } : null));
+      });
+
+      if (!isMounted) {
+        u1();
+        u2();
+        u3();
+        u4();
+        u5();
+      } else {
+        unlistenSmartPause = u1;
+        unlistenSmartResume = u2;
+        unlistenExtStart = u3;
+        unlistenExtStop = u4;
+        unlistenSessions = u5;
+      }
+    };
+
+    setupSmartListeners();
+
+    // Periodic countdown & status polling when paused by external audio or countdown active
+    const interval = setInterval(() => {
+      if (isMounted && isPausedBySmartPlaybackRef.current) {
+        refreshSmartPlaybackStatus();
+      }
+    }, 600);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      if (unlistenSmartPause) unlistenSmartPause();
+      if (unlistenSmartResume) unlistenSmartResume();
+      if (unlistenExtStart) unlistenExtStart();
+      if (unlistenExtStop) unlistenExtStop();
+      if (unlistenSessions) unlistenSessions();
+    };
+  }, [refreshSmartPlaybackStatus, saveLastPlayed]);
 
   const toggleLike = useCallback((trackId: string) => {
     setLikedTrackIds((prev) => {
@@ -2353,6 +2561,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateTrackMetadata,
         addDroppedTracks,
         coverMap,
+        smartPlaybackSettings,
+        smartPlaybackStatus,
+        isPausedBySmartPlayback,
+        smartPlaybackInterruptingApp,
+        updateSmartPlaybackSettings,
+        setSmartPlaybackEnabled,
+        updateExcludedApplications,
+        refreshSmartPlaybackStatus,
       }}
     >
       {children}

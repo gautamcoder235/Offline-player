@@ -46,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 max-w-2xl">
         {/* Search bar with standardized 34px height */}
         <div className="group/search relative flex-1 min-w-[120px] sm:min-w-[160px] max-w-xs sm:max-w-sm focus-within:max-w-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
-          <div className="relative h-[34px] flex items-center bg-[#13111A]/80 hover:bg-[#161420]/90 focus-within:bg-[#161420] border border-white/[0.07] hover:border-white/[0.12] focus-within:border-[#19E6A0]/50 rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.25)] focus-within:ring-2 focus-within:ring-[#19E6A0]/15 transition-all duration-200">
-            <AnimatedSearch className="absolute left-3 w-4 h-4 text-[#8E8A98] pointer-events-none group-hover/search:text-[#19E6A0] group-focus-within/search:text-[#19E6A0] transition-colors duration-200 shrink-0" />
+          <div className="relative h-[34px] flex items-center bg-[#13111A]/80 hover:bg-[#161420]/90 focus-within:bg-[#161420] border border-white/[0.07] hover:border-white/[0.12] focus-within:border-[var(--accent)]/50 rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.25)] focus-within:ring-2 focus-within:ring-[var(--accent)]/15 transition-all duration-200">
+            <AnimatedSearch className="absolute left-3 w-4 h-4 text-[#8E8A98] pointer-events-none group-hover/search:text-[var(--accent)] group-focus-within/search:text-[var(--accent)] transition-colors duration-200 shrink-0" />
             <input
               id="global-search-input"
               type="text"
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {isOnline && (
                   <Globe
                     className={`w-3.5 h-3.5 transition-colors ${
-                      isActive ? 'text-[#19E6A0]' : 'text-[#8E8A98]'
+                      isActive ? 'text-[var(--accent)]' : 'text-[#8E8A98]'
                     }`}
                   />
                 )}
@@ -151,7 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <AnimatedRefresh
             isSpinning={isRefreshing}
-            className="w-3.5 h-3.5 group-hover:text-[#19E6A0] transition-colors"
+            className="w-3.5 h-3.5 group-hover:text-[var(--accent)] transition-colors"
           />
           <span className="hidden sm:inline">Rescan</span>
         </button>

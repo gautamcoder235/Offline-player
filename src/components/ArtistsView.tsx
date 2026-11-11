@@ -121,7 +121,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                   onClick={() => setFilterTab('all')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     filterTab === 'all'
-                      ? 'bg-[#19E6A0] text-black font-semibold shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-semibold shadow-sm'
                       : 'text-[#8E8A99] hover:text-[#F4F2F7]'
                   }`}
                 >
@@ -132,7 +132,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                   onClick={() => setFilterTab('lead')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     filterTab === 'lead'
-                      ? 'bg-[#19E6A0] text-black font-semibold shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-semibold shadow-sm'
                       : 'text-[#8E8A99] hover:text-[#F4F2F7]'
                   }`}
                 >
@@ -143,7 +143,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                   onClick={() => setFilterTab('collab')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     filterTab === 'collab'
-                      ? 'bg-[#19E6A0] text-black font-semibold shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-semibold shadow-sm'
                       : 'text-[#8E8A99] hover:text-[#F4F2F7]'
                   }`}
                 >
@@ -164,7 +164,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                   playTrack(selectedArtist.tracks[0], selectedArtist.tracks, `artist_${selectedArtist.normalizedKey}`);
                 }
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#16CE8F] text-black text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               {isThisArtistPlaying ? (
                 <>
@@ -182,17 +182,17 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
             <button
               type="button"
               onClick={() => handleCreatePlaylist(selectedArtist)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[#19E6A0] border border-[#2D2B3B] hover:border-[#19E6A0]/40 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[var(--accent)] border border-[#2D2B3B] hover:border-[var(--accent-border)] text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
               title="Save all songs featuring this artist into a dedicated playlist"
             >
               {createdFeedback ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-[#19E6A0]" />
-                  <span className="text-[#19E6A0]">Playlist Created!</span>
+                  <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
+                  <span className="text-[var(--accent)]">Playlist Created!</span>
                 </>
               ) : (
                 <>
-                  <ListPlus className="w-3.5 h-3.5 text-[#19E6A0]" />
+                  <ListPlus className="w-3.5 h-3.5 text-[var(--accent)]" />
                   <span>Save as Playlist</span>
                 </>
               )}
@@ -254,10 +254,10 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                   setSelectedArtistKey(artist.normalizedKey);
                   setFilterTab('all');
                 }}
-                className="group p-4 rounded-2xl bg-[#121118]/70 hover:bg-[#181622]/90 border border-white/[0.06] hover:border-[#19E6A0]/30 shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_8px_30px_rgba(25,230,160,0.12)] backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col items-center text-center gap-3.5 relative"
+                className="group p-4 rounded-2xl bg-[#121118]/70 hover:bg-[#181622]/90 border border-white/[0.06] hover:border-[var(--accent-border)] shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_8px_30px_var(--accent-glow)] backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col items-center text-center gap-3.5 relative"
               >
                 {/* Circular Artist Avatar Card */}
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-[#16151E] border-2 border-white/[0.08] group-hover:border-[#19E6A0] relative shadow-xl transition-all duration-300">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-[#16151E] border-2 border-white/[0.08] group-hover:border-[var(--accent)] relative shadow-xl transition-all duration-300">
                   {artist.coverArt ? (
                     <img
                       src={artist.coverArt}
@@ -287,7 +287,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                           playTrack(artist.tracks[0], artist.tracks, `artist_${artist.normalizedKey}`);
                         }
                       }}
-                      className="w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-[0_4px_20px_rgba(25,230,160,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                      className="w-11 h-11 rounded-full bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] shadow-[0_4px_20px_var(--accent-glow)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                       title={isThisArtistPlaying ? 'Pause Artist' : 'Play Artist'}
                       aria-label={isThisArtistPlaying ? 'Pause Artist' : 'Play Artist'}
                     >
@@ -305,7 +305,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
                         e.stopPropagation();
                         handleCreatePlaylist(artist);
                       }}
-                      className="w-9 h-9 rounded-full bg-[#1A1924] hover:bg-[#19E6A0] text-[#AAA6B2] hover:text-black border border-[#333142] hover:border-[#19E6A0] shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      className="w-9 h-9 rounded-full bg-[#1A1924] hover:bg-[var(--accent)] text-[#AAA6B2] hover:text-[var(--accent-contrast,#000000)] border border-[#333142] hover:border-[var(--accent)] shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
                       title={`Create playlist from ${artist.name}`}
                       aria-label={`Create playlist from ${artist.name}`}
                     >
@@ -316,7 +316,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({
 
                 {/* Artist Info */}
                 <div className="w-full min-w-0">
-                  <h3 className="text-xs font-bold text-[#F4F2F7] group-hover:text-[#19E6A0] truncate transition-colors">
+                  <h3 className="text-xs font-bold text-[#F4F2F7] group-hover:text-[var(--accent)] truncate transition-colors">
                     {artist.name}
                   </h3>
                   <p className="text-[11px] text-[#777381] mt-0.5 truncate">

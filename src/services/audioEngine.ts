@@ -506,6 +506,42 @@ export class AudioEngine {
     }
   }
 
+  public async playWithFadeIn(targetVolume?: number, durationSec: number = 0.8): Promise<void> {
+    this.initAudioContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+    }
+    const finalVol = targetVolume !== undefined ? targetVolume : this.currentVolume;
+    if (this.masterGainNode && this.audioCtx && !this.isMuted) {
+      const now = this.audioCtx.currentTime;
+      this.masterGainNode.gain.cancelScheduledValues(now);
+      this.masterGainNode.gain.setValueAtTime(0.0001, now);
+      this.masterGainNode.gain.linearRampToValueAtTime(Math.max(0.0001, finalVol), now + Math.max(0.1, durationSec));
+    }
+    try {
+      await this.activeDeck.audio.play();
+    } catch (err) {
+      console.warn('Playback playWithFadeIn was rejected:', err);
+    }
+  }
+
+  public async pauseWithFadeOut(durationSec: number = 0.18): Promise<void> {
+    if (this.masterGainNode && this.audioCtx && !this.isMuted) {
+      const dur = Math.max(0.05, durationSec);
+      const now = this.audioCtx.currentTime;
+      this.masterGainNode.gain.cancelScheduledValues(now);
+      this.masterGainNode.gain.setValueAtTime(this.masterGainNode.gain.value, now);
+      this.masterGainNode.gain.linearRampToValueAtTime(0.0001, now + dur);
+      await new Promise((resolve) => setTimeout(resolve, dur * 1000));
+    }
+    this.pause();
+    if (this.masterGainNode && this.audioCtx && !this.isMuted) {
+      const now = this.audioCtx.currentTime;
+      this.masterGainNode.gain.cancelScheduledValues(now);
+      this.masterGainNode.gain.setValueAtTime(this.currentVolume, now);
+    }
+  }
+
   public pause(): void {
     this.deckA.audio.pause();
     this.deckB.audio.pause();

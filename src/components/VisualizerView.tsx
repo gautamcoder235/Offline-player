@@ -439,7 +439,7 @@ export const VisualizerView: React.FC = () => {
             </button>
             <button
               onClick={togglePlay}
-              className="w-10 h-10 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black flex items-center justify-center shadow-[0_0_20px_rgba(25,230,160,0.35)] transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+              className="w-10 h-10 rounded-full bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)] transition-transform hover:scale-105 active:scale-95 cursor-pointer"
               title="Play / Pause"
             >
               {isPlaying ? (
@@ -474,7 +474,7 @@ export const VisualizerView: React.FC = () => {
                 title={`${label} (${idx + 1})`}
                 className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 cursor-pointer ${
                   active
-                    ? 'bg-[#19E6A0]/15 text-[#19E6A0] font-semibold border border-[#19E6A0]/30 shadow-[0_0_15px_rgba(25,230,160,0.2)]'
+                    ? 'bg-[var(--accent-muted)] text-[var(--accent)] font-semibold border border-[var(--accent-border)] shadow-[0_0_15px_var(--accent-glow)]'
                     : 'text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-white/[0.05]'
                 }`}
               >

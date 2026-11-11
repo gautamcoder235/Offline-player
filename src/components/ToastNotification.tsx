@@ -30,7 +30,7 @@ export const ToastNotification: React.FC = () => {
                     className="w-full h-full flex items-center justify-center font-bold text-xs"
                     style={{ background: trackColor.bg, color: trackColor.text }}
                   >
-                    <Disc3 className="w-4 h-4 text-[#19E6A0]" />
+                    <Disc3 className="w-4 h-4 text-[var(--accent)]" />
                   </div>
                 )}
               </div>
@@ -43,7 +43,7 @@ export const ToastNotification: React.FC = () => {
 
             {/* Shrinking duration progress bar at the bottom */}
             <div className="w-full h-0.5 bg-white/5 overflow-hidden">
-              <div className="h-full bg-[#19E6A0] animate-toast-progress" />
+              <div className="h-full bg-[var(--accent)] animate-toast-progress" />
             </div>
           </motion.div>
         )}

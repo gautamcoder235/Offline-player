@@ -465,7 +465,7 @@ export function renderHighlightedSnippet(
           return isMatch ? (
             <span
               key={index}
-              className="text-[#19E6A0] font-semibold not-italic underline decoration-[#19E6A0]/40"
+              className="text-[var(--accent)] font-semibold not-italic underline decoration-[var(--accent)]/40"
             >
               {part}
             </span>

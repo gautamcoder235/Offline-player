@@ -239,10 +239,14 @@ export const TrackList: React.FC<TrackListProps> = ({
     getItemKey: (index) => displayTracks[index]?.id ?? index,
   });
 
-  // Re-measure virtual rows dynamically when search query or track list changes
+  // Re-measure virtual rows dynamically when search query or track count changes
+  const displayTrackCount = displayTracks.length;
   useEffect(() => {
-    rowVirtualizer.measure();
-  }, [searchQuery, displayTracks]);
+    const rafId = requestAnimationFrame(() => {
+      rowVirtualizer.measure();
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [searchQuery, displayTrackCount]);
 
   const [actionFeedback, setActionFeedback] = useState<{
     trackId: string;
@@ -717,7 +721,7 @@ export const TrackList: React.FC<TrackListProps> = ({
               : 'bg-gradient-to-b from-[#181622]/80 via-[#100F15]/40 to-transparent'
           } shrink-0 overflow-hidden`}>
             {/* Ambient diffused atmospheric glow */}
-            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#19E6A0]/[0.08] blur-[100px] pointer-events-none" />
+            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[var(--accent)]/[0.08] blur-[100px] pointer-events-none" />
 
             {/* Left: Artwork + Title Metadata */}
             <div className="flex items-end gap-6 md:gap-8 min-w-0 flex-1 relative z-10">
@@ -733,7 +737,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   <img src={heroCover} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover/heroart:scale-105" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1A1924] to-[#121118]">
-                    <Disc3 className="w-16 h-16 text-[#19E6A0]/40 animate-pulse" />
+                    <Disc3 className="w-16 h-16 text-[var(--accent)]/40 animate-pulse" />
                   </div>
                 )}
 
@@ -744,7 +748,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   className="absolute inset-0 bg-black/50 opacity-0 group-hover/heroart:opacity-100 flex items-center justify-center transition-all duration-200 cursor-pointer backdrop-blur-[2px]"
                   aria-label={isThisListPlaying ? "Pause" : "Play"}
                 >
-                  <div className="w-14 h-14 rounded-full bg-[#19E6A0] text-black flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform">
+                  <div className="w-14 h-14 rounded-full bg-[var(--accent)] text-[var(--accent-contrast,#000000)] flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform" style={{ boxShadow: '0 8px 24px var(--accent-glow)' }}>
                     {isThisListPlaying ? (
                       <Pause className="w-6 h-6 fill-current" />
                     ) : (
@@ -756,8 +760,8 @@ export const TrackList: React.FC<TrackListProps> = ({
 
               {/* Title & Metadata */}
               <div className="flex flex-col gap-2 min-w-0 flex-1 pb-1">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-[#19E6A0] flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-[#19E6A0]" />
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent)] flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-[var(--accent)]" />
                   <span>
                     {playlistId === 'top_tracks'
                       ? 'Personal Affinity Engine'
@@ -792,14 +796,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                       onClick={() => setTopTracksTimeRange('short_term')}
                       className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                         topTracksTimeRange === 'short_term'
-                          ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-bold'
                           : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
                       }`}
+                      style={topTracksTimeRange === 'short_term' ? { boxShadow: '0 2px 12px var(--accent-glow)' } : undefined}
                     >
                       <Flame
                         className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
                           topTracksTimeRange === 'short_term'
-                            ? 'fill-black text-black'
+                            ? 'fill-current text-current'
                             : 'text-[#FF7A00] fill-[#FF7A00]/25'
                         }`}
                       />
@@ -810,14 +815,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                       onClick={() => setTopTracksTimeRange('medium_term')}
                       className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                         topTracksTimeRange === 'medium_term'
-                          ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-bold'
                           : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
                       }`}
+                      style={topTracksTimeRange === 'medium_term' ? { boxShadow: '0 2px 12px var(--accent-glow)' } : undefined}
                     >
                       <CalendarDays
                         className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
                           topTracksTimeRange === 'medium_term'
-                            ? 'stroke-black stroke-[2.3]'
+                            ? 'stroke-current stroke-[2.3]'
                             : 'text-[#00F2FE]'
                         }`}
                       />
@@ -828,14 +834,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                       onClick={() => setTopTracksTimeRange('all_time')}
                       className={`group/pill flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                         topTracksTimeRange === 'all_time'
-                          ? 'bg-[#19E6A0] text-black shadow-[0_2px_12px_rgba(25,230,160,0.35)] font-bold'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast,#000000)] font-bold'
                           : 'bg-[#16151D] text-[#8E8A99] hover:text-[#F4F2F7] hover:bg-[#1E1D27] border border-[#2B2936] hover:border-[#3D3A4B]'
                       }`}
+                      style={topTracksTimeRange === 'all_time' ? { boxShadow: '0 2px 12px var(--accent-glow)' } : undefined}
                     >
                       <Trophy
                         className={`w-3.5 h-3.5 transition-transform duration-200 group-hover/pill:scale-110 ${
                           topTracksTimeRange === 'all_time'
-                            ? 'fill-black text-black'
+                            ? 'fill-current text-current'
                             : 'text-[#E8C77A] fill-[#E8C77A]/30'
                         }`}
                       />
@@ -853,7 +860,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                 type="button"
                 onClick={handleHeroPlayAll}
                 disabled={displayTracks.length === 0}
-                className="w-12 h-12 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black shadow-[0_6px_20px_rgba(25,230,160,0.35)] hover:shadow-[0_8px_28px_rgba(25,230,160,0.55)] hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0"
+                className="w-12 h-12 rounded-full bg-[var(--accent)] hover:opacity-95 disabled:opacity-50 text-[var(--accent-contrast,#000000)] hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0"
+                style={{ boxShadow: '0 6px 22px var(--accent-glow)' }}
                 title={isThisListPlaying ? "Pause" : "Play all"}
                 aria-label={isThisListPlaying ? "Pause" : "Play all"}
               >
@@ -871,7 +879,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 disabled={displayTracks.length === 0}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer border ${
                   shuffle
-                    ? 'bg-[#19E6A0]/15 text-[#19E6A0] border-[#19E6A0]/40 shadow-sm'
+                    ? 'bg-[var(--accent-muted)] text-[var(--accent)] border-[var(--accent-border)] shadow-sm'
                     : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#8E8A98] hover:text-[#F4F2F7] border-white/[0.08]'
                 }`}
                 title={shuffle ? "Shuffle is ON (Click to toggle)" : "Shuffle play"}
@@ -924,7 +932,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 <button
                   type="button"
                   onClick={() => { setSortField('default'); setSortDirection('asc'); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#19E6A0]/10 hover:bg-[#19E6A0]/20 text-[#19E6A0] border border-[#19E6A0]/30 text-[11px] font-semibold transition-all active:scale-95 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-muted)] hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent-border)] text-[11px] font-semibold transition-all active:scale-95 cursor-pointer"
                   title="Reset sort order to default"
                 >
                   <ArrowUpDown className="w-3 h-3" />
@@ -948,25 +956,25 @@ export const TrackList: React.FC<TrackListProps> = ({
             </div>
           ) : (
             <div className="w-full text-xs">
-              {/* Seamless Sticky Table Header (No Black Box) */}
-              <div className={`sticky top-0 z-20 transition-all duration-200 ${
+              {/* Seamless Sticky Table Header (Full-width edge-to-edge, No Box Cutout) */}
+              <div className={`sticky top-0 z-20 transition-all duration-200 -mx-6 md:-mx-8 px-9 md:px-11 ${
                 isScrolledHeader
                   ? isGlass
-                    ? 'bg-[#0E0E13]/40 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.3)]'
-                    : 'bg-[#0E0E13]/60 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.3)]'
+                    ? 'bg-black/30 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.25)]'
+                    : 'bg-[#0E0D14]/85 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.35)]'
                   : 'bg-transparent border-b border-white/[0.06]'
               } grid ${
                 hasMultiDisc
                   ? 'grid-cols-[48px_minmax(0,1fr)_80px_40px] md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
                   : 'grid-cols-[40px_minmax(0,1fr)_80px_40px] md:grid-cols-[40px_minmax(0,2.5fr)_minmax(0,1.5fr)_80px_40px]'
-              } items-center px-3 py-2.5 text-[#8E8A98] uppercase tracking-wider font-semibold text-[10px] select-none`}>
+              } items-center py-2.5 text-[#8E8A98] uppercase tracking-wider font-semibold text-[10px] select-none`}>
                 {/* Index / Select All Checkbox Header */}
                 <div className="text-center flex items-center justify-center">
                   {selectedTrackIds.size > 0 ? (
                     <button
                       type="button"
                       onClick={toggleSelectAll}
-                      className="w-4 h-4 rounded-md bg-[#19E6A0] text-black flex items-center justify-center mx-auto shadow-sm transition-transform active:scale-90 cursor-pointer"
+                      className="w-4 h-4 rounded-md bg-[var(--accent)] text-[var(--accent-contrast,#000000)] flex items-center justify-center mx-auto shadow-sm transition-transform active:scale-90 cursor-pointer"
                       title={allSelected ? 'Deselect all (Esc)' : 'Select all (Ctrl+A)'}
                       aria-label="Toggle select all"
                     >
@@ -984,8 +992,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                       title="Sort by index / Reset sort"
                       aria-label="Index header"
                     >
-                      <span className={`font-mono text-[10px] group-hover/select-header:hidden ${sortField === 'default' ? 'text-[#19E6A0]' : 'text-[#8E8A98]'}`}>#</span>
-                      <div className="hidden group-hover/select-header:flex w-3.5 h-3.5 rounded border border-[#8E8A98] hover:border-[#19E6A0] items-center justify-center transition-colors" />
+                      <span className="font-mono text-[10px] group-hover/select-header:hidden text-[#8E8A98] group-hover/select-header:text-[var(--accent)] transition-colors">#</span>
+                      <div className="hidden group-hover/select-header:flex w-3.5 h-3.5 rounded border border-[#8E8A98] hover:border-[var(--accent)] items-center justify-center transition-colors" />
                     </button>
                   )}
                 </div>
@@ -997,7 +1005,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 >
                   <span>Title</span>
                   {sortField === 'title' && (
-                    <span className="text-[#19E6A0] text-xs font-bold leading-none">
+                    <span className="text-[var(--accent)] text-xs font-bold leading-none">
                       {sortDirection === 'asc' ? '↑' : '↓'}
                     </span>
                   )}
@@ -1010,7 +1018,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 >
                   <span>{playlistId === 'top_tracks' ? 'Listening Stats' : 'Album'}</span>
                   {sortField === 'album' && (
-                    <span className="text-[#19E6A0] text-xs font-bold leading-none">
+                    <span className="text-[var(--accent)] text-xs font-bold leading-none">
                       {sortDirection === 'asc' ? '↑' : '↓'}
                     </span>
                   )}
@@ -1023,7 +1031,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 >
                   <Clock className="w-3 h-3 inline-block text-[#8E8A98]" />
                   {sortField === 'duration' && (
-                    <span className="text-[#19E6A0] text-xs font-bold leading-none">
+                    <span className="text-[var(--accent)] text-xs font-bold leading-none">
                       {sortDirection === 'asc' ? '↑' : '↓'}
                     </span>
                   )}
@@ -1100,12 +1108,17 @@ export const TrackList: React.FC<TrackListProps> = ({
                       } ${
                         isSelected
                           ? isCurrent
-                            ? 'bg-[#19E6A0]/20 border border-[#19E6A0] shadow-[0_0_14px_rgba(25,230,160,0.14)] text-[#F4F2F7]'
-                            : 'bg-[#19E6A0]/10 border border-[#19E6A0]/45 shadow-[0_0_10px_rgba(25,230,160,0.06)] text-[#F4F2F7]'
+                            ? 'bg-[var(--accent-muted)] border border-[var(--accent)] text-[#F4F2F7]'
+                            : 'bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[#F4F2F7]'
                           : isCurrent
-                          ? 'bg-[#19E6A0]/[0.08] border border-[#19E6A0]/30 shadow-[0_0_14px_rgba(25,230,160,0.06)] text-[#F4F2F7]'
+                          ? 'bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[#F4F2F7]'
                           : 'border border-transparent hover:bg-white/[0.04] hover:border-white/[0.06] text-[#8E8A98]'
                       }`}
+                      style={
+                        isSelected || isCurrent
+                          ? { boxShadow: isSelected && isCurrent ? '0 0 14px var(--accent-glow)' : '0 0 10px var(--accent-glow)' }
+                          : undefined
+                      }
                     >
                       {/* Index / Play Button / Checkbox */}
                       <div className="text-center relative">
@@ -1116,7 +1129,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                               e.stopPropagation();
                               toggleTrackSelection(track.id);
                             }}
-                            className="w-4 h-4 rounded-md bg-[#19E6A0] text-black flex items-center justify-center mx-auto shadow-sm cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-90"
+                            className="w-4 h-4 rounded-md bg-[var(--accent)] text-[var(--accent-contrast,#000000)] flex items-center justify-center mx-auto shadow-sm cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-90"
                             title="Selected (Click to deselect)"
                             aria-label="Deselect track"
                           >
@@ -1126,7 +1139,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           <>
                             <span
                               className={`inline-block font-mono text-[11px] group-hover:hidden ${
-                                isCurrent ? 'text-[#19E6A0] font-bold' : 'text-[#65616F]'
+                                isCurrent ? 'text-[var(--accent)] font-bold' : 'text-[#65616F]'
                               }`}
                             >
                               {isCurrent ? (
@@ -1144,15 +1157,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                                     aria-label={isPlaying ? 'Playing' : 'Paused'}
                                   >
                                     <span
-                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
+                                      className="w-[2.5px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-1"
                                       style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                                     />
                                     <span
-                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
+                                      className="w-[2.5px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-2"
                                       style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                                     />
                                     <span
-                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
+                                      className="w-[2.5px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-3"
                                       style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                                     />
                                   </div>
@@ -1194,7 +1207,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                 e.stopPropagation();
                                 toggleTrackSelection(track.id);
                               }}
-                              className="hidden group-hover:flex w-4 h-4 rounded-md border border-[#65616F] hover:border-[#19E6A0] hover:bg-[#19E6A0]/10 items-center justify-center mx-auto shadow-sm cursor-pointer transition-all duration-150 active:scale-90"
+                              className="hidden group-hover:flex w-4 h-4 rounded-md border border-[#65616F] hover:border-[var(--accent)] hover:bg-[var(--accent-muted)] items-center justify-center mx-auto shadow-sm cursor-pointer transition-all duration-150 active:scale-90"
                               title="Select track"
                               aria-label="Select track"
                             />
@@ -1203,7 +1216,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           <>
                             <span
                               className={`inline-block font-mono text-[11px] group-hover:hidden ${
-                                isCurrent ? 'text-[#19E6A0] font-bold' : 'text-[#65616F]'
+                                isCurrent ? 'text-[var(--accent)] font-bold' : 'text-[#65616F]'
                               }`}
                             >
                               {isCurrent ? (
@@ -1221,15 +1234,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                                     aria-label={isPlaying ? 'Playing' : 'Paused'}
                                   >
                                     <span
-                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-1"
+                                      className="w-[2.5px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-1"
                                       style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                                     />
                                     <span
-                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-2"
+                                      className="w-[2.5px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-2"
                                       style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                                     />
                                     <span
-                                      className="w-[2.5px] h-full bg-[#19E6A0] rounded-full origin-bottom animate-eq-bar-3"
+                                      className="w-[2.5px] h-full bg-[var(--accent)] rounded-full origin-bottom animate-eq-bar-3"
                                       style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                                     />
                                   </div>
@@ -1277,7 +1290,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                   playTrack(track, displayTracks, playlistId);
                                 }
                               }}
-                              className="group/rowplay hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[#19E6A0] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+                              className="group/rowplay hidden group-hover:inline-flex items-center justify-center w-6 h-6 rounded-full text-[#F4F2F7] hover:text-[var(--accent)] transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
                               aria-label={isCurrent && isPlaying ? 'Pause' : 'Play'}
                             >
                               {isCurrent && isPlaying ? (
@@ -1313,17 +1326,17 @@ export const TrackList: React.FC<TrackListProps> = ({
                             <span
                               className={`font-semibold truncate text-xs transition-colors duration-200 ${
                                 isCurrent
-                                  ? 'text-[#19E6A0]'
+                                  ? 'text-[var(--accent)]'
                                   : isSelected
                                   ? 'text-[#F4F2F7]'
-                                  : 'text-[#F4F2F7] group-hover:text-[#19E6A0]'
+                                  : 'text-[#F4F2F7] group-hover:text-[var(--accent)]'
                               }`}
                             >
                               {track.title}
                             </span>
                             {isTopTracksView && track.stats?.isOnRepeat && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#19E6A0]/15 text-[#19E6A0] border border-[#19E6A0]/30 text-[9px] font-semibold shrink-0 shadow-sm">
-                                <Flame className="w-2.5 h-2.5 fill-[#19E6A0] text-[#19E6A0]" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[var(--accent-muted)] text-[var(--accent)] border border-[var(--accent-border)] text-[9px] font-semibold shrink-0 shadow-sm">
+                                <Flame className="w-2.5 h-2.5 fill-[var(--accent)] text-[var(--accent)]" />
                                 <span>On Repeat</span>
                               </span>
                             )}
@@ -1336,8 +1349,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                               className="flex items-center gap-1.5 mt-1 text-[10px] min-w-0 max-w-full"
                               title={`Lyrics match: "${matchingSnippet}"`}
                             >
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#19E6A0]/10 border border-[#19E6A0]/25 text-[#19E6A0] text-[10px] font-medium shrink-0 shadow-sm">
-                                <Mic2 className="w-2.5 h-2.5 text-[#19E6A0]" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[var(--accent-muted)] border border-[var(--accent-border)] text-[var(--accent)] text-[10px] font-medium shrink-0 shadow-sm">
+                                <Mic2 className="w-2.5 h-2.5 text-[var(--accent)]" />
                                 <span>Lyrics match:</span>
                               </span>
                               <span className="truncate min-w-0 italic text-[#B5B1BF] text-[10.5px]">
@@ -1441,14 +1454,14 @@ export const TrackList: React.FC<TrackListProps> = ({
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {actionFeedback?.trackId === track.id && actionFeedback.action === 'queue' ? (
-                                  <Check className="w-3.5 h-3.5 text-[#19E6A0] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
+                                  <Check className="w-3.5 h-3.5 text-[var(--accent)] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
                                 ) : (
-                                  <ListPlus className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                                  <ListPlus className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
                                 )}
                                 <span
                                   className={`truncate transition-colors duration-200 ${
                                     actionFeedback?.trackId === track.id && actionFeedback.action === 'queue'
-                                      ? 'text-[#19E6A0] font-medium'
+                                      ? 'text-[var(--accent)] font-medium'
                                       : ''
                                   }`}
                                 >
@@ -1481,15 +1494,15 @@ export const TrackList: React.FC<TrackListProps> = ({
                                       >
                                         <span
                                           className={`truncate flex-1 transition-colors duration-200 ${
-                                            isPlSaved ? 'text-[#19E6A0] font-medium' : ''
+                                            isPlSaved ? 'text-[var(--accent)] font-medium' : ''
                                           }`}
                                         >
                                           {isPlSaved ? `Added to ${pl.name}` : pl.name}
                                         </span>
                                         {isPlSaved ? (
-                                          <Check className="w-3 h-3 text-[#19E6A0] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
+                                          <Check className="w-3 h-3 text-[var(--accent)] animate-in fade-in zoom-in-95 duration-200 shrink-0" />
                                         ) : (
-                                          <Plus className="w-3 h-3 text-[#65616F] group-hover/pl:text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover/pl:scale-110" />
+                                          <Plus className="w-3 h-3 text-[#65616F] group-hover/pl:text-[var(--accent)] shrink-0 transition-transform duration-200 group-hover/pl:scale-110" />
                                         )}
                                       </button>
                                     );
@@ -1535,7 +1548,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                                 className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group/item text-xs"
                               >
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                  <Pencil className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                                  <Pencil className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
                                   <span className="truncate">Edit Tags & Art...</span>
                                 </div>
                               </button>
@@ -1579,7 +1592,7 @@ export const TrackList: React.FC<TrackListProps> = ({
           } animate-in fade-in slide-in-from-bottom-3 duration-200 select-none`}
         >
           {/* Selected Count Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#19E6A0]/15 text-[#19E6A0] text-xs font-semibold border border-[#19E6A0]/30 shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--accent-muted)] text-[var(--accent)] text-xs font-semibold border border-[var(--accent-border)] shrink-0">
             <Check className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>
               {selectedTracksInOrder.length}{' '}
@@ -1594,10 +1607,10 @@ export const TrackList: React.FC<TrackListProps> = ({
             <button
               type="button"
               onClick={() => setIsPlaylistDropdownOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[#19E6A0] text-xs font-medium border border-[#2F2D3D] transition-all duration-150 cursor-pointer active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[var(--accent)] text-xs font-medium border border-[#2F2D3D] transition-all duration-150 cursor-pointer active:scale-95 shrink-0"
               title="Add selected songs to playlist"
             >
-              <ListPlus className="w-3.5 h-3.5 text-[#19E6A0]" />
+              <ListPlus className="w-3.5 h-3.5 text-[var(--accent)]" />
               <span>Add to Playlist</span>
               <ChevronUp
                 className={`w-3 h-3 text-[#777381] transition-transform duration-200 ${
@@ -1622,10 +1635,10 @@ export const TrackList: React.FC<TrackListProps> = ({
                     setIsPlaylistDropdownOpen(false);
                     setIsNewPlaylistModalOpen(true);
                   }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all flex items-center gap-2 text-xs font-semibold cursor-pointer group"
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-[var(--accent)] hover:bg-[var(--accent-muted)] active:scale-[0.98] transition-all flex items-center gap-2 text-xs font-semibold cursor-pointer group"
                 >
-                  <div className="w-6 h-6 rounded-lg bg-[#19E6A0]/20 flex items-center justify-center shrink-0">
-                    <Plus className="w-3.5 h-3.5 text-[#19E6A0]" />
+                  <div className="w-6 h-6 rounded-lg bg-[var(--accent-muted)] flex items-center justify-center shrink-0">
+                    <Plus className="w-3.5 h-3.5 text-[var(--accent)]" />
                   </div>
                   <span className="truncate">New Playlist with selected</span>
                 </button>
@@ -1648,8 +1661,8 @@ export const TrackList: React.FC<TrackListProps> = ({
                             <div
                               className="w-4 h-4 rounded-md shrink-0 flex items-center justify-center text-[9px] font-bold"
                               style={{
-                                background: pl.coverColor ? `${pl.coverColor}25` : '#19E6A025',
-                                color: pl.coverColor || '#19E6A0',
+                                background: pl.coverColor ? `${pl.coverColor}25` : 'var(--accent-muted)',
+                                color: pl.coverColor || 'var(--accent)',
                               }}
                             >
                               <ListMusic className="w-2.5 h-2.5" />
@@ -1672,10 +1685,10 @@ export const TrackList: React.FC<TrackListProps> = ({
           <button
             type="button"
             onClick={handleBatchAddToQueue}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[#19E6A0] text-xs font-medium border border-[#2F2D3D] transition-all duration-150 cursor-pointer active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[var(--accent)] text-xs font-medium border border-[#2F2D3D] transition-all duration-150 cursor-pointer active:scale-95 shrink-0"
             title="Queue all selected tracks"
           >
-            <ListMusic className="w-3.5 h-3.5 text-[#19E6A0]" />
+            <ListMusic className="w-3.5 h-3.5 text-[var(--accent)]" />
             <span>Add to Queue</span>
           </button>
 
@@ -1683,10 +1696,10 @@ export const TrackList: React.FC<TrackListProps> = ({
           <button
             type="button"
             onClick={handleBatchPlay}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[#19E6A0] text-xs font-medium border border-[#2F2D3D] transition-all duration-150 cursor-pointer active:scale-95 shrink-0"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[var(--accent)] text-xs font-medium border border-[#2F2D3D] transition-all duration-150 cursor-pointer active:scale-95 shrink-0"
             title="Play selected tracks"
           >
-            <Play className="w-3 h-3 fill-current text-[#19E6A0]" />
+            <Play className="w-3 h-3 fill-current text-[var(--accent)]" />
             <span>Play</span>
           </button>
 
@@ -1748,7 +1761,7 @@ export const TrackList: React.FC<TrackListProps> = ({
               /* Batch Context Menu */
               <>
                 <div className="px-2.5 py-1.5 border-b border-[#25232F] mb-1">
-                  <div className="flex items-center gap-1.5 text-[#19E6A0] font-semibold text-xs">
+                  <div className="flex items-center gap-1.5 text-[var(--accent)] font-semibold text-xs">
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>{selectedTracksInOrder.length} songs selected</span>
                   </div>
@@ -1761,7 +1774,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <Play className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 fill-[#19E6A0]" />
+                    <Play className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 fill-[var(--accent)]" />
                     <span className="truncate">Play Selection</span>
                   </div>
                 </button>
@@ -1773,7 +1786,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <ListPlus className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                    <ListPlus className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 transition-transform duration-200 group-hover:scale-110" />
                     <span className="truncate">Add to Queue</span>
                   </div>
                 </button>
@@ -1806,9 +1819,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                       setContextMenu(null);
                       setIsNewPlaylistModalOpen(true);
                     }}
-                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-semibold"
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[var(--accent)] hover:bg-[var(--accent-muted)] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-semibold"
                   >
-                    <Plus className="w-3 h-3 text-[#19E6A0]" />
+                    <Plus className="w-3 h-3 text-[var(--accent)]" />
                     <span className="truncate">New Playlist...</span>
                   </button>
 
@@ -1823,7 +1836,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           className="w-full px-2.5 py-1 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 cursor-pointer group text-xs"
                         >
                           <span className="truncate flex-1">{pl.name}</span>
-                          <Plus className="w-3 h-3 text-[#65616F] group-hover:text-[#19E6A0] shrink-0" />
+                          <Plus className="w-3 h-3 text-[#65616F] group-hover:text-[var(--accent)] shrink-0" />
                         </button>
                       ))}
                     </div>
@@ -1894,9 +1907,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     {currentTrack?.id === contextMenu.track.id && isPlaying ? (
-                      <Pause className="w-3.5 h-3.5 text-[#19E6A0] shrink-0" />
+                      <Pause className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
                     ) : (
-                      <Play className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 fill-[#19E6A0]" />
+                      <Play className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 fill-[var(--accent)]" />
                     )}
                     <span className="truncate">
                       {currentTrack?.id === contextMenu.track.id && isPlaying ? 'Pause' : 'Play Now'}
@@ -1914,7 +1927,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <ListPlus className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                    <ListPlus className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 transition-transform duration-200 group-hover:scale-110" />
                     <span className="truncate">Add to Queue</span>
                   </div>
                 </button>
@@ -1958,9 +1971,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                       setContextMenu(null);
                       setIsNewPlaylistModalOpen(true);
                     }}
-                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-semibold"
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[var(--accent)] hover:bg-[var(--accent-muted)] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-semibold"
                   >
-                    <Plus className="w-3 h-3 text-[#19E6A0]" />
+                    <Plus className="w-3 h-3 text-[var(--accent)]" />
                     <span className="truncate">New Playlist...</span>
                   </button>
 
@@ -1980,10 +1993,10 @@ export const TrackList: React.FC<TrackListProps> = ({
                         );
                         setContextMenu(null);
                       }}
-                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-medium"
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[var(--accent)] hover:bg-[var(--accent-muted)] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-medium"
                       title={`Create playlist containing all songs including ${contextMenu.track.artist}`}
                     >
-                      <Mic2 className="w-3 h-3 text-[#19E6A0]" />
+                      <Mic2 className="w-3 h-3 text-[var(--accent)]" />
                       <span className="truncate">Playlist for "{cleanArtistName(contextMenu.track.artist)}"</span>
                     </button>
                   )}
@@ -2004,10 +2017,10 @@ export const TrackList: React.FC<TrackListProps> = ({
                         );
                         setContextMenu(null);
                       }}
-                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#19E6A0] hover:bg-[#19E6A0]/10 active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-medium"
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[var(--accent)] hover:bg-[var(--accent-muted)] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs font-medium"
                       title={`Create playlist for album "${contextMenu.track.album}"`}
                     >
-                      <Disc3 className="w-3 h-3 text-[#19E6A0]" />
+                      <Disc3 className="w-3 h-3 text-[var(--accent)]" />
                       <span className="truncate">Playlist for "{contextMenu.track.album}"</span>
                     </button>
                   )}
@@ -2025,7 +2038,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                           className="w-full px-2.5 py-1 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 cursor-pointer group text-xs"
                         >
                           <span className="truncate flex-1">{pl.name}</span>
-                          <Plus className="w-3 h-3 text-[#65616F] group-hover:text-[#19E6A0] shrink-0" />
+                          <Plus className="w-3 h-3 text-[#65616F] group-hover:text-[var(--accent)] shrink-0" />
                         </button>
                       ))}
                     </div>
@@ -2080,7 +2093,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                     className="w-full px-2.5 py-1.5 rounded-lg text-left text-[#AAA6B2] hover:text-[#F4F2F7] hover:bg-[#1E1D26] active:scale-[0.98] transition-all duration-200 flex items-center justify-between cursor-pointer group"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Pencil className="w-3.5 h-3.5 text-[#19E6A0] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                      <Pencil className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 transition-transform duration-200 group-hover:scale-110" />
                       <span className="truncate">Edit Tags & Art...</span>
                     </div>
                   </button>
@@ -2150,7 +2163,7 @@ export const TrackList: React.FC<TrackListProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ListPlus className="w-4 h-4 text-[#19E6A0]" />
+                  <ListPlus className="w-4 h-4 text-[var(--accent)]" />
                   <h3 className="text-sm font-bold text-[#F4F2F7]">New Playlist from Selection</h3>
                 </div>
                 <button
@@ -2179,7 +2192,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   autoFocus
                   className={`w-full px-3 py-2.5 rounded-xl ${
                     isGlass ? 'bg-[#100F14]/70 border-white/[0.1]' : 'bg-[#100F14] border-[#282631]'
-                  } border text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors`}
+                  } border text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/50 transition-colors`}
                 />
               </div>
 
@@ -2194,7 +2207,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   onChange={(e) => setNewPlaylistDesc(e.target.value)}
                   className={`w-full px-3 py-2.5 rounded-xl ${
                     isGlass ? 'bg-[#100F14]/70 border-white/[0.1]' : 'bg-[#100F14] border-[#282631]'
-                  } border text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[#19E6A0]/50 transition-colors`}
+                  } border text-xs text-[#F4F2F7] placeholder-[#65616F] focus:outline-none focus:border-[var(--accent)]/50 transition-colors`}
                 />
               </div>
 
@@ -2228,7 +2241,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                 <button
                   type="submit"
                   disabled={!newPlaylistName.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#19E6A0] hover:bg-[#35F0B1] disabled:opacity-50 text-black font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-[var(--accent-contrast,#000000)] font-semibold text-xs shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
                 >
                   Create Playlist
                 </button>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Trash2, X, Music } from 'lucide-react';
@@ -19,6 +19,8 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const isBackdropMouseDownRef = useRef(false);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -29,6 +31,17 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    isBackdropMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
 
   // Resolve cover preview
   const playlistTracks = playlist ? tracks.filter((t) => playlist.track_ids.includes(t.id)) : [];
@@ -46,7 +59,8 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 select-none"
-          onClick={onClose}
+          onMouseDown={handleBackdropMouseDown}
+          onClick={handleBackdropClick}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -54,6 +68,7 @@ export const DeletePlaylistModal: React.FC<DeletePlaylistModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
             className="w-full max-w-md rounded-2xl bg-[#0D0B13]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.85)] p-6 space-y-5 text-left"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"

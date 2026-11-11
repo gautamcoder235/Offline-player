@@ -108,7 +108,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
                   playTrack(selectedAlbum.tracks[0], selectedAlbum.tracks, `album_${selectedAlbum.key}`);
                 }
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#19E6A0] hover:bg-[#16CE8F] text-black text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               {isThisAlbumPlaying ? (
                 <>
@@ -126,17 +126,17 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
             <button
               type="button"
               onClick={() => handleCreatePlaylist(selectedAlbum)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[#19E6A0] border border-[#2D2B3B] hover:border-[#19E6A0]/40 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1D27] hover:bg-[#282635] text-[#F4F2F7] hover:text-[var(--accent)] border border-[#2D2B3B] hover:border-[var(--accent-border)] text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
               title="Save this album into your playlists"
             >
               {createdFeedback ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-[#19E6A0]" />
-                  <span className="text-[#19E6A0]">Playlist Created!</span>
+                  <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
+                  <span className="text-[var(--accent)]">Playlist Created!</span>
                 </>
               ) : (
                 <>
-                  <ListPlus className="w-3.5 h-3.5 text-[#19E6A0]" />
+                  <ListPlus className="w-3.5 h-3.5 text-[var(--accent)]" />
                   <span>Save as Playlist</span>
                 </>
               )}
@@ -192,7 +192,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
                 whileHover={{ y: -5, scale: 1.01 }}
                 transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                 onClick={() => setSelectedAlbumKey(album.key)}
-                className="group relative p-3.5 rounded-2xl bg-[#121118]/70 hover:bg-[#181622]/90 border border-white/[0.06] hover:border-[#19E6A0]/30 shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_8px_30px_rgba(25,230,160,0.12)] backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col gap-3"
+                className="group relative p-3.5 rounded-2xl bg-[#121118]/70 hover:bg-[#181622]/90 border border-white/[0.06] hover:border-[var(--accent-border)] shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_8px_30px_var(--accent-glow)] backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col gap-3"
               >
                 {/* Album Cover Art Tile */}
                 <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#16151E] border border-white/[0.08] relative shadow-lg">
@@ -225,7 +225,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
                           playTrack(album.tracks[0], album.tracks, `album_${album.key}`);
                         }
                       }}
-                      className="w-11 h-11 rounded-full bg-[#19E6A0] hover:bg-[#35F0B1] text-black shadow-[0_4px_20px_rgba(25,230,160,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                      className="w-11 h-11 rounded-full bg-[var(--accent)] hover:opacity-95 text-[var(--accent-contrast,#000000)] shadow-[0_4px_20px_var(--accent-glow)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                       title={isThisAlbumPlaying ? 'Pause Album' : 'Play Album'}
                       aria-label={isThisAlbumPlaying ? 'Pause Album' : 'Play Album'}
                     >
@@ -243,7 +243,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
                         e.stopPropagation();
                         handleCreatePlaylist(album);
                       }}
-                      className="w-9 h-9 rounded-full bg-[#16151E]/90 hover:bg-[#19E6A0] text-[#AAA6B2] hover:text-black border border-white/[0.12] hover:border-[#19E6A0] shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      className="w-9 h-9 rounded-full bg-[#16151E]/90 hover:bg-[var(--accent)] text-[#AAA6B2] hover:text-[var(--accent-contrast,#000000)] border border-white/[0.12] hover:border-[var(--accent)] shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
                       title={`Save "${album.name}" as a playlist`}
                       aria-label={`Save "${album.name}" as a playlist`}
                     >
@@ -254,7 +254,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
 
                 {/* Album Info */}
                 <div className="min-w-0">
-                  <h3 className="text-xs font-bold text-[#F4F2F7] group-hover:text-[#19E6A0] truncate transition-colors">
+                  <h3 className="text-xs font-bold text-[#F4F2F7] group-hover:text-[var(--accent)] truncate transition-colors">
                     {album.name}
                   </h3>
                   <p className="text-[11px] text-[#9A96A5] truncate mt-0.5">
@@ -271,7 +271,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({
                       </>
                     )}
                     {album.isCompilation && (
-                      <span className="text-[9px] font-semibold text-[#19E6A0] bg-[#19E6A0]/10 border border-[#19E6A0]/20 px-1.5 py-0.2 rounded">
+                      <span className="text-[9px] font-semibold text-[var(--accent)] bg-[var(--accent-muted)] border border-[var(--accent-border)] px-1.5 py-0.2 rounded">
                         Compilation
                       </span>
                     )}
