@@ -673,14 +673,14 @@ button:hover .discord-icon-spin-half,
 .group:hover .discord-icon-prev,
 button:hover .discord-icon-prev,
 .discord-icon-prev:hover {
-  transform: scale(1.18) translateX(-2px);
+  transform: scale(1.10) translateX(-1px);
 }
 
 /* 13. Skip Forward / Next Directional Nudge */
 .group:hover .discord-icon-next,
 button:hover .discord-icon-next,
 .discord-icon-next:hover {
-  transform: scale(1.18) translateX(2px);
+  transform: scale(1.10) translateX(1px);
 }
 
 /* Mint Luminance Glow */
