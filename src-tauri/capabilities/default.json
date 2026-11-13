@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
+  "description": "Capability for main and tray popup windows",
+  "windows": ["main", "tray_popup"],
   "permissions": [
     "core:default",
     "core:app:default",

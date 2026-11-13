@@ -163,6 +163,7 @@ struct TrackedSession {
     state: AudioSessionState,
     peak_level: f32,
     is_self: bool,
+    is_system_sounds: bool,
     first_heard_audio: Option<Instant>,
     last_heard_audio: Option<Instant>,
     is_producing_audio: bool,
@@ -375,7 +376,10 @@ fn run_monitor_loop(
                 session.is_self = true;
             }
 
-            if session.is_self || session.pid == 0 {
+            if session.is_self || session.pid == 0 || session.is_system_sounds {
+                session.peak_level = 0.0;
+                session.is_producing_audio = false;
+                session.first_heard_audio = None;
                 continue;
             }
 
@@ -412,15 +416,22 @@ fn run_monitor_loop(
                         session.is_producing_audio = true;
                     }
                 } else {
-                    // Silence hangover: keep is_producing_audio true for 600ms before clearing
-                    // to prevent jitter between rapid pauses or quiet syllables
-                    if let Some(last_heard) = session.last_heard_audio {
-                        if now.duration_since(last_heard) > Duration::from_millis(600) {
+                    if session.is_producing_audio {
+                        // Silence hangover: keep is_producing_audio true for 600ms before clearing
+                        // to prevent jitter between rapid pauses or quiet syllables in active media
+                        if let Some(last_heard) = session.last_heard_audio {
+                            if now.duration_since(last_heard) > Duration::from_millis(600) {
+                                session.is_producing_audio = false;
+                                session.first_heard_audio = None;
+                            }
+                        } else {
                             session.is_producing_audio = false;
                             session.first_heard_audio = None;
                         }
                     } else {
-                        session.is_producing_audio = false;
+                        // Sound stopped before meeting min_audio_duration_ms (e.g. transient sound / message notification).
+                        // Immediately reset first_heard_audio so short sounds never accumulate across silence.
+                        session.first_heard_audio = None;
                     }
                 }
             } else {
@@ -436,7 +447,7 @@ fn run_monitor_loop(
         let mut session_infos = Vec::new();
 
         for session in sessions.values() {
-            if session.is_self || session.pid == 0 {
+            if session.is_self || session.pid == 0 || session.is_system_sounds {
                 continue;
             }
 
@@ -537,6 +548,7 @@ fn add_session(
         let is_self = is_self_process(pid);
         let (process_name, display_name) = get_process_info(pid);
         let meter: Option<IAudioMeterInformation> = control.cast().ok();
+        let is_system_sounds = control2.IsSystemSoundsSession() == windows::Win32::Foundation::S_OK;
 
         let events_callback: IAudioSessionEvents = SessionEventsCallback {
             session_id: id_str.clone(),
@@ -558,6 +570,7 @@ fn add_session(
                 state,
                 peak_level: 0.0,
                 is_self,
+                is_system_sounds,
                 first_heard_audio: None,
                 last_heard_audio: None,
                 is_producing_audio: false,
@@ -585,6 +598,25 @@ pub fn is_application_excluded(process_name: &str, excluded_list: &[String]) -> 
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| lower_name.clone());
 
+    // Always exclude Windows system sound hosts, notification dispatchers, and shell audio
+    if matches!(
+        stem.as_str(),
+        "shellexperiencehost"
+            | "explorer"
+            | "svchost"
+            | "audiodg"
+            | "system"
+            | "backgroundtransferhost"
+            | "runtimebroker"
+            | "systemsettings"
+            | "searchhost"
+            | "startmenuexperiencehost"
+            | "actioncenterviewhost"
+            | "toastnotification"
+    ) {
+        return true;
+    }
+
     for excluded in excluded_list {
         let ex_lower = excluded.trim().to_lowercase();
         if ex_lower.is_empty() {
@@ -607,6 +639,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_is_system_sounds_method() {
+        let _ = |c: &IAudioSessionControl2| {
+            let res: windows::core::HRESULT = unsafe { c.IsSystemSoundsSession() };
+            let is_system = res == windows::Win32::Foundation::S_OK;
+            let _ = is_system;
+        };
+    }
+
+    #[test]
     fn test_is_application_excluded() {
         let excluded = vec![
             "discord.exe".to_string(),
@@ -623,6 +664,12 @@ mod tests {
         assert!(is_application_excluded("Discord.exe", &excluded));
         assert!(is_application_excluded("steam.exe", &excluded));
         assert!(is_application_excluded("obs64.exe", &excluded));
+
+        // Built-in system notification & shell hosts
+        assert!(is_application_excluded("shellexperiencehost.exe", &excluded));
+        assert!(is_application_excluded("explorer.exe", &excluded));
+        assert!(is_application_excluded("svchost.exe", &excluded));
+        assert!(is_application_excluded("audiodg.exe", &excluded));
 
         // Non-excluded
         assert!(!is_application_excluded("chrome.exe", &excluded));

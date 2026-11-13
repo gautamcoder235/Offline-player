@@ -54,6 +54,7 @@ pub fn get_db_path() -> PathBuf {
 pub fn init_db() -> Result<Connection, rusqlite::Error> {
     let path = get_db_path();
     let conn = Connection::open(path)?;
+    conn.busy_timeout(std::time::Duration::from_secs(5))?;
 
     // Enable WAL mode & foreign keys for high-performance concurrent reads
     conn.pragma_update(None, "journal_mode", "WAL")?;

@@ -147,12 +147,39 @@ fn save_library_cache_to_disk(cache: &LibraryCache) {
     }
 }
 
+pub fn sync_streamer_authorized_roots(settings: &AppSettings) {
+    let mut roots: Vec<PathBuf> = settings
+        .music_directories
+        .iter()
+        .filter(|d| !d.trim().is_empty())
+        .map(PathBuf::from)
+        .collect();
+
+    if roots.is_empty() {
+        let default_dir = dirs::audio_dir()
+            .unwrap_or_else(|| {
+                dirs::home_dir()
+                    .map(|p| p.join("Music"))
+                    .unwrap_or_else(|| PathBuf::from("Music"))
+            });
+        roots.push(default_dir);
+    }
+
+    if !settings.download_directory.trim().is_empty() {
+        roots.push(PathBuf::from(&settings.download_directory));
+    }
+
+    streamer::set_authorized_roots(roots);
+}
+
 pub fn update_track_session_urls(track: &mut TrackMetadata) {
-    let current_port = streamer::SERVER_PORT.load(std::sync::atomic::Ordering::SeqCst);
+    if !track.file_path.is_empty() {
+        streamer::authorize_file(Path::new(&track.file_path));
+    }
     track.stream_url = streamer::get_stream_url(&track.file_path);
     if let Some(ref cover) = track.cover_art {
-        if let Some(pos) = cover.find("/cover?") {
-            track.cover_art = Some(format!("http://127.0.0.1:{}{}", current_port, &cover[pos..]));
+        if cover.contains("/cover?") {
+            track.cover_art = Some(streamer::refresh_cover_url(cover));
         }
     } else {
         // If track has no cover URL, check if artwork exists in APPDATA covers dir
@@ -240,6 +267,7 @@ async fn scan_library(state: State<'_, AppState>, directories: Option<Vec<String
             if !p.exists() || !p.is_dir() {
                 continue;
             }
+            streamer::authorize_root(p);
 
             for entry in WalkDir::new(p).follow_links(true).into_iter().flatten() {
                 if entry.file_type().is_file() {
@@ -334,6 +362,11 @@ fn get_audio_url(file_path: String) -> String {
 }
 
 #[tauri::command]
+fn get_streamer_token() -> String {
+    streamer::get_auth_token().to_string()
+}
+
+#[tauri::command]
 fn start_download(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -347,6 +380,11 @@ fn start_download(
             Some(lock.download_directory.clone())
         }
     };
+    if let Some(ref dir) = effective_output {
+        if !dir.trim().is_empty() {
+            streamer::authorize_root(Path::new(dir));
+        }
+    }
     run_download(app, &state.downloader, url, effective_output)
 }
 
@@ -365,6 +403,20 @@ fn save_track_lyrics(file_path: String, lyrics_content: String) -> Result<(), St
     save_lrc_file(&file_path, &lyrics_content)
 }
 
+fn sanitize_explorer_path(path: &Path) -> Result<String, String> {
+    let canonical = std::fs::canonicalize(path).map_err(|e| format!("Invalid path: {}", e))?;
+    let mut s = canonical.to_string_lossy().replace('/', "\\");
+    if s.starts_with(r"\\?\UNC\") {
+        s = format!(r"\\{}", &s[8..]);
+    } else if s.starts_with(r"\\?\") {
+        s = s[4..].to_string();
+    }
+    if s.contains('"') || s.chars().any(|c| c.is_control()) {
+        return Err("Unsupported characters in file path".to_string());
+    }
+    Ok(s)
+}
+
 #[tauri::command]
 fn open_in_explorer(file_path: String) -> Result<(), String> {
     let mut clean_path = file_path.replace('/', "\\");
@@ -377,12 +429,9 @@ fn open_in_explorer(file_path: String) -> Result<(), String> {
             if parent.exists() {
                 #[cfg(windows)]
                 {
-                    use std::os::windows::process::CommandExt;
+                    let safe_parent = sanitize_explorer_path(parent)?;
                     use std::process::Command;
-                    let parent_str = parent.to_string_lossy().replace('/', "\\");
-                    let _ = Command::new("explorer")
-                        .raw_arg(format!("\"{}\"", parent_str))
-                        .spawn();
+                    let _ = Command::new("explorer").arg(safe_parent).spawn();
                     return Ok(());
                 }
             }
@@ -394,13 +443,12 @@ fn open_in_explorer(file_path: String) -> Result<(), String> {
     {
         use std::os::windows::process::CommandExt;
         use std::process::Command;
+        let safe_path = sanitize_explorer_path(path)?;
         if path.is_dir() {
-            let _ = Command::new("explorer")
-                .raw_arg(format!("\"{}\"", clean_path))
-                .spawn();
+            let _ = Command::new("explorer").arg(safe_path).spawn();
         } else {
             let _ = Command::new("explorer")
-                .raw_arg(format!("/select,\"{}\"", clean_path))
+                .raw_arg(format!("/select,\"{}\"", safe_path))
                 .spawn();
         }
     }
@@ -441,6 +489,7 @@ fn get_settings(state: State<'_, AppState>) -> AppSettings {
 #[tauri::command]
 fn save_settings(state: State<'_, AppState>, settings: AppSettings) -> AppSettings {
     persist_settings(&settings);
+    sync_streamer_authorized_roots(&settings);
     let mut lock = state.settings.lock().unwrap();
     *lock = settings.clone();
     settings
@@ -825,6 +874,7 @@ async fn handle_dropped_paths(paths: Vec<String>) -> Result<Vec<TrackMetadata>, 
             if p.is_file() {
                 if let Some(ext) = p.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()) {
                     if valid_extensions.contains(&ext.as_str()) {
+                        streamer::authorize_file(&p);
                         let path_str = p.to_string_lossy().to_string();
                         if seen.insert(path_str) {
                             if let Some(meta) = metadata::extract_metadata(&p) {
@@ -834,11 +884,13 @@ async fn handle_dropped_paths(paths: Vec<String>) -> Result<Vec<TrackMetadata>, 
                     }
                 }
             } else if p.is_dir() {
+                streamer::authorize_root(&p);
                 for entry in WalkDir::new(&p).follow_links(true).into_iter().filter_map(|e| e.ok()) {
                     if entry.file_type().is_file() {
                         let ep = entry.path();
                         if let Some(ext) = ep.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()) {
                             if valid_extensions.contains(&ext.as_str()) {
+                                streamer::authorize_file(ep);
                                 let path_str = ep.to_string_lossy().to_string();
                                 if seen.insert(path_str) {
                                     if let Some(meta) = metadata::extract_metadata(ep) {
@@ -1282,6 +1334,7 @@ pub fn run() {
     println!("MusicVault local audio streaming server started on 127.0.0.1:{}", port);
 
     let initial_settings = load_persisted_settings();
+    sync_streamer_authorized_roots(&initial_settings);
     let db_conn = match db::init_db() {
         Ok(c) => c,
         Err(e) => {
@@ -1467,6 +1520,7 @@ pub fn run() {
             load_cached_library,
             scan_library,
             get_audio_url,
+            get_streamer_token,
             start_download,
             cancel_download,
             get_track_lyrics,
@@ -1526,6 +1580,7 @@ mod tests {
     #[test]
     fn test_update_track_session_urls() {
         streamer::SERVER_PORT.store(49200, Ordering::SeqCst);
+        let tok = streamer::get_auth_token();
 
         let mut track = TrackMetadata {
             id: "track_123".to_string(),
@@ -1538,21 +1593,23 @@ mod tests {
             year: Some(2025),
             bitrate: Some(320),
             size_bytes: 4096,
-            cover_art: Some("http://127.0.0.1:11111/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3".to_string()),
+            cover_art: Some("http://127.0.0.1:11111/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3&token=old".to_string()),
             stream_url: "http://127.0.0.1:11111/audio?file=C%3A%5CMusic%5Csong.mp3".to_string(),
             lyrics: None,
             replay_gain: None,
             track_number: Some(1),
             disc_number: Some(1),
             genre: Some("Rock".to_string()),
+            ..Default::default()
         };
 
         update_track_session_urls(&mut track);
 
         assert!(track.stream_url.starts_with("http://127.0.0.1:49200/audio?file="));
+        assert!(track.stream_url.ends_with(&format!("&token={}", tok)));
         assert_eq!(
             track.cover_art,
-            Some("http://127.0.0.1:49200/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3".to_string())
+            Some(streamer::get_cover_url("abc", r"C:\Music\song.mp3"))
         );
 
         // Switch to a new session port (simulating app restart)
@@ -1560,9 +1617,10 @@ mod tests {
         update_track_session_urls(&mut track);
 
         assert!(track.stream_url.starts_with("http://127.0.0.1:56789/audio?file="));
+        assert!(track.stream_url.ends_with(&format!("&token={}", tok)));
         assert_eq!(
             track.cover_art,
-            Some("http://127.0.0.1:56789/cover?id=abc&file=C%3A%5CMusic%5Csong.mp3".to_string())
+            Some(streamer::get_cover_url("abc", r"C:\Music\song.mp3"))
         );
     }
 
@@ -1587,6 +1645,7 @@ mod tests {
             track_number: None,
             disc_number: None,
             genre: None,
+            ..Default::default()
         };
 
         cache.entries.insert(
@@ -1635,6 +1694,7 @@ mod tests {
             track_number: None,
             disc_number: None,
             genre: None,
+            ..Default::default()
         };
 
         update_track_session_urls(&mut track);
@@ -1669,6 +1729,7 @@ mod tests {
             track_number: None,
             disc_number: None,
             genre: None,
+            ..Default::default()
         };
         let track_b = TrackMetadata {
             id: "b".to_string(),
@@ -1688,6 +1749,7 @@ mod tests {
             track_number: None,
             disc_number: None,
             genre: None,
+            ..Default::default()
         };
 
         cache.entries.insert("C:\\FolderA\\songA.mp3".to_string(), LibraryCacheEntry { mtime: 1, size: 500, track: track_a });

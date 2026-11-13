@@ -19,7 +19,7 @@ impl Default for SmartPlaybackSettings {
             auto_pause: true,
             auto_resume: true,
             resume_delay_ms: 2000,
-            min_audio_duration_ms: 300,
+            min_audio_duration_ms: 1200,
             activity_threshold: 0.005,
             excluded_applications: vec![
                 "discord.exe".to_string(),
@@ -41,7 +41,12 @@ pub fn load_smart_settings() -> SmartPlaybackSettings {
     let path = get_smart_settings_path();
     if path.exists() {
         if let Ok(data) = std::fs::read_to_string(&path) {
-            if let Ok(settings) = serde_json::from_str::<SmartPlaybackSettings>(&data) {
+            if let Ok(mut settings) = serde_json::from_str::<SmartPlaybackSettings>(&data) {
+                // Automatically upgrade legacy under-threshold duration (e.g. 300ms) that falsely caught notifications
+                if settings.min_audio_duration_ms < 800 {
+                    settings.min_audio_duration_ms = 1200;
+                    save_smart_settings(&settings);
+                }
                 return settings;
             }
         }

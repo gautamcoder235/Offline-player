@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[cfg(windows)]
 use windows::Win32::Foundation::CloseHandle;
@@ -42,8 +42,16 @@ pub struct SessionTrackingData {
     pub last_heard_audio: Option<Instant>,
 }
 
+const PID_CACHE_TTL: Duration = Duration::from_secs(10);
+const PID_CACHE_MAX_ENTRIES: usize = 1024;
+
+struct PidClassification {
+    is_self: bool,
+    evaluated_at: Instant,
+}
+
 static PROCESS_NAME_CACHE: Mutex<Option<HashMap<u32, (String, String)>>> = Mutex::new(None);
-static KNOWN_SELF_PIDS: Mutex<Option<HashSet<u32>>> = Mutex::new(None);
+static PID_CLASSIFICATION_CACHE: Mutex<Option<HashMap<u32, PidClassification>>> = Mutex::new(None);
 
 #[cfg(windows)]
 /// Snapshot the entire process tree on Windows, returning a map of PID -> (parent_pid, exe_name).
@@ -80,19 +88,59 @@ pub fn is_generic_host_process(name: &str) -> bool {
     )
 }
 
+#[cfg(windows)]
+fn is_self_process_in_tree(pid: u32, tree: &HashMap<u32, (u32, String)>) -> (bool, Vec<u32>) {
+    let my_pid = std::process::id();
+    let mut curr = pid;
+    let mut visited = Vec::new();
+    let mut is_descendant = false;
+
+    for _ in 0..15 {
+        visited.push(curr);
+        if curr == my_pid {
+            is_descendant = true;
+            break;
+        }
+        if let Some(&(parent_pid, _)) = tree.get(&curr) {
+            if parent_pid == 0 || parent_pid == curr {
+                break;
+            }
+            curr = parent_pid;
+        } else {
+            break;
+        }
+    }
+
+    (is_descendant, visited)
+}
+
+fn store_pid_classification(pid: u32, is_self: bool, now: Instant) {
+    if let Ok(mut guard) = PID_CLASSIFICATION_CACHE.lock() {
+        let map = guard.get_or_insert_with(HashMap::new);
+        if map.len() >= PID_CACHE_MAX_ENTRIES {
+            map.retain(|_, v| now.duration_since(v.evaluated_at) < PID_CACHE_TTL);
+        }
+        map.insert(pid, PidClassification { is_self, evaluated_at: now });
+    }
+}
+
 /// Check if a process ID belongs to our application or its child processes (e.g. our own WebView2 runtime).
+/// Caches both positive and negative classifications with a TTL to eliminate repeated process tree snapshots.
 pub fn is_self_process(pid: u32) -> bool {
     let my_pid = std::process::id();
     if pid == my_pid || pid == 0 {
         return true;
     }
 
-    // Fast path: check known self PIDs cache
-    {
-        let cache = KNOWN_SELF_PIDS.lock().unwrap();
-        if let Some(ref set) = *cache {
-            if set.contains(&pid) {
-                return true;
+    let now = Instant::now();
+
+    // Fast path: check cached positive & negative PID classifications
+    if let Ok(guard) = PID_CLASSIFICATION_CACHE.lock() {
+        if let Some(ref map) = *guard {
+            if let Some(entry) = map.get(&pid) {
+                if entry.is_self || now.duration_since(entry.evaluated_at) < PID_CACHE_TTL {
+                    return entry.is_self;
+                }
             }
         }
     }
@@ -100,37 +148,20 @@ pub fn is_self_process(pid: u32) -> bool {
     #[cfg(windows)]
     {
         let tree = get_process_tree();
-        let mut curr = pid;
-        let mut visited = Vec::new();
-        let mut is_descendant = false;
-
-        // Trace up the process ancestor chain to see if my_pid is an ancestor
-        for _ in 0..15 {
-            visited.push(curr);
-            if curr == my_pid {
-                is_descendant = true;
-                break;
-            }
-            if let Some(&(parent_pid, _)) = tree.get(&curr) {
-                if parent_pid == 0 || parent_pid == curr {
-                    break;
-                }
-                curr = parent_pid;
-            } else {
-                break;
-            }
-        }
+        let (is_descendant, visited) = is_self_process_in_tree(pid, &tree);
 
         if is_descendant {
-            let mut cache = KNOWN_SELF_PIDS.lock().unwrap();
-            let set = cache.get_or_insert_with(HashSet::new);
             for p in visited {
-                set.insert(p);
+                store_pid_classification(p, true, now);
             }
             return true;
+        } else {
+            store_pid_classification(pid, false, now);
+            return false;
         }
     }
 
+    #[cfg(not(windows))]
     false
 }
 
@@ -156,14 +187,21 @@ pub fn get_process_info(pid: u32) -> (String, String) {
     {
         let tree = get_process_tree();
         let my_pid = std::process::id();
+        let now = Instant::now();
 
-        // 1. If this process is our self process, identify as our music player
-        if is_self_process(pid) {
+        // 1. Check/evaluate self process using the already-captured process tree
+        let (is_self, visited) = is_self_process_in_tree(pid, &tree);
+        if is_self {
+            for p in visited {
+                store_pid_classification(p, true, now);
+            }
             let res = ("offline-player.exe".to_string(), "Spotify Offline".to_string());
             let mut cache = PROCESS_NAME_CACHE.lock().unwrap();
             let map = cache.get_or_insert_with(HashMap::new);
             map.insert(pid, res.clone());
             return res;
+        } else {
+            store_pid_classification(pid, false, now);
         }
 
         // 2. Look up the process entry in the process tree
@@ -302,6 +340,15 @@ mod tests {
         let current_pid = std::process::id();
         assert!(is_self_process(current_pid));
         assert!(is_self_process(0));
+        assert!(!is_self_process(999999999));
+
+        // Verify negative classification was cached in PID_CLASSIFICATION_CACHE
+        {
+            let guard = PID_CLASSIFICATION_CACHE.lock().unwrap();
+            let map = guard.as_ref().expect("PID cache should be initialized");
+            let entry = map.get(&999999999).expect("Negative PID classification should be cached");
+            assert!(!entry.is_self);
+        }
         assert!(!is_self_process(999999999));
     }
 }

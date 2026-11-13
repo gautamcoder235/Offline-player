@@ -214,6 +214,7 @@ export async function resolveOnlineStream(title: string, artist: string): Promis
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Restore last-played track metadata and playback position from localStorage
   const [savedLastPlayed] = useState(loadSavedLastPlayed);
+  const sessionTokenRef = useRef<string | null>(null);
 
   const [tracks, setTracks] = useState<Track[]>(loadInitialTracks);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(() => savedLastPlayed?.track || null);
@@ -544,6 +545,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const crossfadeDurationRef = useRef(crossfadeDuration);
   crossfadeDurationRef.current = crossfadeDuration;
   const isCrossfadingRef = useRef(false);
+  const crossfadeResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playbackRequestIdRef = useRef(0);
+  const isTransitioningTrackRef = useRef(false);
+  const [playbackSettledSeq, setPlaybackSettledSeq] = useState(0);
 
   const setCrossfadeDuration = useCallback((sec: number) => {
     const clamped = Math.max(0, Math.min(12, Math.round(sec)));
@@ -890,14 +895,32 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     let isCancelled = false;
 
+    const syncTracksIntoContext = (freshList: Track[]) => {
+      if (contextTracksRef.current.length === 0) {
+        setContextTracks(freshList);
+        return;
+      }
+      const byId = new Map(freshList.map((t) => [t.id, t]));
+      setContextTracks((prev) =>
+        prev.map((t) => byId.get(t.id) ?? t)
+      );
+    };
+
     const initLibrary = async () => {
+      try {
+        const token = await invoke<string>('get_streamer_token');
+        if (!isCancelled && token) {
+          sessionTokenRef.current = token;
+        }
+      } catch {
+        // Fallback when running in browser preview
+      }
+
       try {
         const cachedTracks = await invoke<Track[]>('load_cached_library');
         if (!isCancelled && cachedTracks && cachedTracks.length > 0) {
           setTracks(cachedTracks);
-          if (contextTracksRef.current.length === 0) {
-            setContextTracks(cachedTracks);
-          }
+          syncTracksIntoContext(cachedTracks);
           if (currentTrackRef.current) {
             const cur = currentTrackRef.current;
             const found = cachedTracks.find(
@@ -924,9 +947,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
         if (!isCancelled && scannedTracks) {
           setTracks(scannedTracks);
-          if (contextTracksRef.current.length === 0) {
-            setContextTracks(scannedTracks);
-          }
+          syncTracksIntoContext(scannedTracks);
           if (currentTrackRef.current) {
             const cur = currentTrackRef.current;
             const found = scannedTracks.find(
@@ -1111,8 +1132,32 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveLyricIndex(activeIdx);
   }, [currentTime, currentLyrics]);
 
+  const resolveSessionStreamUrl = useCallback(async (track: Track): Promise<string> => {
+    const existing = track.stream_url;
+    if (!track.file_path) return existing || '';
+    const token = sessionTokenRef.current;
+    if (existing && token && existing.includes(`token=${token}`)) {
+      return existing;
+    }
+    try {
+      const fresh = await invoke<string>('get_audio_url', { filePath: track.file_path });
+      return fresh || existing || '';
+    } catch (err) {
+      console.warn('Failed to resolve fresh stream url:', err);
+      return existing || '';
+    }
+  }, []);
+
   const playTrack = useCallback(
     async (track: Track, newContextTracks?: Track[], sourcePlaylistId?: string | null) => {
+      const reqId = ++playbackRequestIdRef.current;
+      isTransitioningTrackRef.current = false;
+      isCrossfadingRef.current = false;
+      if (crossfadeResetTimerRef.current) {
+        clearTimeout(crossfadeResetTimerRef.current);
+        crossfadeResetTimerRef.current = null;
+      }
+
       if (sourcePlaylistId !== undefined) {
         setPlayingPlaylistId(sourcePlaylistId);
       }
@@ -1188,17 +1233,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const cacheKey = `${trackToPlay.artist.trim().toLowerCase()} - ${trackToPlay.title.trim().toLowerCase()}`;
 
       if (trackToPlay.file_path) {
-        // Only invoke get_audio_url if stream_url is not already populated
-        if (!streamUrl) {
-          try {
-            const fresh = await invoke<string>('get_audio_url', { filePath: trackToPlay.file_path });
-            if (fresh) {
-              streamUrl = fresh;
-              trackToPlay = { ...trackToPlay, stream_url: fresh };
-            }
-          } catch (err) {
-            console.warn('Failed to resolve fresh stream url:', err);
-          }
+        const fresh = await resolveSessionStreamUrl(trackToPlay);
+        if (playbackRequestIdRef.current !== reqId) return;
+        if (fresh) {
+          streamUrl = fresh;
+          trackToPlay = { ...trackToPlay, stream_url: fresh };
         }
       } else {
         // Online track resolution: Check cache -> instant preview -> resolve full stream in background
@@ -1222,6 +1261,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } else {
           try {
             const resolved = await resolveOnlineStream(trackToPlay.title, trackToPlay.artist);
+            if (playbackRequestIdRef.current !== reqId) return;
             if (resolved) {
               streamUrl = resolved;
               trackToPlay = { ...trackToPlay, stream_url: resolved };
@@ -1230,6 +1270,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               trackToPlay = { ...trackToPlay, stream_url: streamUrl };
             }
           } catch (err) {
+            if (playbackRequestIdRef.current !== reqId) return;
             console.warn('Failed to resolve online stream url:', err);
             if (trackToPlay.preview_url) {
               streamUrl = trackToPlay.preview_url;
@@ -1239,16 +1280,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
+      if (playbackRequestIdRef.current !== reqId) return;
+
       try {
         if (streamUrl) {
           setIsPausedBySmartPlayback(false);
           setSmartPlaybackInterruptingApp(null);
           invoke('report_user_playback_action', { action: 'Play' }).catch(console.warn);
-          await audioEngine.loadTrack(streamUrl);
-          await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
-          setIsPlaying(true);
+          const loaded = await audioEngine.loadTrack(streamUrl);
+          if (playbackRequestIdRef.current !== reqId || !loaded) return;
+          const started = await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
+          if (playbackRequestIdRef.current !== reqId) return;
+          setIsPlaying(started);
+          setPlaybackSettledSeq((s) => s + 1);
+          if (!started) {
+            console.warn('Playback did not start for track:', trackToPlay.title);
+          }
+        } else {
+          setIsPlaying(false);
         }
       } catch (e) {
+        if (playbackRequestIdRef.current === reqId) {
+          setIsPlaying(false);
+        }
         console.error('Failed to play track:', e);
       }
 
@@ -1282,11 +1336,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }, 2000);
     },
-    [fetchLyrics, saveLastPlayed, showToast]
+    [fetchLyrics, resolveSessionStreamUrl, saveLastPlayed, showToast]
   );
 
   const transitionToTrack = useCallback(
     async (track: Track) => {
+      const reqId = ++playbackRequestIdRef.current;
+      isTransitioningTrackRef.current = true;
+
+      const idx = contextTracksRef.current.findIndex((t) => t.id === track.id);
+      if (idx !== -1) {
+        lastContextIndexRef.current = idx;
+      }
+
       let trackToPlay = track;
       const effectiveCover = track.cover_art || coverMap[track.id];
       if (effectiveCover && !trackToPlay.cover_art) {
@@ -1341,57 +1403,74 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       let streamUrl = trackToPlay.stream_url;
       const cacheKey = `${trackToPlay.artist.trim().toLowerCase()} - ${trackToPlay.title.trim().toLowerCase()}`;
 
-      if (trackToPlay.file_path) {
-        if (!streamUrl) {
-          try {
-            const fresh = await invoke<string>('get_audio_url', { filePath: trackToPlay.file_path });
-            if (fresh) {
-              streamUrl = fresh;
-              trackToPlay = { ...trackToPlay, stream_url: fresh };
-            }
-          } catch (err) {
-            console.warn('Failed to resolve fresh stream url in transition:', err);
+      try {
+        if (trackToPlay.file_path) {
+          const fresh = await resolveSessionStreamUrl(trackToPlay);
+          if (playbackRequestIdRef.current !== reqId) return;
+          if (fresh) {
+            streamUrl = fresh;
+            trackToPlay = { ...trackToPlay, stream_url: fresh };
           }
-        }
-      } else {
-        if (ONLINE_STREAM_CACHE.has(cacheKey)) {
-          streamUrl = ONLINE_STREAM_CACHE.get(cacheKey)!;
-          trackToPlay = { ...trackToPlay, stream_url: streamUrl };
-        } else if (streamUrl && streamUrl !== trackToPlay.preview_url) {
-          // Already has full stream_url
-        } else if (trackToPlay.preview_url) {
-          streamUrl = trackToPlay.preview_url;
-          trackToPlay = { ...trackToPlay, stream_url: streamUrl };
-          resolveOnlineStream(trackToPlay.title, trackToPlay.artist)
-            .then((resolved) => {
-              if (resolved && currentTrackRef.current?.id === trackToPlay.id) {
-                audioEngine.upgradeActiveStream(resolved);
-              }
-            })
-            .catch(console.warn);
         } else {
-          try {
-            const resolved = await resolveOnlineStream(trackToPlay.title, trackToPlay.artist);
-            if (resolved) {
-              streamUrl = resolved;
-              trackToPlay = { ...trackToPlay, stream_url: resolved };
-            } else if (trackToPlay.preview_url) {
-              streamUrl = trackToPlay.preview_url;
-              trackToPlay = { ...trackToPlay, stream_url: streamUrl };
-            }
-          } catch (err) {
-            console.warn('Failed to resolve online stream url in transition:', err);
-            if (trackToPlay.preview_url) {
-              streamUrl = trackToPlay.preview_url;
-              trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+          if (ONLINE_STREAM_CACHE.has(cacheKey)) {
+            streamUrl = ONLINE_STREAM_CACHE.get(cacheKey)!;
+            trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+          } else if (streamUrl && streamUrl !== trackToPlay.preview_url) {
+            // Already has full stream_url
+          } else if (trackToPlay.preview_url) {
+            streamUrl = trackToPlay.preview_url;
+            trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+            resolveOnlineStream(trackToPlay.title, trackToPlay.artist)
+              .then((resolved) => {
+                if (resolved && currentTrackRef.current?.id === trackToPlay.id) {
+                  audioEngine.upgradeActiveStream(resolved);
+                }
+              })
+              .catch(console.warn);
+          } else {
+            try {
+              const resolved = await resolveOnlineStream(trackToPlay.title, trackToPlay.artist);
+              if (playbackRequestIdRef.current !== reqId) return;
+              if (resolved) {
+                streamUrl = resolved;
+                trackToPlay = { ...trackToPlay, stream_url: resolved };
+              } else if (trackToPlay.preview_url) {
+                streamUrl = trackToPlay.preview_url;
+                trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+              }
+            } catch (err) {
+              if (playbackRequestIdRef.current !== reqId) return;
+              console.warn('Failed to resolve online stream url in transition:', err);
+              if (trackToPlay.preview_url) {
+                streamUrl = trackToPlay.preview_url;
+                trackToPlay = { ...trackToPlay, stream_url: streamUrl };
+              }
             }
           }
         }
-      }
 
-      if (streamUrl) {
-        await audioEngine.transitionTo(streamUrl, crossfadeDurationRef.current);
-        setIsPlaying(true);
+        if (playbackRequestIdRef.current !== reqId) return;
+
+        if (streamUrl) {
+          const started = await audioEngine.transitionTo(streamUrl, crossfadeDurationRef.current);
+          if (playbackRequestIdRef.current !== reqId) return;
+          setIsPlaying(started);
+          if (!started) {
+            console.warn('Transition playback did not start for track:', trackToPlay.title);
+          }
+        } else {
+          setIsPlaying(false);
+        }
+      } finally {
+        if (playbackRequestIdRef.current === reqId) {
+          isTransitioningTrackRef.current = false;
+          if (crossfadeResetTimerRef.current) {
+            clearTimeout(crossfadeResetTimerRef.current);
+            crossfadeResetTimerRef.current = null;
+          }
+          isCrossfadingRef.current = false;
+          setPlaybackSettledSeq((s) => s + 1);
+        }
       }
 
       // Fast background prefetch next track in context playlist after 2s of continuous playback
@@ -1423,7 +1502,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }, 2000);
     },
-    [fetchLyrics, saveLastPlayed, showToast]
+    [fetchLyrics, resolveSessionStreamUrl, saveLastPlayed, showToast]
   );
 
   const playQueueTrack = useCallback(
@@ -1569,10 +1648,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         repeatModeRef.current !== 'one'
       ) {
         isCrossfadingRef.current = true;
-        handleNextTrack(true);
-        setTimeout(() => {
+        if (crossfadeResetTimerRef.current) {
+          clearTimeout(crossfadeResetTimerRef.current);
+        }
+        crossfadeResetTimerRef.current = setTimeout(() => {
           isCrossfadingRef.current = false;
+          crossfadeResetTimerRef.current = null;
         }, (xfade + 1) * 1000);
+        handleNextTrack(true);
       }
 
       if (realDur > 0 && cTime >= Math.min(30, realDur * 0.5)) {
@@ -1638,11 +1721,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const mode = repeatModeRef.current;
       if (mode === 'one') {
         audioEngine.seek(0);
-        audioEngine.play();
+        audioEngine.play().then((started) => {
+          setIsPlaying(started);
+        });
       } else {
         if (!isCrossfadingRef.current) {
           handleNextTrack(false);
         }
+      }
+    };
+
+    audioEngine.onError = () => {
+      setIsPlaying(false);
+      const cur = currentTrackRef.current;
+      if (cur && !cur.file_path) {
+        const cacheKey = `${cur.artist.trim().toLowerCase()} - ${cur.title.trim().toLowerCase()}`;
+        ONLINE_STREAM_CACHE.delete(cacheKey);
       }
     };
   }, [handleNextTrack, saveLastPlayed]);
@@ -1677,12 +1771,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Audio might not be loaded yet into HTMLAudioElement if freshly restored from previous session
       const currentSrc = audioEngine.getCurrentSrc();
-      const needsLoad = !currentSrc || (audioEngine.isPaused() && currentSrc === '');
+      const staleSessionSrc = Boolean(
+        track.file_path && sessionTokenRef.current && currentSrc && !currentSrc.includes(`token=${sessionTokenRef.current}`)
+      );
+      const needsLoad = !currentSrc || staleSessionSrc || (audioEngine.isPaused() && currentSrc === '');
 
       if (needsLoad) {
         try {
           let streamUrl = track.stream_url;
-          // Refresh URL from backend in case the streaming port changed after app restart
+          // Refresh URL from backend in case the streaming port or token changed after app restart
           if (track.file_path) {
             try {
               const freshUrl = await invoke<string>('get_audio_url', { filePath: track.file_path });
@@ -1694,20 +1791,28 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               // fallback to existing stream_url
             }
           }
-          await audioEngine.loadTrack(streamUrl);
+          if (!streamUrl) {
+            setIsPlaying(false);
+            return;
+          }
+          const loaded = await audioEngine.loadTrack(streamUrl);
+          if (!loaded) {
+            setIsPlaying(false);
+            return;
+          }
           if (currentTimeRef.current > 0) {
             audioEngine.seek(currentTimeRef.current);
           }
-          await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
-          setIsPlaying(true);
+          const started = await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
+          setIsPlaying(started);
           return;
         } catch (e) {
           console.error('Failed to resume track playback:', e);
         }
       }
 
-      await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
-      setIsPlaying(true);
+      const started = await audioEngine.playWithFadeIn(volumeRef.current, 0.45);
+      setIsPlaying(started);
     }
   }, [playTrack, saveLastPlayed]);
 
@@ -1985,8 +2090,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (isPausedBySmartPlaybackRef.current && currentTrackRef.current) {
           setIsPausedBySmartPlayback(false);
           setSmartPlaybackInterruptingApp(null);
-          audioEngine.playWithFadeIn(volumeRef.current, 0.8).catch(console.warn);
-          setIsPlaying(true);
+          audioEngine.playWithFadeIn(volumeRef.current, 0.8).then((started) => {
+            setIsPlaying(started);
+          }).catch(console.warn);
         }
       });
 
@@ -2320,7 +2426,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Pre-buffer next track into idle deck for gapless & overlapping crossfade (Task 2.1)
   useEffect(() => {
-    if (!currentTrack) return;
+    if (!currentTrack || isTransitioningTrackRef.current) return;
+    const activeTrackId = currentTrack.id;
     let nextTrack: Track | null = null;
     if (queue.length > 0) {
       nextTrack = queue[0];
@@ -2329,12 +2436,26 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const idx = playlist.findIndex((t) => t.id === currentTrack.id);
       if (idx !== -1 && idx + 1 < playlist.length) {
         nextTrack = playlist[idx + 1];
+      } else if (repeatMode === 'all' && playlist.length > 1) {
+        nextTrack = playlist[0];
       }
     }
     if (nextTrack?.stream_url) {
-      audioEngine.preloadNext(nextTrack.stream_url);
+      if (nextTrack.file_path && sessionTokenRef.current && !nextTrack.stream_url.includes(`token=${sessionTokenRef.current}`)) {
+        resolveSessionStreamUrl(nextTrack).then((freshUrl) => {
+          if (
+            freshUrl &&
+            !isTransitioningTrackRef.current &&
+            currentTrackRef.current?.id === activeTrackId
+          ) {
+            audioEngine.preloadNext(freshUrl);
+          }
+        });
+      } else {
+        audioEngine.preloadNext(nextTrack.stream_url);
+      }
     }
-  }, [currentTrack?.id, queue, contextTracks, tracks]);
+  }, [currentTrack?.id, playbackSettledSeq, queue, contextTracks, tracks, repeatMode, resolveSessionStreamUrl]);
 
   // Discord Rich Presence status update (Task 4.3)
   useEffect(() => {

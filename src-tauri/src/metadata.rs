@@ -38,6 +38,35 @@ pub struct TrackMetadata {
     pub genre: Option<String>,
 }
 
+impl Default for TrackMetadata {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            file_path: String::new(),
+            title: String::new(),
+            artist: String::new(),
+            album: String::new(),
+            album_artist: None,
+            file_format: None,
+            date_added: None,
+            play_count: 0,
+            last_played: None,
+            duration: 0.0,
+            duration_str: "0:00".to_string(),
+            year: None,
+            bitrate: None,
+            size_bytes: 0,
+            cover_art: None,
+            stream_url: String::new(),
+            lyrics: None,
+            replay_gain: None,
+            track_number: None,
+            disc_number: None,
+            genre: None,
+        }
+    }
+}
+
 pub fn save_track_metadata(
     file_path: &Path,
     title: &str,
@@ -543,6 +572,7 @@ mod tests {
             track_number: Some(4),
             disc_number: Some(2),
             genre: Some("Rock".to_string()),
+            ..Default::default()
         };
         assert_eq!(meta.track_number, Some(4));
         assert_eq!(meta.disc_number, Some(2));

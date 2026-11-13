@@ -2719,11 +2719,12 @@ dependencies = [
 
 [[package]]
 name = "offline-player"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "base64 0.22.1",
  "dirs 5.0.1",
  "discord-rich-presence",
+ "getrandom 0.2.17",
  "lofty",
  "percent-encoding",
  "reqwest 0.12.28",

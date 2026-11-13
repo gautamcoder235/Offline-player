@@ -15,6 +15,7 @@ interface Deck {
   audio: HTMLAudioElement;
   sourceNode: MediaElementAudioSourceNode | null;
   gainNode: GainNode | null;
+  ignorePauseUntil: number;
 }
 
 export class AudioEngine {
@@ -71,12 +72,25 @@ export class AudioEngine {
     });
 
     audio.addEventListener('play', () => {
+      const deck = id === 'A' ? this.deckA : this.deckB;
+      deck.ignorePauseUntil = 0;
       if (this.activeDeckId === id && this.onPlay) {
         this.onPlay();
       }
     });
 
     audio.addEventListener('pause', () => {
+      const deck = id === 'A' ? this.deckA : this.deckB;
+      if (audio.ended) {
+        return;
+      }
+      if (deck.ignorePauseUntil > 0) {
+        const suppressed = performance.now() <= deck.ignorePauseUntil;
+        deck.ignorePauseUntil = 0;
+        if (suppressed) {
+          return;
+        }
+      }
       if (this.activeDeckId === id && this.onPause) {
         this.onPause();
       }
@@ -102,7 +116,25 @@ export class AudioEngine {
       audio,
       sourceNode: null,
       gainNode: null,
+      ignorePauseUntil: 0,
     };
+  }
+
+  private isSameUrl(a: string, b: string): boolean {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    try {
+      return new URL(a, window.location.href).href === new URL(b, window.location.href).href;
+    } catch {
+      return false;
+    }
+  }
+
+  private pauseDeckInternally(deck: Deck): void {
+    if (!deck.audio.paused && !deck.audio.ended) {
+      deck.ignorePauseUntil = performance.now() + 300;
+    }
+    deck.audio.pause();
   }
 
   private get activeDeck(): Deck {
@@ -231,8 +263,10 @@ export class AudioEngine {
    * Pre-load next track into the idle deck for zero-latency gapless transition or overlapping crossfade
    */
   public preloadNext(streamUrl: string): void {
+    if (!streamUrl) return;
     const idle = this.idleDeck;
-    if (idle.audio.src !== streamUrl) {
+    if (!this.isSameUrl(idle.audio.src, streamUrl) || idle.audio.error) {
+      this.pauseDeckInternally(idle);
       idle.audio.src = streamUrl;
       idle.audio.load();
     }
@@ -241,33 +275,48 @@ export class AudioEngine {
   /**
    * Transition between current active deck and idle deck with overlapping crossfade or gapless switch
    */
-  public async transitionTo(streamUrl: string, crossfadeSec: number = 0): Promise<void> {
-    this.initAudioContext();
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      await this.audioCtx.resume();
-    }
-
+  public async transitionTo(streamUrl: string, crossfadeSec: number = 0): Promise<boolean> {
+    if (!streamUrl) return false;
     const currentTransition = ++this.transitionCounter;
     if (this.crossfadeTimer) {
       clearTimeout(this.crossfadeTimer);
       this.crossfadeTimer = null;
     }
 
+    this.initAudioContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+    }
+    if (this.transitionCounter !== currentTransition) {
+      return false;
+    }
+
     const currentDeck = this.activeDeck;
     const nextDeck = this.idleDeck;
 
-    // Ensure next deck has the correct source
-    if (nextDeck.audio.src !== streamUrl) {
+    // Ensure next deck has the correct source without discarding pre-buffered media unnecessarily
+    if (!this.isSameUrl(nextDeck.audio.src, streamUrl) || nextDeck.audio.error) {
+      this.pauseDeckInternally(nextDeck);
       nextDeck.audio.src = streamUrl;
       nextDeck.audio.load();
+    } else if (nextDeck.audio.readyState >= 1 && (nextDeck.audio.ended || nextDeck.audio.currentTime > 0.05)) {
+      try {
+        nextDeck.audio.currentTime = 0;
+      } catch {
+        // ignore if not seekable yet
+      }
     }
 
     const dur = Math.max(0, crossfadeSec);
     const now = this.audioCtx ? this.audioCtx.currentTime : 0;
 
+    if (this.masterGainNode && this.audioCtx && !this.isMuted) {
+      this.masterGainNode.gain.cancelScheduledValues(now);
+      this.masterGainNode.gain.setValueAtTime(this.currentVolume, now);
+    }
+
     if (dur <= 0.05 || !this.audioCtx || !currentDeck.gainNode || !nextDeck.gainNode) {
       // Gapless switch
-      nextDeck.audio.currentTime = 0;
       if (nextDeck.gainNode && this.audioCtx) {
         nextDeck.gainNode.gain.cancelScheduledValues(now);
         nextDeck.gainNode.gain.setValueAtTime(1.0, now);
@@ -277,17 +326,17 @@ export class AudioEngine {
         currentDeck.gainNode.gain.setValueAtTime(0.0, now);
       }
       this.activeDeckId = nextDeck.id;
-      currentDeck.audio.pause();
+      this.pauseDeckInternally(currentDeck);
       try {
         await nextDeck.audio.play();
+        return this.transitionCounter === currentTransition && !nextDeck.audio.paused;
       } catch (err) {
         console.warn('Gapless playback play() was rejected:', err);
+        return false;
       }
-      return;
     }
 
     // Overlapping crossfade
-    nextDeck.audio.currentTime = 0;
     nextDeck.gainNode.gain.cancelScheduledValues(now);
     nextDeck.gainNode.gain.setValueAtTime(0.0001, now);
     nextDeck.gainNode.gain.linearRampToValueAtTime(1.0, now + dur);
@@ -303,17 +352,25 @@ export class AudioEngine {
       await nextDeck.audio.play();
     } catch (err) {
       console.warn('Crossfade next deck play() was rejected:', err);
+      this.pauseDeckInternally(currentDeck);
+      return false;
+    }
+
+    if (this.transitionCounter !== currentTransition) {
+      return false;
     }
 
     // Pause old deck only after crossfade completes if no newer transition started
     this.crossfadeTimer = setTimeout(() => {
       if (this.transitionCounter !== currentTransition) return;
-      currentDeck.audio.pause();
+      this.pauseDeckInternally(currentDeck);
       if (currentDeck.gainNode && this.audioCtx) {
         currentDeck.gainNode.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
       }
       this.crossfadeTimer = null;
     }, dur * 1000);
+
+    return !nextDeck.audio.paused;
   }
 
   /**
@@ -397,7 +454,7 @@ export class AudioEngine {
 
           setTimeout(() => {
             if (this.transitionCounter !== currentTransition) return;
-            currentDeck.audio.pause();
+            this.pauseDeckInternally(currentDeck);
             if (currentDeck.gainNode && this.audioCtx) {
               currentDeck.gainNode.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
             }
@@ -455,6 +512,7 @@ export class AudioEngine {
         resolve(false);
       };
 
+      this.pauseDeckInternally(targetDeck);
       targetDeck.audio.addEventListener('canplay', onCanPlay, { once: true });
       targetDeck.audio.addEventListener('error', onError, { once: true });
       targetDeck.audio.src = newStreamUrl;
@@ -470,46 +528,95 @@ export class AudioEngine {
     });
   }
 
-  public async loadTrack(streamUrl: string): Promise<void> {
-    this.initAudioContext();
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      await this.audioCtx.resume();
-    }
-
-    this.transitionCounter++;
+  public async loadTrack(streamUrl: string): Promise<boolean> {
+    if (!streamUrl) return false;
+    const currentTransition = ++this.transitionCounter;
     if (this.crossfadeTimer) {
       clearTimeout(this.crossfadeTimer);
       this.crossfadeTimer = null;
     }
-    this.idleDeck.audio.pause();
-    if (this.idleDeck.gainNode && this.audioCtx) {
-      this.idleDeck.gainNode.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
+
+    this.initAudioContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+    }
+    if (this.transitionCounter !== currentTransition) {
+      return false;
     }
 
+    const idle = this.idleDeck;
     const active = this.activeDeck;
+
+    // Reuse already pre-buffered idle deck for zero-stall next-track transitions even when crossfade = 0
+    if (this.isSameUrl(idle.audio.src, streamUrl) && idle.audio.readyState >= 2 && !idle.audio.error) {
+      this.pauseDeckInternally(active);
+      if (active.gainNode && this.audioCtx) {
+        active.gainNode.gain.cancelScheduledValues(this.audioCtx.currentTime);
+        active.gainNode.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
+      }
+      if (idle.audio.ended || idle.audio.currentTime > 0.05) {
+        try {
+          idle.audio.currentTime = 0;
+        } catch {
+          // ignore if not seekable
+        }
+      }
+      if (idle.gainNode && this.audioCtx) {
+        idle.gainNode.gain.cancelScheduledValues(this.audioCtx.currentTime);
+        idle.gainNode.gain.setValueAtTime(1.0, this.audioCtx.currentTime);
+      }
+      this.activeDeckId = idle.id;
+      return true;
+    }
+
+    this.pauseDeckInternally(idle);
+    if (idle.gainNode && this.audioCtx) {
+      idle.gainNode.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
+    }
+
+    this.pauseDeckInternally(active);
     if (active.gainNode && this.audioCtx) {
       active.gainNode.gain.setValueAtTime(1.0, this.audioCtx.currentTime);
     }
     active.audio.src = streamUrl;
     active.audio.load();
+    return true;
   }
 
-  public async play(): Promise<void> {
+  public async play(): Promise<boolean> {
+    const opCounter = this.transitionCounter;
     this.initAudioContext();
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume();
+    }
+    if (this.transitionCounter !== opCounter) {
+      return false;
+    }
+    const audio = this.activeDeck.audio;
+    if (audio.ended || (audio.duration > 0 && isFinite(audio.duration) && audio.currentTime >= audio.duration - 0.05)) {
+      try {
+        audio.currentTime = 0;
+      } catch {
+        // ignore if not seekable yet
+      }
     }
     try {
-      await this.activeDeck.audio.play();
+      await audio.play();
+      return this.transitionCounter === opCounter && !audio.paused;
     } catch (err) {
       console.warn('Playback play() was rejected:', err);
+      return false;
     }
   }
 
-  public async playWithFadeIn(targetVolume?: number, durationSec: number = 0.8): Promise<void> {
+  public async playWithFadeIn(targetVolume?: number, durationSec: number = 0.8): Promise<boolean> {
+    const opCounter = this.transitionCounter;
     this.initAudioContext();
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume();
+    }
+    if (this.transitionCounter !== opCounter) {
+      return false;
     }
     const finalVol = targetVolume !== undefined ? targetVolume : this.currentVolume;
     if (this.masterGainNode && this.audioCtx && !this.isMuted) {
@@ -520,8 +627,10 @@ export class AudioEngine {
     }
     try {
       await this.activeDeck.audio.play();
+      return this.transitionCounter === opCounter && !this.activeDeck.audio.paused;
     } catch (err) {
       console.warn('Playback playWithFadeIn was rejected:', err);
+      return false;
     }
   }
 
@@ -543,6 +652,13 @@ export class AudioEngine {
   }
 
   public pause(): void {
+    this.transitionCounter++;
+    if (this.crossfadeTimer) {
+      clearTimeout(this.crossfadeTimer);
+      this.crossfadeTimer = null;
+    }
+    this.deckA.ignorePauseUntil = 0;
+    this.deckB.ignorePauseUntil = 0;
     this.deckA.audio.pause();
     this.deckB.audio.pause();
   }

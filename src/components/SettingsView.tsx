@@ -915,19 +915,19 @@ export const SettingsView: React.FC = () => {
               <div className="pt-1">
                 <input
                   type="range"
-                  min="200"
-                  max="2000"
+                  min="300"
+                  max="3000"
                   step="100"
                   value={smartPlaybackSettings.min_audio_duration_ms}
                   onChange={(e) => handleMinDurationChange(Number(e.target.value))}
                   className="w-full h-1.5 bg-white/[0.08] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
                 />
                 <div className="flex justify-between text-[9px] font-mono text-[#555260] pt-1">
-                  <span>200ms</span>
-                  <span>500ms</span>
-                  <span>800ms (Default)</span>
-                  <span>1400ms</span>
+                  <span>300ms</span>
+                  <span>800ms</span>
+                  <span>1200ms (Default)</span>
                   <span>2000ms</span>
+                  <span>3000ms</span>
                 </div>
               </div>
             </div>
@@ -996,7 +996,7 @@ export const SettingsView: React.FC = () => {
               {/* Quick Add Suggestions */}
               <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span className="text-[#777381]">Quick Add:</span>
-                {['discord.exe', 'obs64.exe', 'steam.exe', 'ms-teams.exe'].map((quickApp) => {
+                {['discord.exe', 'whatsapp.exe', 'telegram.exe', 'slack.exe', 'ms-teams.exe', 'obs64.exe'].map((quickApp) => {
                   const isAlreadyExcluded = smartPlaybackSettings.excluded_applications
                     .map((a) => a.toLowerCase())
                     .includes(quickApp.toLowerCase());
