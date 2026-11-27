@@ -19,6 +19,76 @@ impl Default for DownloaderState {
     }
 }
 
+static RESOLVED_PYTHON_PATH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Resolves and caches the system or virtualenv Python executable.
+/// Guarantees on Windows that no command prompt / terminal window ever flashes.
+pub fn get_python_path() -> String {
+    RESOLVED_PYTHON_PATH
+        .get_or_init(|| {
+            let cur_dir = std::env::current_dir().unwrap_or_default();
+            let mut python_candidates: Vec<PathBuf> = Vec::new();
+
+            // 1. Virtualenv in current directory
+            python_candidates.push(cur_dir.join(".venv").join("Scripts").join("python.exe"));
+            python_candidates.push(cur_dir.join(".venv").join("bin").join("python"));
+
+            // 2. Virtualenv in user home directory
+            if let Some(home) = dirs::home_dir() {
+                python_candidates.push(home.join(".musicvault").join(".venv").join("Scripts").join("python.exe"));
+                python_candidates.push(home.join(".musicvault").join(".venv").join("bin").join("python"));
+            }
+
+            // 3. Common Windows Python install locations (direct path, 0 subprocesses needed)
+            #[cfg(windows)]
+            {
+                if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+                    let py_dir = PathBuf::from(&local_appdata).join("Programs").join("Python");
+                    if let Ok(entries) = std::fs::read_dir(&py_dir) {
+                        for entry in entries.flatten() {
+                            let p = entry.path().join("python.exe");
+                            if p.is_file() {
+                                python_candidates.push(p);
+                            }
+                        }
+                    }
+                }
+                for v in &["Python313", "Python312", "Python311", "Python310", "Python39"] {
+                    python_candidates.push(PathBuf::from(format!("C:\\{}", v)).join("python.exe"));
+                }
+            }
+
+            // Check if any direct candidate path exists on disk
+            if let Some(found) = python_candidates.into_iter().find(|p| p.is_file()) {
+                return found.to_string_lossy().to_string();
+            }
+
+            // 4. Fallback: probe PATH binaries using CREATE_NO_WINDOW so no console window ever flashes
+            let check_python_cmd = |cmd_name: &str| -> bool {
+                let mut cmd = Command::new(cmd_name);
+                cmd.arg("--version")
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
+                #[cfg(windows)]
+                {
+                    use std::os::windows::process::CommandExt;
+                    const CREATE_NO_WINDOW: u32 = 0x08000000;
+                    cmd.creation_flags(CREATE_NO_WINDOW);
+                }
+                cmd.status().map(|s| s.success()).unwrap_or(false)
+            };
+
+            if check_python_cmd("python") {
+                "python".to_string()
+            } else if check_python_cmd("py") {
+                "py".to_string()
+            } else {
+                "python3".to_string()
+            }
+        })
+        .clone()
+}
+
 pub fn run_download(
     app: AppHandle,
     state: &DownloaderState,
@@ -26,30 +96,7 @@ pub fn run_download(
     output_dir: Option<String>,
 ) -> Result<String, String> {
     let cur_dir = std::env::current_dir().unwrap_or_default();
-    let mut python_candidates: Vec<PathBuf> = Vec::new();
-
-    // Check virtualenv in current directory or user home
-    python_candidates.push(cur_dir.join(".venv").join("Scripts").join("python.exe"));
-    python_candidates.push(cur_dir.join(".venv").join("bin").join("python"));
-    if let Some(home) = dirs::home_dir() {
-        python_candidates.push(home.join(".musicvault").join(".venv").join("Scripts").join("python.exe"));
-        python_candidates.push(home.join(".musicvault").join(".venv").join("bin").join("python"));
-    }
-
-    let python_path = python_candidates
-        .into_iter()
-        .find(|p| p.is_file())
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| {
-            // Check if 'python' or 'py' or 'python3' responds
-            if Command::new("python").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
-                "python".to_string()
-            } else if Command::new("py").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
-                "py".to_string()
-            } else {
-                "python3".to_string()
-            }
-        });
+    let python_path = get_python_path();
 
     let mut candidate_paths = Vec::new();
     if let Ok(res_dir) = app.path().resource_dir() {
@@ -180,12 +227,15 @@ pub fn stop_download(state: &DownloaderState) -> Result<String, String> {
         let pid = child.id();
         #[cfg(windows)]
         {
+            use std::os::windows::process::CommandExt;
             use std::process::Command;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
             // On Windows, child.kill() only kills the python wrapper, leaving child yt-dlp/ffmpeg processes alive.
-            // taskkill /F /T kills the entire process tree cleanly.
-            let _ = Command::new("taskkill")
-                .args(["/F", "/T", "/PID", &pid.to_string()])
-                .spawn();
+            // taskkill /F /T kills the entire process tree cleanly without flashing a console window.
+            let mut kill_cmd = Command::new("taskkill");
+            kill_cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+            kill_cmd.creation_flags(CREATE_NO_WINDOW);
+            let _ = kill_cmd.spawn();
         }
         let _ = child.kill();
         Ok("Download stopped".to_string())

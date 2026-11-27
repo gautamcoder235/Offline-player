@@ -1053,9 +1053,11 @@ export const OnlineSearchView: React.FC<OnlineSearchViewProps> = ({
     }
   }, []);
 
-  // Background stream warming for top 2 results when search finishes
+  // Background stream warming for top 2 results after search results settle
   useEffect(() => {
-    if (results.length > 0) {
+    if (!results || results.length === 0) return;
+
+    const timer = setTimeout(() => {
       for (let i = 0; i < Math.min(2, results.length); i++) {
         const item = results[i];
         const key = `${item.artist_name.trim().toLowerCase()} - ${item.track_name.trim().toLowerCase()}`;
@@ -1063,7 +1065,9 @@ export const OnlineSearchView: React.FC<OnlineSearchViewProps> = ({
           resolveOnlineStream(item.track_name, item.artist_name).catch(() => {});
         }
       }
-    }
+    }, 600);
+
+    return () => clearTimeout(timer);
   }, [results]);
 
   // Listen for scroll-to-track to locate and flash active online song

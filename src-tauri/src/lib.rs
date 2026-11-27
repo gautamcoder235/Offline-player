@@ -1077,28 +1077,7 @@ async fn get_online_stream_url(
 
     tauri::async_runtime::spawn_blocking(move || {
         let cur_dir = std::env::current_dir().unwrap_or_default();
-        let mut python_candidates: Vec<PathBuf> = Vec::new();
-
-        python_candidates.push(cur_dir.join(".venv").join("Scripts").join("python.exe"));
-        python_candidates.push(cur_dir.join(".venv").join("bin").join("python"));
-        if let Some(home) = dirs::home_dir() {
-            python_candidates.push(home.join(".musicvault").join(".venv").join("Scripts").join("python.exe"));
-            python_candidates.push(home.join(".musicvault").join(".venv").join("bin").join("python"));
-        }
-
-        let python_path = python_candidates
-            .into_iter()
-            .find(|p| p.is_file())
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|| {
-                if Command::new("python").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
-                    "python".to_string()
-                } else if Command::new("py").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
-                    "py".to_string()
-                } else {
-                    "python3".to_string()
-                }
-            });
+        let python_path = downloader::get_python_path();
 
         let mut candidate_paths = Vec::new();
         if let Ok(res_dir) = app.path().resource_dir() {
